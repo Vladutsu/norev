@@ -1,10 +1,10 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 9.6,
+ "elapsed_seconds": 9.3,
  "calls": [
   {
    "stage": "extract",
-   "prompt": "The session took place today, 2026-11-06 (Friday).\nCalendar for resolving dates:\n  Fri 2026-11-06 (today), Sat 2026-11-07 (tomorrow), Sun 2026-11-08, Mon 2026-11-09, Tue 2026-11-10, Wed 2026-11-11, Thu 2026-11-12\n  Fri 2026-11-13, Sat 2026-11-14, Sun 2026-11-15, Mon 2026-11-16, Tue 2026-11-17, Wed 2026-11-18, Thu 2026-11-19\n  Fri 2026-11-20, Sat 2026-11-21, Sun 2026-11-22, Mon 2026-11-23, Tue 2026-11-24, Wed 2026-11-25, Thu 2026-11-26\n  Fri 2026-11-27, Sat 2026-11-28, Sun 2026-11-29, Mon 2026-11-30, Tue 2026-12-01, Wed 2026-12-02, Thu 2026-12-03\n  Fri 2026-12-04, Sat 2026-12-05, Sun 2026-12-06, Mon 2026-12-07, Tue 2026-12-08, Wed 2026-12-09, Thu 2026-12-10\n  Fri 2026-12-11, Sat 2026-12-12, Sun 2026-12-13, Mon 2026-12-14, Tue 2026-12-15, Wed 2026-12-16, Thu 2026-12-17\n\nYou extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a\nSession (one recorded conversation) and must extract every Proposed Action: a concrete action someone has\nto carry out. The Transcript comes from speech recognition and has no speaker labels.\n\nWhat is a Proposed Action:\n- Any commitment or request to do something: \"X, can you ...?\" followed by agreement, \"please ...\",\n  \"I'll do it\".\n- Include small items too.\n- One action per Proposed Action: split \"write the tests and update the docs\" into two Proposed Actions.\n- NOT a Proposed Action: items that were cancelled or dropped (\"we won't do X anymore\" - record it as a decision),\n  ideas nobody committed to, and decisions.\n\nOwner:\n- The person who accepted the action or was asked to do it, written as in the transcript.\n- If a Proposed Action was reassigned (\"Ionuț was supposed to, but Elena takes it over\"), use only the final owner.\n- If the speaker commits themself (\"I'll do it\", \"I'll send it\") and their name is not stated, owner=null.\n  Never pick a person who is only mentioned in the sentence.\n- If assignable team members are provided and the transcript names no owner, choose one only when their\n  skills clearly match the action; use the exact candidate name. Otherwise owner=null.\n\nDue date:\n- Resolve \"today\", \"tomorrow\", weekday names (\"by Monday\", \"on Thursday\") and \"next week\" with the\n  calendar above. \"By Monday\" means that Monday.\n- If no deadline is stated, due_date=null. The date of a later session is not a deadline unless the action\n  has to be finished before it.\n\nRules:\n- Response language: English.\n- Do not invent information that is not present in the transcript.\n- Normalize dates to YYYY-MM-DD.\n- Remove duplicates. Keep actions separate from decisions and risks.\n- transcript_excerpt: the shortest transcript quote (at most 15 words) that shows the action.\n\nReturn ONLY valid JSON, with no extra text, using this schema:\n\n{\n  \"session_summary\": \"maximum 4 sentences\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"infinitive verb + clear objective\",\n      \"description\": \"one short sentence\",\n      \"owner\": \"person name or null\",\n      \"due_date\": \"YYYY-MM-DD or null\",\n      \"priority\": \"high|medium|low\",\n      \"transcript_excerpt\": \"short quote from the transcript\"\n    }\n  ],\n  \"decisions\": [\"decisions made in the session\"],\n  \"risks\": [\"identified blockers or risks\"],\n  \"follow_up_questions\": [\"questions needed for actions with unclear owner/deadline\"]\n}\n\nTranscript:\n[S1] Good day, Mrs. Dumitrescu. I called you to discuss Vlad's math grades. [S2] Good day. I know he got a four on the last test. [S1] Yes, and he missed three times this month. I propose recovery classes on Tuesday, after school. [S2] That's fine. I'll make sure he comes to all classes. [S1] I prepare an exercise sheet on fractions until Monday. [S2] May I write to you by email if he has questions? [S1] Sure. And please sign the grade book by Friday. [S2] I'll sign it tomorrow. [S1] The recovery test will be on November 25th. [S2] Thank you, Mrs. Teacher.",
+   "prompt": "The session took place today, 2026-11-06 (Friday).\nCalendar for resolving dates:\n  Fri 2026-11-06 (today), Sat 2026-11-07 (tomorrow), Sun 2026-11-08, Mon 2026-11-09, Tue 2026-11-10, Wed 2026-11-11, Thu 2026-11-12\n  Fri 2026-11-13, Sat 2026-11-14, Sun 2026-11-15, Mon 2026-11-16, Tue 2026-11-17, Wed 2026-11-18, Thu 2026-11-19\n  Fri 2026-11-20, Sat 2026-11-21, Sun 2026-11-22, Mon 2026-11-23, Tue 2026-11-24, Wed 2026-11-25, Thu 2026-11-26\n  Fri 2026-11-27, Sat 2026-11-28, Sun 2026-11-29, Mon 2026-11-30, Tue 2026-12-01, Wed 2026-12-02, Thu 2026-12-03\n  Fri 2026-12-04, Sat 2026-12-05, Sun 2026-12-06, Mon 2026-12-07, Tue 2026-12-08, Wed 2026-12-09, Thu 2026-12-10\n  Fri 2026-12-11, Sat 2026-12-12, Sun 2026-12-13, Mon 2026-12-14, Tue 2026-12-15, Wed 2026-12-16, Thu 2026-12-17\n\nYou extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a\nSession (one recorded conversation) and must extract every Proposed Action: a concrete action someone has\nto carry out. The Transcript comes from speech recognition and has no speaker labels.\n\nWhat is a Proposed Action:\n- Any commitment or request to do something: \"X, can you ...?\" followed by agreement, \"please ...\",\n  \"I'll do it\".\n- Include small items too.\n- One action per Proposed Action: split \"write the tests and update the docs\" into two Proposed Actions.\n- NOT a Proposed Action: items that were cancelled or dropped (\"we won't do X anymore\" - record it as a decision),\n  ideas nobody committed to, and decisions.\n\nOwner:\n- The person who accepted the action or was asked to do it, written as in the transcript.\n- If a Proposed Action was reassigned (\"Ionuț was supposed to, but Elena takes it over\"), use only the final owner.\n- If the speaker commits themself (\"I'll do it\", \"I'll send it\") and their name is not stated, owner=null.\n  Never pick a person who is only mentioned in the sentence.\n- If assignable team members are provided and the transcript names no owner, choose one only when their\n  skills clearly match the action; use the exact candidate name. Otherwise owner=null.\n\nDue date:\n- Resolve \"today\", \"tomorrow\", weekday names (\"by Monday\", \"on Thursday\") and \"next week\" with the\n  calendar above. \"By Monday\" means that Monday.\n- If no deadline is stated, due_date=null. The date of a later session is not a deadline unless the action\n  has to be finished before it.\n\nRules:\n- Response language: English.\n- Do not invent information that is not present in the transcript.\n- Normalize dates to YYYY-MM-DD.\n- Remove duplicates. Keep actions separate from decisions and risks.\n- transcript_excerpt: the shortest transcript quote (at most 15 words) that shows the action.\n\nReturn ONLY valid JSON, with no extra text, using this schema:\n\n{\n  \"session_summary\": \"maximum 4 sentences\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"infinitive verb + clear objective\",\n      \"description\": \"one short sentence\",\n      \"owner\": \"person name or null\",\n      \"due_date\": \"YYYY-MM-DD or null\",\n      \"priority\": \"high|medium|low\",\n      \"transcript_excerpt\": \"short quote from the transcript\"\n    }\n  ],\n  \"decisions\": [\"decisions made in the session\"],\n  \"risks\": [\"identified blockers or risks\"],\n  \"follow_up_questions\": [\"questions needed for actions with unclear owner/deadline\"]\n}\n\nTranscript:\n[S1] Good day, Mrs. Dumitrescu. I called you to discuss Vlad's math grades. [S2] Good day. I know he got a 4 on the last test. [S1] Yes, and he missed three times this month. I propose recovery classes on Tuesday, after school. [S2] That's fine. I'll make sure he comes to all classes. [S1] I prepare an exercise sheet on fractions until Monday. [S2] May I write to you by email if he has questions? [S1] Sure. And please sign the grade book by Friday. [S2] I'll sign it tomorrow. [S1] The recovery test will be on November 25th. [S2] Thank you, Mrs. Teacher.",
    "json_schema": {
     "type": "object",
     "properties": {
@@ -104,18 +104,18 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed Vlad's math grades, with plans for recovery classes and an exercise sheet. Mrs. Dumitrescu agreed to attend the classes and sign the grade book.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Prepare exercise sheet on fractions\",\n      \"description\": \"Prepare an exercise sheet on fractions until Monday\",\n      \"owner\": null,\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I prepare an exercise sheet on fractions until Monday\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Sign grade book\",\n      \"description\": \"Sign the grade book by Friday\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"please sign the grade book by Friday\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Conduct recovery classes\",\n      \"description\": \"Conduct recovery classes on Tuesday, after school\",\n      \"owner\": \"S1\",\n      \"due_date\": \"2026-11-09\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I propose recovery classes on Tuesday, after school\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Administer recovery test\",\n      \"description\": \"Administer the recovery test on November 25th\",\n      \"owner\": \"S1\",\n      \"due_date\": \"2026-11-25\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"The recovery test will be on November 25th\"\n    }\n  ],\n  \"decisions\": [\n    \"Mrs. Dumitrescu agreed to attend recovery classes and sign the grade book\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Who will be responsible for sending the exercise sheet to Mrs. Dumitrescu?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed Vlad's poor math grades and proposed recovery classes and an exercise sheet. The parent agreed to ensure Vlad attends the classes and sign the grade book.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Prepare exercise sheet on fractions\",\n      \"description\": \"Prepare an exercise sheet on fractions until Monday\",\n      \"owner\": null,\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I prepare an exercise sheet on fractions until Monday\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Conduct recovery classes\",\n      \"description\": \"Conduct recovery classes on Tuesday, after school\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I propose recovery classes on Tuesday, after school\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Sign grade book\",\n      \"description\": \"Sign the grade book by Friday\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Please sign the grade book by Friday\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Schedule recovery test\",\n      \"description\": \"Schedule recovery test on November 25th\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-25\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"The recovery test will be on November 25th\"\n    }\n  ],\n  \"decisions\": [\n    \"Mrs. Dumitrescu agreed to ensure Vlad attends the recovery classes\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Who is responsible for sending the exercise sheet to Vlad?\"\n  ]\n}"
   }
  ],
  "result": {
-  "session_summary": "The session discussed Vlad's math grades, with plans for recovery classes and an exercise sheet. Mrs. Dumitrescu agreed to attend the classes and sign the grade book.",
+  "session_summary": "The session discussed Vlad's poor math grades and proposed recovery classes and an exercise sheet. The parent agreed to ensure Vlad attends the classes and sign the grade book.",
   "proposed_actions": [
    {
     "id": "A1",
     "title": "Prepare exercise sheet on fractions",
     "description": "Prepare an exercise sheet on fractions until Monday",
     "owner": null,
-    "due_date": "2026-11-08",
+    "due_date": "2026-11-09",
     "priority": "medium",
     "status": "proposed",
     "dependencies": [],
@@ -125,23 +125,10 @@
    },
    {
     "id": "A2",
-    "title": "Sign grade book",
-    "description": "Sign the grade book by Friday",
-    "owner": "Mrs. Dumitrescu",
-    "due_date": "2026-11-12",
-    "priority": "high",
-    "status": "proposed",
-    "dependencies": [],
-    "confidence": 0.0,
-    "transcript_excerpt": "please sign the grade book by Friday",
-    "needs_review": false
-   },
-   {
-    "id": "A3",
     "title": "Conduct recovery classes",
     "description": "Conduct recovery classes on Tuesday, after school",
-    "owner": "S1",
-    "due_date": "2026-11-09",
+    "owner": "Mrs. Dumitrescu",
+    "due_date": null,
     "priority": "high",
     "status": "proposed",
     "dependencies": [],
@@ -150,10 +137,23 @@
     "needs_review": false
    },
    {
+    "id": "A3",
+    "title": "Sign grade book",
+    "description": "Sign the grade book by Friday",
+    "owner": "Mrs. Dumitrescu",
+    "due_date": "2026-11-13",
+    "priority": "medium",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "Please sign the grade book by Friday",
+    "needs_review": false
+   },
+   {
     "id": "A4",
-    "title": "Administer recovery test",
-    "description": "Administer the recovery test on November 25th",
-    "owner": "S1",
+    "title": "Schedule recovery test",
+    "description": "Schedule recovery test on November 25th",
+    "owner": "Mrs. Dumitrescu",
     "due_date": "2026-11-25",
     "priority": "high",
     "status": "proposed",
@@ -164,11 +164,11 @@
    }
   ],
   "decisions": [
-   "Mrs. Dumitrescu agreed to attend recovery classes and sign the grade book"
+   "Mrs. Dumitrescu agreed to ensure Vlad attends the recovery classes"
   ],
   "risks": [],
   "follow_up_questions": [
-   "Who will be responsible for sending the exercise sheet to Mrs. Dumitrescu?"
+   "Who is responsible for sending the exercise sheet to Vlad?"
   ]
  }
 }

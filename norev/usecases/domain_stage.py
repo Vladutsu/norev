@@ -77,6 +77,17 @@ def _field_value(field_type: str, value: Any) -> str | None:
     return text or None
 
 
+def _user_only_fields(domain: Domain, type_name: str) -> set[str]:
+    """Fields the answer schema allows only as null (e.g. attendee emails): the model never fills them."""
+    variants = domain.answer_schema.get("properties", {}).get("proposed_actions", {}).get("items", {}).get("anyOf", [])
+    for variant in variants:
+        props = variant.get("properties", {})
+        if props.get("action_type", {}).get("const") == type_name:
+            fields = props.get("fields", {}).get("properties", {})
+            return {name for name, schema in fields.items() if schema == {"type": "null"}}
+    return set()
+
+
 def apply_answer(
     domain: Domain, actions: list[ProposedAction], answer: dict
 ) -> tuple[list[ProposedAction], list[Suggestion]]:
@@ -99,11 +110,13 @@ def apply_answer(
             continue
         raw_fields = item.get("fields")
         raw_fields = raw_fields if isinstance(raw_fields, dict) else {}
+        user_only = _user_only_fields(domain, action_type.name)
         typed[action_id] = dataclasses.replace(
             by_id[action_id],
             action_type=action_type.name,
             prepared_payload=None,
-            fields={f.name: _field_value(f.type, raw_fields.get(f.name)) for f in action_type.fields},
+            fields={f.name: None if f.name in user_only else _field_value(f.type, raw_fields.get(f.name))
+                    for f in action_type.fields},
         )
 
     suggestions = []

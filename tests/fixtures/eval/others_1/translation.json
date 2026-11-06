@@ -1,10 +1,10 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 5.7,
+ "elapsed_seconds": 5.9,
  "calls": [
   {
    "stage": "translate",
-   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună ziua, domnule Ionescu. Ați reușit să vă uitați la apartamentul din Drumul Taberei?\"}\n{\"id\": \"2\", \"text\": \"Da, ne-a plăcut, dar prețul de nouăzeci și cinci de mii de euro ni se pare mare.\"}\n{\"id\": \"3\", \"text\": \"Pot să vorbesc cu proprietarul pentru o reducere. Îl sun mâine.\"}\n{\"id\": \"4\", \"text\": \"Ar fi bine. Și am vrea să vedem și apartamentul cu trei camere din Militari.\"}\n{\"id\": \"5\", \"text\": \"Vă programez o vizionare sâmbătă la ora unsprezece.\"}\n{\"id\": \"6\", \"text\": \"Perfect. Ce acte ne trebuie pentru credit?\"}\n{\"id\": \"7\", \"text\": \"Vă trimit pe email lista de acte până diseară.\"}\n{\"id\": \"8\", \"text\": \"Eu vorbesc cu banca săptămâna viitoare pentru preaprobare.\"}\n{\"id\": \"9\", \"text\": \"Bun. Dacă proprietarul acceptă optzeci și opt de mii, facem antecontractul.\"}\n{\"id\": \"10\", \"text\": \"De acord. Mulțumesc.\"}",
+   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună ziua, domnule Ionescu. Ați reușit să vă uitați la apartamentul din Drumul Taberei?\"}\n{\"id\": \"2\", \"text\": \"Da, ne-a plăcut, dar prețul de 95000 de euro ni se pare mare.\"}\n{\"id\": \"3\", \"text\": \"Pot să vorbesc cu proprietarul pentru o reducere. Îl sun mâine.\"}\n{\"id\": \"4\", \"text\": \"Ar fi bine. Și am vrea să vedem și apartamentul cu 3 camere din Militari.\"}\n{\"id\": \"5\", \"text\": \"Vă programez o vizionare sâmbătă la ora 11.\"}\n{\"id\": \"6\", \"text\": \"Perfect. Ce acte ne trebuie pentru credit?\"}\n{\"id\": \"7\", \"text\": \"Vă trimit pe email lista de acte până diseară.\"}\n{\"id\": \"8\", \"text\": \"Eu vorbesc cu banca săptămâna viitoare pentru preaprobare.\"}\n{\"id\": \"9\", \"text\": \"Bun. Dacă proprietarul acceptă 88000, facem antecontractul.\"}\n{\"id\": \"10\", \"text\": \"De acord. Mulțumesc.\"}",
    "json_schema": {
     "type": "object",
     "properties": {
@@ -48,7 +48,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mr. Ionescu. Did you manage to look at the apartment in Drumul Taberei?\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Yes, we liked it, but the price of ninety-five thousand euros seems high to us.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"May I speak with the owner for a reduction. I'll call him tomorrow.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"That would be good. And we would like to see also the three-room apartment in Militari.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"I'll schedule a viewing Saturday at eleven o'clock.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Perfect. What documents do we need for the loan?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"I'll send you by email the list of documents by tonight.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"I'll talk with the bank next week for pre-approval.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Fine. If the owner accepts eighty-eight thousand euros, we'll make the preliminary contract.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Agreed. Thank you.\"\n    }\n  ]\n}"
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mr. Ionescu. Did you manage to look at the apartment in Drumul Taberei?\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Yes, we liked it, but the price of 95,000 euros seems high to us.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"May I speak with the owner for a reduction. I'll call him tomorrow.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"That would be good. And we would like to see also the 3-bedroom apartment in Militari.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"I'll schedule a viewing Saturday at 11 o'clock.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Perfect. What documents do we need for the loan?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"I'll send you by email the list of documents by tonight.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"I'll talk with the bank next week for pre-approval.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Fine. If the owner accepts 88,000, we'll make the preliminary contract.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Agreed. Thank you.\"\n    }\n  ]\n}"
   }
  ],
  "english": {
@@ -78,7 +78,7 @@
     "start": 6.5,
     "end": 13.05,
     "speaker_id": "S2",
-    "text": "Yes, we liked it, but the price of ninety-five thousand euros seems high to us.",
+    "text": "Yes, we liked it, but the price of 95,000 euros seems high to us.",
     "untranslated": false
    },
    {
@@ -92,14 +92,14 @@
     "start": 18.5,
     "end": 24.35,
     "speaker_id": "S2",
-    "text": "That would be good. And we would like to see also the three-room apartment in Militari.",
+    "text": "That would be good. And we would like to see also the 3-bedroom apartment in Militari.",
     "untranslated": false
    },
    {
     "start": 24.85,
     "end": 28.25,
     "speaker_id": "S1",
-    "text": "I'll schedule a viewing Saturday at eleven o'clock.",
+    "text": "I'll schedule a viewing Saturday at 11 o'clock.",
     "untranslated": false
    },
    {
@@ -127,7 +127,7 @@
     "start": 40.45,
     "end": 44.9,
     "speaker_id": "S1",
-    "text": "Fine. If the owner accepts eighty-eight thousand euros, we'll make the preliminary contract.",
+    "text": "Fine. If the owner accepts 88,000, we'll make the preliminary contract.",
     "untranslated": false
    },
    {

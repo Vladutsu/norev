@@ -25,14 +25,14 @@
       "start": 4.799,
       "end": 12.845,
       "speaker_id": "S2",
-      "text": "Good day. Not very well, Mr. doctor. The cough hasn't gone away and for three days I've had a fever, thirty-eight and something in the evening.",
+      "text": "Good day. Not very well, Mr. doctor. The cough hasn't gone away and for 3 days I've had a fever, 38 and something in the evening.",
       "untranslated": false
     },
     {
       "start": 13.426,
       "end": 14.479,
       "speaker_id": "S1",
-      "text": "Are you coughing up phlegm?",
+      "text": "Are you coughing with phlegm?",
       "untranslated": false
     },
     {
@@ -53,7 +53,7 @@
       "start": 23.929,
       "end": 27.525,
       "speaker_id": "S2",
-      "text": "I've reduced to ten cigarettes a day, but I haven't quit altogether.",
+      "text": "I've reduced to 10 cigarettes a day, but I haven't quit altogether.",
       "untranslated": false
     },
     {
@@ -67,7 +67,7 @@
       "start": 33.136,
       "end": 36.05,
       "speaker_id": "S2",
-      "text": "It hurts a bit on the right side when I breathe deeply.",
+      "text": "It hurts on the right side when I breathe deeply.",
       "untranslated": false
     },
     {
@@ -102,7 +102,7 @@
       "start": 53.712,
       "end": 64.2,
       "speaker_id": "S1",
-      "text": "I'll prescribe amoxicillin with clavulanic acid, one thousand milligrams, twice a day, for seven days. For the fever take paracetamol, no more than four tablets a day.",
+      "text": "I'll prescribe amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days. For the fever take paracetamol, no more than 4 tablets a day.",
       "untranslated": false
     },
     {
@@ -116,7 +116,7 @@
       "start": 68.26,
       "end": 73.861,
       "speaker_id": "S1",
-      "text": "No. I'll give you a sick leave for five days, up to Tuesday inclusive. Rest and plenty of fluids.",
+      "text": "No. I'll give you a medical leave of 5 days, up to Tuesday inclusive. Rest and plenty of fluids.",
       "untranslated": false
     },
     {
@@ -144,7 +144,7 @@
       "start": 85.918,
       "end": 91.102,
       "speaker_id": "S1",
-      "text": "You'll also do a hematology panel and C-reactive protein test, tomorrow morning, on an empty stomach.",
+      "text": "Do a complete blood count and C-reactive protein test, tomorrow morning, on an empty stomach.",
       "untranslated": false
     },
     {
@@ -158,7 +158,7 @@
       "start": 94.135,
       "end": 106.2,
       "speaker_id": "S1",
-      "text": "I'll be waiting for you on Tuesday, November 10th, at half past eight, with the X-ray and test results. If you have trouble breathing or the fever goes above thirty-nine, come immediately or call the emergency department.",
+      "text": "I'll be waiting on Tuesday, November 10th, at 8:30, with the X-ray and test results. If you have trouble breathing or the fever goes above 39, come immediately or call the emergency department.",
       "untranslated": false
     },
     {

@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from LLM.AI_Model.translate import CHUNK_CHARS, LANGUAGE_NAMES, split_sentences
+from norev.adapters.llm.numbers_ro import numbers_to_digits
 from norev.core.models import Segment, Transcript
 from norev.core.ports import LlmClient
 
@@ -107,10 +108,13 @@ class TurnTranslator:
             turn_pieces.append(ids)
 
         source_name = LANGUAGE_NAMES.get(source_language, source_language or "the source language")
-        english = self._translate_pieces(list(source), source, source_name)
+        # Numbers written in words go as digits, so the model only has to copy them (#39); a turn left
+        # untranslated still keeps its original text
+        sent = {i: numbers_to_digits(t) for i, t in source.items()} if source_language == "ro" else source
+        english = self._translate_pieces(list(source), sent, source_name)
         missing = [i for i in source if i not in english]
         if missing:  # one retry, in new batches of only the missing turns
-            english.update(self._translate_pieces(missing, source, source_name))
+            english.update(self._translate_pieces(missing, sent, source_name))
 
         segments = []
         for turn, ids in zip(turns, turn_pieces):

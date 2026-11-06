@@ -1,21 +1,34 @@
 {
-  "session_summary": "A patient visited the doctor for persistent headaches, high blood pressure, and palpitations. The doctor prescribed medication, recommended lifestyle changes, and scheduled follow-up tests and appointments.",
+  "session_summary": "A patient discussed symptoms of high blood pressure, including headaches, dizziness, and palpitations. The doctor prescribed medication, advised lifestyle changes, and scheduled follow-up tests and appointments.",
   "proposed_actions": [
     {
       "id": "A1",
       "title": "Measure Blood Pressure",
-      "description": "Measure blood pressure twice daily and record values in a notebook",
+      "description": "Measure blood pressure twice daily and record results in a notebook",
       "owner": "Mrs. Ionescu",
       "due_date": "2026-11-12",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "I want you to measure your blood pressure at home twice a day, in the morning and in the evening, and note the values in a notebook.",
+      "transcript_excerpt": "I want you to measure your blood pressure at home twice a day, in the morning and evening",
       "needs_review": false
     },
     {
       "id": "A2",
+      "title": "Take Medication",
+      "description": "Take amlodipine 5 milligrams once daily in the morning",
+      "owner": "Mrs. Ionescu",
+      "due_date": null,
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I'll prescribe you amlodipine 5 milligrams, one tablet in the morning",
+      "needs_review": false
+    },
+    {
+      "id": "A3",
       "title": "Get Blood Tests",
       "description": "Complete blood tests: cholesterol, blood sugar, creatinine, and ionogram",
       "owner": "Mrs. Ionescu",
@@ -24,57 +37,46 @@
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "Please do them by Wednesday, on the spot.",
-      "needs_review": false
-    },
-    {
-      "id": "A3",
-      "title": "Schedule Electrocardiogram",
-      "description": "Undergo an electrocardiogram at the assistant's station",
-      "owner": "Maria",
-      "due_date": "2026-11-06",
-      "priority": "high",
-      "status": "proposed",
-      "dependencies": [],
-      "confidence": 0.0,
-      "transcript_excerpt": "we'll do it right here, at the assistant, after the consultation.",
+      "transcript_excerpt": "Please do them by Wednesday, on the spot",
       "needs_review": false
     },
     {
       "id": "A4",
-      "title": "Take Amlodipine",
-      "description": "Take amlodipine five milligrams, one tablet in the morning",
+      "title": "Schedule Electrocardiogram",
+      "description": "Undergo an electrocardiogram at the assistant's station",
       "owner": "Mrs. Ionescu",
       "due_date": null,
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "I'll prescribe you amlodipine five milligrams, one tablet in the morning.",
+      "transcript_excerpt": "we'll do it right here, at the assistant, after the consultation",
       "needs_review": false
     },
     {
       "id": "A5",
-      "title": "Follow Up Appointment",
-      "description": "Attend a follow-up appointment on Friday, November 13th at 10:00 AM",
+      "title": "Attend Follow-Up Appointment",
+      "description": "Attend a follow-up appointment on Friday, November 13th, at 10 o'clock",
       "owner": "Mrs. Ionescu",
       "due_date": "2026-11-13",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "Come back on Friday, on the 13th of November, at ten o'clock.",
+      "transcript_excerpt": "Come back on Friday, November 13th, at 10 o'clock",
       "needs_review": false
     }
   ],
   "decisions": [
-    "Prescribe amlodipine five milligrams, one tablet in the morning",
-    "Schedule follow-up appointment on Friday, November 13th at 10:00 AM"
+    "Prescribe amlodipine 5 milligrams once daily in the morning",
+    "Schedule blood tests and an electrocardiogram",
+    "Recommend reducing coffee intake and limiting salt consumption"
   ],
   "risks": [
-    "If blood pressure goes over 180 or symptoms like numbness, blurred vision, or chest pain occur, call 122 immediately"
+    "If blood pressure exceeds 180 or symptoms like numbness, blurred vision, or chest pain occur, call 112 immediately"
   ],
   "follow_up_questions": [
-    "When will the blood pressure notebook be reviewed?"
+    "Is there a specific time frame for the follow-up appointment?",
+    "Are there any additional lifestyle changes recommended?"
   ]
 }

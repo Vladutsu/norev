@@ -2,6 +2,7 @@
 
     python tests/fixtures/llm/record.py           # needs llama-server (GPU laptop); rewrites the fixtures
     python tests/fixtures/llm/record.py --check   # no model: replays the recorded responses
+    python tests/fixtures/llm/record.py --refresh # no model: replays them and rewrites the results (code changed, prompts did not)
 
 For each consult_*/transcript.json it runs the core pipeline: translation per Speaker turn
 (norev.adapters.llm.translator, decision #13), then generic Proposed Action extraction
@@ -101,7 +102,7 @@ def run(source: dict, client, settings: DeepSeekSettings) -> tuple[dict, dict]:
     return english_json(source, english), actions
 
 
-def main(check: bool) -> int:
+def main(check: bool, refresh: bool = False) -> int:
     failed = 0
     settings = DeepSeekSettings.from_environment()
     for folder in sorted(HERE.glob("consult_*")):
@@ -112,6 +113,9 @@ def main(check: bool) -> int:
             try:
                 english, actions = run(source, client, settings.with_overrides(model=recorded["model"]))
                 assert not client._calls, "fewer LLM calls than recorded"
+                if refresh:
+                    for name, data in (("transcript.en.json", english), ("proposed_actions.json", actions)):
+                        (folder / name).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                 assert english == json.loads((folder / "transcript.en.json").read_text(encoding="utf-8")), \
                     "result differs from transcript.en.json"
                 assert actions == json.loads((folder / "proposed_actions.json").read_text(encoding="utf-8")), \
@@ -138,4 +142,5 @@ def main(check: bool) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main("--check" in sys.argv[1:]))
+    refresh = "--refresh" in sys.argv[1:]
+    raise SystemExit(main("--check" in sys.argv[1:] or refresh, refresh))
