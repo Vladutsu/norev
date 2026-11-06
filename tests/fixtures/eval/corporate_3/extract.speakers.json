@@ -104,7 +104,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed an incident where the application was unavailable for 2 hours due to an expired SSL certificate. Actions were proposed to prevent future issues, including setting up alerts and informing affected customers. A decision was made to delay monthly recovery exercises until January.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Renew SSL certificate\",\n      \"description\": \"Ensure the SSL certificate is renewed before expiration\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Ana, who is responsible for the automatic renewal of certificates?\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Set up alert for SSL certificate expiration\",\n      \"description\": \"Add an alert in monitoring 30 days before SSL certificate expiration\",\n      \"owner\": \"S3\",\n      \"due_date\": \"2026-11-26\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I add an alert in monitoring 30 days before expiration.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Send email to affected customers\",\n      \"description\": \"Inform the 140 affected customers about the incident\",\n      \"owner\": \"support team\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Someone from support should send the email, not us.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Write incident report\",\n      \"description\": \"Prepare the incident report for the event\",\n      \"owner\": \"S1\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I will write the incident report until Monday.\"\n    }\n  ],\n  \"decisions\": [\n    \"Monthly recovery exercises will be postponed until January.\"\n  ],\n  \"risks\": [\n    \"No specific risks were identified in the session.\"\n  ],\n  \"follow_up_questions\": [\n    \"Who is responsible for setting up the alert for the SSL certificate expiration?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed an incident where the application was unavailable for 2 hours due to an expired SSL certificate. Actions were proposed to prevent future issues, including setting up alerts and informing affected customers. A decision was made to delay monthly recovery exercises until January.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Renew SSL certificate\",\n      \"description\": \"Ensure the SSL certificate is renewed before expiration.\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Ana, who is responsible for the automatic renewal of certificates?\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Set up alert for SSL certificate expiration\",\n      \"description\": \"Add an alert in monitoring 30 days before SSL certificate expiration.\",\n      \"owner\": \"S3\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I add an alert in monitoring 30 days before expiration.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Send email to affected customers\",\n      \"description\": \"Inform the 140 affected customers about the incident.\",\n      \"owner\": \"Support team\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Someone from support should send the email, not us.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Write incident report\",\n      \"description\": \"Prepare the incident report detailing the cause and resolution.\",\n      \"owner\": \"S1\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I will write the incident report until Monday.\"\n    }\n  ],\n  \"decisions\": [\n    \"Monthly recovery exercises will be postponed until January.\"\n  ],\n  \"risks\": [\n    \"No specific risks were identified in the session.\"\n  ],\n  \"follow_up_questions\": [\n    \"Who is responsible for setting up the alert for SSL certificate expiration?\"\n  ]\n}"
   }
  ],
  "result": {
@@ -113,7 +113,7 @@
    {
     "id": "A1",
     "title": "Renew SSL certificate",
-    "description": "Ensure the SSL certificate is renewed before expiration",
+    "description": "Ensure the SSL certificate is renewed before expiration.",
     "owner": "Ana",
     "due_date": "2026-11-12",
     "priority": "high",
@@ -126,9 +126,9 @@
    {
     "id": "A2",
     "title": "Set up alert for SSL certificate expiration",
-    "description": "Add an alert in monitoring 30 days before SSL certificate expiration",
+    "description": "Add an alert in monitoring 30 days before SSL certificate expiration.",
     "owner": "S3",
-    "due_date": "2026-11-26",
+    "due_date": "2026-11-12",
     "priority": "high",
     "status": "proposed",
     "dependencies": [],
@@ -139,8 +139,8 @@
    {
     "id": "A3",
     "title": "Send email to affected customers",
-    "description": "Inform the 140 affected customers about the incident",
-    "owner": "support team",
+    "description": "Inform the 140 affected customers about the incident.",
+    "owner": "Support team",
     "due_date": "2026-11-06",
     "priority": "high",
     "status": "proposed",
@@ -152,10 +152,10 @@
    {
     "id": "A4",
     "title": "Write incident report",
-    "description": "Prepare the incident report for the event",
+    "description": "Prepare the incident report detailing the cause and resolution.",
     "owner": "S1",
     "due_date": "2026-11-09",
-    "priority": "medium",
+    "priority": "high",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
@@ -170,7 +170,7 @@
    "No specific risks were identified in the session."
   ],
   "follow_up_questions": [
-   "Who is responsible for setting up the alert for the SSL certificate expiration?"
+   "Who is responsible for setting up the alert for SSL certificate expiration?"
   ]
  }
 }

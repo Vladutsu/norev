@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 9.6,
+ "elapsed_seconds": 8.9,
  "calls": [
   {
    "stage": "extract",
@@ -104,7 +104,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed Vlad's math grades, with a focus on recovery classes and an exercise sheet. The teacher and parent agreed on a plan to improve Vlad's performance.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Conduct Recovery Classes\",\n      \"description\": \"Hold recovery classes on Tuesday after school.\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I propose recovery classes on Tuesday, after school.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Prepare Exercise Sheet\",\n      \"description\": \"Prepare an exercise sheet on fractions by Monday.\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I prepare an exercise sheet on fractions until Monday.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Sign Grade Book\",\n      \"description\": \"Sign the grade book by Friday.\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"And please sign the grade book by Friday.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Schedule Recovery Test\",\n      \"description\": \"Schedule the recovery test on November 25th.\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-25\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"The recovery test will be on November 25th.\"\n    }\n  ],\n  \"decisions\": [\n    \"The teacher and parent agreed on a plan to improve Vlad's performance.\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Is there a specific time for the recovery classes?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed Vlad's math grades, with a focus on recovery classes and an exercise sheet. The teacher and parent agreed on a plan to improve Vlad's performance.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Prepare Exercise Sheet\",\n      \"description\": \"Prepare an exercise sheet on fractions by Monday\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I prepare an exercise sheet on fractions until Monday\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Sign Grade Book\",\n      \"description\": \"Sign the grade book by Friday\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"And please sign the grade book by Friday\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Ensure Attendance at Recovery Classes\",\n      \"description\": \"Ensure Vlad attends all recovery classes\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll make sure he comes to all classes\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Conduct Recovery Test\",\n      \"description\": \"Conduct the recovery test on November 25th\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-25\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"The recovery test will be on November 25th\"\n    }\n  ],\n  \"decisions\": [],\n  \"risks\": [],\n  \"follow_up_questions\": []\n}"
   }
  ],
  "result": {
@@ -112,63 +112,59 @@
   "proposed_actions": [
    {
     "id": "A1",
-    "title": "Conduct Recovery Classes",
-    "description": "Hold recovery classes on Tuesday after school.",
+    "title": "Prepare Exercise Sheet",
+    "description": "Prepare an exercise sheet on fractions by Monday",
     "owner": "Mrs. Dumitrescu",
-    "due_date": "2026-11-10",
+    "due_date": "2026-11-09",
     "priority": "medium",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
-    "transcript_excerpt": "I propose recovery classes on Tuesday, after school.",
+    "transcript_excerpt": "I prepare an exercise sheet on fractions until Monday",
     "needs_review": false
    },
    {
     "id": "A2",
-    "title": "Prepare Exercise Sheet",
-    "description": "Prepare an exercise sheet on fractions by Monday.",
-    "owner": "Mrs. Dumitrescu",
-    "due_date": "2026-11-09",
-    "priority": "high",
-    "status": "proposed",
-    "dependencies": [],
-    "confidence": 0.0,
-    "transcript_excerpt": "I prepare an exercise sheet on fractions until Monday.",
-    "needs_review": false
-   },
-   {
-    "id": "A3",
     "title": "Sign Grade Book",
-    "description": "Sign the grade book by Friday.",
+    "description": "Sign the grade book by Friday",
     "owner": "Mrs. Dumitrescu",
     "due_date": "2026-11-13",
     "priority": "high",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
-    "transcript_excerpt": "And please sign the grade book by Friday.",
+    "transcript_excerpt": "And please sign the grade book by Friday",
+    "needs_review": false
+   },
+   {
+    "id": "A3",
+    "title": "Ensure Attendance at Recovery Classes",
+    "description": "Ensure Vlad attends all recovery classes",
+    "owner": "Mrs. Dumitrescu",
+    "due_date": null,
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "I'll make sure he comes to all classes",
     "needs_review": false
    },
    {
     "id": "A4",
-    "title": "Schedule Recovery Test",
-    "description": "Schedule the recovery test on November 25th.",
+    "title": "Conduct Recovery Test",
+    "description": "Conduct the recovery test on November 25th",
     "owner": "Mrs. Dumitrescu",
     "due_date": "2026-11-25",
-    "priority": "medium",
+    "priority": "high",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
-    "transcript_excerpt": "The recovery test will be on November 25th.",
+    "transcript_excerpt": "The recovery test will be on November 25th",
     "needs_review": false
    }
   ],
-  "decisions": [
-   "The teacher and parent agreed on a plan to improve Vlad's performance."
-  ],
+  "decisions": [],
   "risks": [],
-  "follow_up_questions": [
-   "Is there a specific time for the recovery classes?"
-  ]
+  "follow_up_questions": []
  }
 }

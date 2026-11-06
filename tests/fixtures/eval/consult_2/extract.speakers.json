@@ -1,10 +1,10 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 19.0,
+ "elapsed_seconds": 18.2,
  "calls": [
   {
    "stage": "extract",
-   "prompt": "The session took place today, 2026-11-06 (Friday).\nCalendar for resolving dates:\n  Fri 2026-11-06 (today), Sat 2026-11-07 (tomorrow), Sun 2026-11-08, Mon 2026-11-09, Tue 2026-11-10, Wed 2026-11-11, Thu 2026-11-12\n  Fri 2026-11-13, Sat 2026-11-14, Sun 2026-11-15, Mon 2026-11-16, Tue 2026-11-17, Wed 2026-11-18, Thu 2026-11-19\n  Fri 2026-11-20, Sat 2026-11-21, Sun 2026-11-22, Mon 2026-11-23, Tue 2026-11-24, Wed 2026-11-25, Thu 2026-11-26\n  Fri 2026-11-27, Sat 2026-11-28, Sun 2026-11-29, Mon 2026-11-30, Tue 2026-12-01, Wed 2026-12-02, Thu 2026-12-03\n  Fri 2026-12-04, Sat 2026-12-05, Sun 2026-12-06, Mon 2026-12-07, Tue 2026-12-08, Wed 2026-12-09, Thu 2026-12-10\n  Fri 2026-12-11, Sat 2026-12-12, Sun 2026-12-13, Mon 2026-12-14, Tue 2026-12-15, Wed 2026-12-16, Thu 2026-12-17\n\nYou extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a\nSession (one recorded conversation) and must extract every Proposed Action: a concrete action someone has\nto carry out. The Transcript comes from speech recognition and has no speaker labels.\n\nWhat is a Proposed Action:\n- Any commitment or request to do something: \"X, can you ...?\" followed by agreement, \"please ...\",\n  \"I'll do it\".\n- Include small items too.\n- One action per Proposed Action: split \"write the tests and update the docs\" into two Proposed Actions.\n- NOT a Proposed Action: items that were cancelled or dropped (\"we won't do X anymore\" - record it as a decision),\n  ideas nobody committed to, and decisions.\n\nOwner:\n- The person who accepted the action or was asked to do it, written as in the transcript.\n- If a Proposed Action was reassigned (\"Ionuț was supposed to, but Elena takes it over\"), use only the final owner.\n- If the speaker commits themself (\"I'll do it\", \"I'll send it\") and their name is not stated, owner=null.\n  Never pick a person who is only mentioned in the sentence.\n- If assignable team members are provided and the transcript names no owner, choose one only when their\n  skills clearly match the action; use the exact candidate name. Otherwise owner=null.\n\nDue date:\n- Resolve \"today\", \"tomorrow\", weekday names (\"by Monday\", \"on Thursday\") and \"next week\" with the\n  calendar above. \"By Monday\" means that Monday.\n- If no deadline is stated, due_date=null. The date of a later session is not a deadline unless the action\n  has to be finished before it.\n\nRules:\n- Response language: English.\n- Do not invent information that is not present in the transcript.\n- Normalize dates to YYYY-MM-DD.\n- Remove duplicates. Keep actions separate from decisions and risks.\n- transcript_excerpt: the shortest transcript quote (at most 15 words) that shows the action.\n\nReturn ONLY valid JSON, with no extra text, using this schema:\n\n{\n  \"session_summary\": \"maximum 4 sentences\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"infinitive verb + clear objective\",\n      \"description\": \"one short sentence\",\n      \"owner\": \"person name or null\",\n      \"due_date\": \"YYYY-MM-DD or null\",\n      \"priority\": \"high|medium|low\",\n      \"transcript_excerpt\": \"short quote from the transcript\"\n    }\n  ],\n  \"decisions\": [\"decisions made in the session\"],\n  \"risks\": [\"identified blockers or risks\"],\n  \"follow_up_questions\": [\"questions needed for actions with unclear owner/deadline\"]\n}\n\nTranscript:\n[S1] Good day, Mr. Popa. How are you feeling now compared to last time? [S2] Good day. Not very well, Mr. doctor. The cough hasn't gone away and for 3 days I've had a fever, 38 and something in the evening. [S1] Are you coughing with phlegm? [S2] Yes, mostly in the morning, it's green. And I get very tired, barely make it to the second floor. [S1] Do you still smoke? [S2] I've reduced to 10 cigarettes a day, but I haven't quit altogether. [S1] Let me listen to your lungs. Breathe deeply through your mouth. One more time. [S2] It hurts on the right side when I breathe deeply. [S1] I hear some crackles at the base of the right lung. I want a chest X-ray today or at the latest tomorrow. [S2] Where do I get it done? [S1] At the county hospital, radiology. I'll give you the referral form now and you call to schedule an appointment. [S2] Okay. And what about the fever? [S1] I'll prescribe amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days. For the fever take paracetamol, no more than 4 tablets a day. [S2] Can I go to work? I work on a construction site. [S1] No. I'll give you a medical leave of absence for 5 days, up to Tuesday inclusive. Rest and plenty of fluids. [S2] I need a certificate for my employer. [S1] I'll issue the medical leave certificate now, you take it to human resources. [S2] Thank you. And the tests? [S1] Do a complete blood count and C-reactive protein test, tomorrow morning, on an empty stomach. [S2] I'll do them tomorrow. When should I come back? [S1] I'll be waiting on Tuesday, November 10th, at 8:30, with the X-ray and test results. If you have trouble breathing or the fever goes above 39, come immediately or call the emergency department. [S2] I understand. And about smoking? [S1] I recommend the smoking cessation program at the dispensary. I'll put you on the list and the assistant, Mrs. Elena, will call you next week. [S2] Okay, I'll try. Thank you, Mr. doctor.",
+   "prompt": "The session took place today, 2026-11-06 (Friday).\nCalendar for resolving dates:\n  Fri 2026-11-06 (today), Sat 2026-11-07 (tomorrow), Sun 2026-11-08, Mon 2026-11-09, Tue 2026-11-10, Wed 2026-11-11, Thu 2026-11-12\n  Fri 2026-11-13, Sat 2026-11-14, Sun 2026-11-15, Mon 2026-11-16, Tue 2026-11-17, Wed 2026-11-18, Thu 2026-11-19\n  Fri 2026-11-20, Sat 2026-11-21, Sun 2026-11-22, Mon 2026-11-23, Tue 2026-11-24, Wed 2026-11-25, Thu 2026-11-26\n  Fri 2026-11-27, Sat 2026-11-28, Sun 2026-11-29, Mon 2026-11-30, Tue 2026-12-01, Wed 2026-12-02, Thu 2026-12-03\n  Fri 2026-12-04, Sat 2026-12-05, Sun 2026-12-06, Mon 2026-12-07, Tue 2026-12-08, Wed 2026-12-09, Thu 2026-12-10\n  Fri 2026-12-11, Sat 2026-12-12, Sun 2026-12-13, Mon 2026-12-14, Tue 2026-12-15, Wed 2026-12-16, Thu 2026-12-17\n\nYou extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a\nSession (one recorded conversation) and must extract every Proposed Action: a concrete action someone has\nto carry out. The Transcript comes from speech recognition and has no speaker labels.\n\nWhat is a Proposed Action:\n- Any commitment or request to do something: \"X, can you ...?\" followed by agreement, \"please ...\",\n  \"I'll do it\".\n- Include small items too.\n- One action per Proposed Action: split \"write the tests and update the docs\" into two Proposed Actions.\n- NOT a Proposed Action: items that were cancelled or dropped (\"we won't do X anymore\" - record it as a decision),\n  ideas nobody committed to, and decisions.\n\nOwner:\n- The person who accepted the action or was asked to do it, written as in the transcript.\n- If a Proposed Action was reassigned (\"Ionuț was supposed to, but Elena takes it over\"), use only the final owner.\n- If the speaker commits themself (\"I'll do it\", \"I'll send it\") and their name is not stated, owner=null.\n  Never pick a person who is only mentioned in the sentence.\n- If assignable team members are provided and the transcript names no owner, choose one only when their\n  skills clearly match the action; use the exact candidate name. Otherwise owner=null.\n\nDue date:\n- Resolve \"today\", \"tomorrow\", weekday names (\"by Monday\", \"on Thursday\") and \"next week\" with the\n  calendar above. \"By Monday\" means that Monday.\n- If no deadline is stated, due_date=null. The date of a later session is not a deadline unless the action\n  has to be finished before it.\n\nRules:\n- Response language: English.\n- Do not invent information that is not present in the transcript.\n- Normalize dates to YYYY-MM-DD.\n- Remove duplicates. Keep actions separate from decisions and risks.\n- transcript_excerpt: the shortest transcript quote (at most 15 words) that shows the action.\n\nReturn ONLY valid JSON, with no extra text, using this schema:\n\n{\n  \"session_summary\": \"maximum 4 sentences\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"infinitive verb + clear objective\",\n      \"description\": \"one short sentence\",\n      \"owner\": \"person name or null\",\n      \"due_date\": \"YYYY-MM-DD or null\",\n      \"priority\": \"high|medium|low\",\n      \"transcript_excerpt\": \"short quote from the transcript\"\n    }\n  ],\n  \"decisions\": [\"decisions made in the session\"],\n  \"risks\": [\"identified blockers or risks\"],\n  \"follow_up_questions\": [\"questions needed for actions with unclear owner/deadline\"]\n}\n\nTranscript:\n[S1] Good day, Mr. Popa. How are you feeling now compared to last time? [S2] Good day. Not very well, Mr. doctor. The cough hasn't gone away and for 3 days I've had a fever, 38 and something in the evening. [S1] Are you coughing with phlegm? [S2] Yes, mostly in the morning, it's green. And I get very tired, barely make it to the second floor. [S1] Do you still smoke? [S2] I've reduced to 10 cigarettes a day, but I haven't quit altogether. [S1] Let me listen to your lungs. Breathe deeply through your mouth. One more time. [S2] It hurts on the right side when I breathe deeply. [S1] I hear some crackles at the base of the right lung. I want a chest X-ray today or at the latest tomorrow. [S2] Where do I get it done? [S1] At the county hospital, radiology. I'll give you the referral form now and you call to schedule an appointment. [S2] Okay. And what about the fever? [S1] I'll prescribe amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days. For the fever take paracetamol, no more than 4 tablets a day. [S2] Can I go to work? I work on a construction site. [S1] No. I'll give you a medical leave of 5 days, up to Tuesday inclusive. Rest and plenty of fluids. [S2] I need a certificate for my employer. [S1] I'll issue the medical leave certificate now, you take it to human resources. [S2] Thank you. And the tests? [S1] Do a complete blood count and C-reactive protein test, tomorrow morning, on an empty stomach. [S2] I'll do them tomorrow. When should I come back? [S1] I'll be waiting on Tuesday, November 10th, at 8:30, with the X-ray and test results. If you have trouble breathing or the fever goes above 39, come immediately or call the emergency department. [S2] I understand. And about smoking? [S1] I recommend the smoking cessation program at the clinic. I'll put you on the list and the assistant, Mrs. Elena, will call you next week. [S2] Okay, I'll try. Thank you, Mr. doctor.",
    "json_schema": {
     "type": "object",
     "properties": {
@@ -104,11 +104,11 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"A patient reported ongoing symptoms including cough, fever, and fatigue. The doctor recommended a chest X-ray, prescribed medication, and advised a medical leave. The patient was also advised to undergo blood tests and participate in a smoking cessation program.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Schedule Chest X-ray\",\n      \"description\": \"Patient to schedule chest X-ray at county hospital radiology\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I want a chest X-ray today or at the latest tomorrow.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Take Medication\",\n      \"description\": \"Patient to take amoxicillin with clavulanic acid twice daily for 7 days\",\n      \"owner\": \"Patient\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll prescribe amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Take Paracetamol for Fever\",\n      \"description\": \"Patient to take paracetamol no more than 4 tablets a day\",\n      \"owner\": \"Patient\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"For the fever take paracetamol, no more than 4 tablets a day.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Undergo Blood Tests\",\n      \"description\": \"Patient to undergo complete blood count and C-reactive protein test tomorrow morning on an empty stomach\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Do a complete blood count and C-reactive protein test, tomorrow morning, on an empty stomach.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Obtain Medical Leave Certificate\",\n      \"description\": \"Doctor to issue medical leave certificate for the patient\",\n      \"owner\": \"Mr. Popa\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll issue the medical leave certificate now, you take it to human resources.\"\n    },\n    {\n      \"id\": \"A6\",\n      \"title\": \"Attend Follow-up Appointment\",\n      \"description\": \"Patient to attend follow-up appointment on Tuesday, November 10th, at 8:30\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll be waiting on Tuesday, November 10th, at 8:30, with the X-ray and test results.\"\n    },\n    {\n      \"id\": \"A7\",\n      \"title\": \"Enroll in Smoking Cessation Program\",\n      \"description\": \"Patient to enroll in smoking cessation program at the dispensary\",\n      \"owner\": \"Mrs. Elena\",\n      \"due_date\": \"2026-11-14\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll put you on the list and the assistant, Mrs. Elena, will call you next week.\"\n    }\n  ],\n  \"decisions\": [\n    \"Patient to take medical leave for 5 days, up to Tuesday inclusive\",\n    \"Patient advised not to go to work due to health concerns\"\n  ],\n  \"risks\": [\n    \"Patient's symptoms may worsen, requiring immediate medical attention\",\n    \"Patient may not adhere to prescribed medication or follow-up instructions\"\n  ],\n  \"follow_up_questions\": [\n    \"Will the patient be able to attend the follow-up appointment on time?\",\n    \"Is there a specific date for the smoking cessation program to be initiated?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"A patient reported ongoing symptoms including cough, fever, and fatigue. The doctor recommended a chest X-ray, prescribed medication, and advised a medical leave. The patient was also scheduled for blood tests and referred to a smoking cessation program.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Schedule Chest X-ray\",\n      \"description\": \"Patient to schedule chest X-ray at county hospital radiology\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I want a chest X-ray today or at the latest tomorrow.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Take Medication\",\n      \"description\": \"Patient to take amoxicillin with clavulanic acid twice daily for 7 days\",\n      \"owner\": \"Patient\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll prescribe amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Take Paracetamol for Fever\",\n      \"description\": \"Patient to take paracetamol no more than 4 tablets a day\",\n      \"owner\": \"Patient\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"For the fever take paracetamol, no more than 4 tablets a day.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Complete Blood Tests\",\n      \"description\": \"Patient to complete blood tests and C-reactive protein test on an empty stomach\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Do a complete blood count and C-reactive protein test, tomorrow morning, on an empty stomach.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Attend Follow-up Appointment\",\n      \"description\": \"Patient to attend follow-up appointment on Tuesday, November 10th, at 8:30\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll be waiting on Tuesday, November 10th, at 8:30, with the X-ray and test results.\"\n    },\n    {\n      \"id\": \"A6\",\n      \"title\": \"Obtain Medical Leave Certificate\",\n      \"description\": \"Doctor to issue medical leave certificate for the patient\",\n      \"owner\": \"Doctor\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll issue the medical leave certificate now, you take it to human resources.\"\n    },\n    {\n      \"id\": \"A7\",\n      \"title\": \"Enroll in Smoking Cessation Program\",\n      \"description\": \"Patient to enroll in smoking cessation program at the clinic\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-17\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I recommend the smoking cessation program at the clinic. I'll put you on the list and the assistant, Mrs. Elena, will call you next week.\"\n    }\n  ],\n  \"decisions\": [\n    \"Patient to take medical leave for 5 days, up to Tuesday inclusive.\",\n    \"Patient to avoid work due to health concerns.\"\n  ],\n  \"risks\": [\n    \"Patient's symptoms may worsen, requiring immediate medical attention.\"\n  ],\n  \"follow_up_questions\": [\n    \"When will the smoking cessation program be available for the patient?\"\n  ]\n}"
   }
  ],
  "result": {
-  "session_summary": "A patient reported ongoing symptoms including cough, fever, and fatigue. The doctor recommended a chest X-ray, prescribed medication, and advised a medical leave. The patient was also advised to undergo blood tests and participate in a smoking cessation program.",
+  "session_summary": "A patient reported ongoing symptoms including cough, fever, and fatigue. The doctor recommended a chest X-ray, prescribed medication, and advised a medical leave. The patient was also scheduled for blood tests and referred to a smoking cessation program.",
   "proposed_actions": [
    {
     "id": "A1",
@@ -151,8 +151,8 @@
    },
    {
     "id": "A4",
-    "title": "Undergo Blood Tests",
-    "description": "Patient to undergo complete blood count and C-reactive protein test tomorrow morning on an empty stomach",
+    "title": "Complete Blood Tests",
+    "description": "Patient to complete blood tests and C-reactive protein test on an empty stomach",
     "owner": "Patient",
     "due_date": "2026-11-07",
     "priority": "high",
@@ -164,19 +164,6 @@
    },
    {
     "id": "A5",
-    "title": "Obtain Medical Leave Certificate",
-    "description": "Doctor to issue medical leave certificate for the patient",
-    "owner": "Mr. Popa",
-    "due_date": null,
-    "priority": "high",
-    "status": "proposed",
-    "dependencies": [],
-    "confidence": 0.0,
-    "transcript_excerpt": "I'll issue the medical leave certificate now, you take it to human resources.",
-    "needs_review": false
-   },
-   {
-    "id": "A6",
     "title": "Attend Follow-up Appointment",
     "description": "Patient to attend follow-up appointment on Tuesday, November 10th, at 8:30",
     "owner": "Patient",
@@ -189,30 +176,41 @@
     "needs_review": false
    },
    {
-    "id": "A7",
-    "title": "Enroll in Smoking Cessation Program",
-    "description": "Patient to enroll in smoking cessation program at the dispensary",
-    "owner": "Mrs. Elena",
-    "due_date": "2026-11-14",
+    "id": "A6",
+    "title": "Obtain Medical Leave Certificate",
+    "description": "Doctor to issue medical leave certificate for the patient",
+    "owner": "Doctor",
+    "due_date": null,
     "priority": "medium",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
-    "transcript_excerpt": "I'll put you on the list and the assistant, Mrs. Elena, will call you next week.",
+    "transcript_excerpt": "I'll issue the medical leave certificate now, you take it to human resources.",
+    "needs_review": false
+   },
+   {
+    "id": "A7",
+    "title": "Enroll in Smoking Cessation Program",
+    "description": "Patient to enroll in smoking cessation program at the clinic",
+    "owner": "Patient",
+    "due_date": "2026-11-17",
+    "priority": "medium",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "I recommend the smoking cessation program at the clinic. I'll put you on the list and the assistant, Mrs. Elena, will call you next week.",
     "needs_review": false
    }
   ],
   "decisions": [
-   "Patient to take medical leave for 5 days, up to Tuesday inclusive",
-   "Patient advised not to go to work due to health concerns"
+   "Patient to take medical leave for 5 days, up to Tuesday inclusive.",
+   "Patient to avoid work due to health concerns."
   ],
   "risks": [
-   "Patient's symptoms may worsen, requiring immediate medical attention",
-   "Patient may not adhere to prescribed medication or follow-up instructions"
+   "Patient's symptoms may worsen, requiring immediate medical attention."
   ],
   "follow_up_questions": [
-   "Will the patient be able to attend the follow-up appointment on time?",
-   "Is there a specific date for the smoking cessation program to be initiated?"
+   "When will the smoking cessation program be available for the patient?"
   ]
  }
 }
