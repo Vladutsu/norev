@@ -89,7 +89,7 @@ class RecordedEvaluationTest(unittest.TestCase):
         for folder in evaluate.sessions():
             with self.subTest(folder.name):
                 expected = evaluate._json(folder / "expected.json")
-                self.assertIn("verified_by", expected)
+                self.assertTrue(expected.get("verified_by"), "expected.json must be checked by a person (#25)")
                 self.assertTrue(all("match" in a and "owner" in a and "due" in a for a in expected["actions"]))
 
 

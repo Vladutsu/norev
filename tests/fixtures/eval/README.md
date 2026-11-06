@@ -25,7 +25,7 @@ Each folder:
 - `translation.json`, `extract.neutral.json`, `extract.speakers.json`: the recorded calls and results.
 
 `variance.json`: the Proposed Actions of extra runs on the same English Transcript, because temperature
-0 still varies between runs. `report.json`: the scores. `thresholds.json`: the proposed limits.
+0 still varies between runs. `report.json`: the scores. `thresholds.json`: the limits, confirmed before the final evaluation; `follow_ups` names the issue of each limit not met.
 
 ```bash
 python tests/fixtures/eval/evaluate.py check        # no model; also in ./check.sh (tests/test_eval_scoring.py)

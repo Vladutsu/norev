@@ -1,6 +1,6 @@
 {
  "thresholds": {
-  "status": "proposed, to confirm before the final evaluation",
+  "status": "confirmed by David-Eti23, 2026-11-06, before the final evaluation",
   "applies_to": "corporate_others (Medical is reported, as an example, without a threshold)",
   "limits": {
    "omission_rate": 0.15,
@@ -9,6 +9,11 @@
    "date_wrong_rate": 0.1,
    "cancelled_listed": 0,
    "numbers_changed": 0
+  },
+  "follow_ups": {
+   "owner_wrong_rate": "#40",
+   "date_wrong_rate": "#41",
+   "numbers_changed (medical)": "#39"
   }
  },
  "variants": {
@@ -131,11 +136,13 @@
       {
        "id": "112-becomes-122",
        "what": "The translation must keep the emergency number 112",
+       "follow_up": "#39",
        "solved": false
       },
       {
        "id": "follow-up-missed",
        "what": "The follow-up visit on 13 November must be found",
+       "follow_up": null,
        "solved": true
       }
      ]
@@ -297,6 +304,7 @@
       {
        "id": "surgery-appointment-owner",
        "what": "The surgery appointment Ana said she would book must have Ana as owner",
+       "follow_up": "#40",
        "solved": false
       }
      ]
@@ -730,11 +738,13 @@
       {
        "id": "112-becomes-122",
        "what": "The translation must keep the emergency number 112",
+       "follow_up": "#39",
        "solved": false
       },
       {
        "id": "follow-up-missed",
        "what": "The follow-up visit on 13 November must be found",
+       "follow_up": null,
        "solved": true
       }
      ]
@@ -904,6 +914,7 @@
       {
        "id": "surgery-appointment-owner",
        "what": "The surgery appointment Ana said she would book must have Ana as owner",
+       "follow_up": "#40",
        "solved": false
       }
      ]
