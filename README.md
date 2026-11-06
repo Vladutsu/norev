@@ -89,6 +89,21 @@ one, so it refuses `others`. Speaker ids
 Nothing is written to `Outputs/` except `llama-server.log`. The old stages
 `python -m LLM.pipeline translate|extract` are deprecated (they write plaintext JSON) and print a warning.
 
+### Desktop app
+
+```bash
+.venv/bin/pip install -r requirements-ui.txt
+.venv/bin/python -m norev.ui           # record (microphone) or import a file, review, approve, export
+.venv/bin/python -m norev.ui --demo    # synthetic examples, reviewed but never executed
+```
+
+Same flow as `norev.sh`, started from the window: the audio is sealed in the store (never written to
+a file), Whisper and diarization run first, then the app starts `llama-server` for the analysis and
+stops it after (same variables as `norev.sh`; a server already running at `LLAMACPP_URL` is used).
+An approved Proposed Action is executed only on **Execute**, through the Workflow executor and the
+Central Processor; a failed one is retried by hand, and a step interrupted by a restart is shown for
+the User to confirm, never sent again on its own. There is no Live Transcript yet (#47).
+
 ## Before pushing
 
 ```bash
@@ -122,3 +137,6 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `WHISPER_DEVICE` | `cuda` | `cuda` or `cpu` (falls back to CPU on GPU OOM) |
 | `LLM_CHUNK_CHARS` | `4000` | Transcript chunk size sent to the extractor |
 | `LLM_PROVIDER` | `llamacpp` | `llamacpp` or `ollama` |
+| `NOREV_EXPORT_DIR` | `~/Documents/norev` | desktop app: where approved Proposed Actions are exported (`local_document`) |
+| `NOREV_INPUT_DEVICE` | system default | desktop app: microphone name, or its number in `python -m norev.adapters.recorder --list-devices` |
+| `NOREV_LLAMA_LOG` | `~/.norev/llama-server.log` | desktop app: llama-server log |

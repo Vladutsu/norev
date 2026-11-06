@@ -6,7 +6,7 @@ which is the only module that holds real `LlmClient` and `Connector` implementat
 from datetime import date, datetime
 from typing import Any, Protocol, runtime_checkable
 
-from norev.core.models import ActionsSnapshot, Domain, AuditEvent, OthersPrompt, ProposedAction, Session, Speaker, SpeakerTurn, Suggestion, Transcript
+from norev.core.models import ActionsSnapshot, Domain, AuditEvent, OthersPrompt, ProposedAction, Session, Speaker, SpeakerTurn, StepRecord, Suggestion, Transcript
 
 
 @runtime_checkable
@@ -84,6 +84,10 @@ class SessionStore(Protocol):
 
     def get_session(self, session_id: str) -> Session | None: ...
 
+    def list_sessions(self) -> list[Session]:
+        """Every stored Session, newest first (Recent Sessions, OPEN-QUESTIONS #8)."""
+        ...
+
     def save_transcript(self, session_id: str, transcript: Transcript) -> str: ...
 
     def load_transcript(self, transcript_ref: str) -> Transcript: ...
@@ -142,6 +146,16 @@ class SessionStore(Protocol):
         ...
 
     def load_speakers(self, session_id: str) -> list[Speaker]: ...
+
+
+@runtime_checkable
+class ExecutionStore(Protocol):
+    """Step states of each action's Workflow (#23); must survive a restart, so an interrupted step
+    stays visible as uncertain. save_step replaces the record of that step only."""
+
+    def load_steps(self, action_id: str) -> dict[str, StepRecord]: ...
+
+    def save_step(self, action_id: str, record: StepRecord) -> None: ...
 
 
 @runtime_checkable

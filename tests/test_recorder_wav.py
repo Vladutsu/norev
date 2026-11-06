@@ -34,6 +34,14 @@ class RecorderWavTest(unittest.TestCase):
         self.assertEqual(self._header(), (1, SAMPLE_WIDTH, SAMPLE_RATE, 2 * SAMPLE_RATE))
         self.assertEqual(self.wav_path.read_bytes()[:4], b"RIFF")
 
+    def test_records_into_memory_without_a_file(self) -> None:
+        import io
+
+        buffer = io.BytesIO()
+        Recorder(buffer, source=[b"\x00\x00" * SAMPLE_RATE]).record()
+        with wave.open(io.BytesIO(buffer.getvalue())) as wav:
+            self.assertEqual((wav.getframerate(), wav.getnframes()), (SAMPLE_RATE, SAMPLE_RATE))
+
     def test_stop_from_another_thread(self) -> None:
         def endless():
             for _ in itertools.count():
