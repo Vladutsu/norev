@@ -1,0 +1,3 @@
+# Industry-agnostic core; each industry is a pluggable Domain
+
+The core (recording, live transcription, speaker attribution, extraction pipeline, approval, execution, Central Processor) knows nothing about any industry. Everything industry-specific (speaker Roles, Action Types, extraction instructions, Suggestion rules) lives in a Domain. Medical (family doctor) is the only Domain for now. Journalism (an article drafted from an interview) is an illustrative example of how far apart Domains can be, not a planned deliverable. Each Domain also chooses its own LLM, because no single local model is good at every industry and at Romanian. The existing code hard-codes a project-management prompt and task schema; that must move out of the core into a Domain.
