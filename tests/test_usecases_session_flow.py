@@ -10,27 +10,19 @@ from norev.adapters.domains.loader import load_domain
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.store.encrypted import KEY_BYTES, EncryptedStore
 from norev.core.models import (
-    ActionStatus, ActionType, Domain, DomainField, Role, Segment, Session, SpeakerTurn, Transcript, Workflow,
-    WorkflowStep,
+    ActionStatus, Domain, OthersPrompt, Segment, Session, SpeakerTurn, Transcript,
 )
 from norev.testing.fakes import FakeActionExtractor, FakeDiarizer, FakeLlmClient, FakeTranscriber, InMemorySessionStore
+from norev.usecases.others_prompt import confirm
 from norev.usecases.session_flow import run_session, select_domain
 from norev.usecases.transcribe import transcribe_session
 
 DOMAINS = Path(__file__).resolve().parents[1] / "domains"
 CORPORATE = load_domain(DOMAINS / "corporate")
 MEDICAL = load_domain(DOMAINS / "medical")
-# shortcut: stand-in until #21 adds domains/others with the User's confirmed prompt
-OTHERS = Domain(
-    name="others", label="Others", model="others.gguf", context=4096,
-    roles=(Role("user", "The User."),),
-    action_types=(ActionType("follow_up", (DomainField("note", "string", False),), Workflow((
-        WorkflowStep("save_document", connector="local_document", sends=("title", "description", "note")),
-        WorkflowStep("save_result"),
-    ))),),
-    prompt_template="Transcript:\n{{transcript}}\nActions:\n{{proposed_actions}}",
-    answer_schema={"type": "object"},
-)
+OTHERS = load_domain(DOMAINS / "others")
+OTHERS_PROMPT = confirm(OTHERS, "Weekly call with a contractor about a kitchen renovation.",
+                        "- Keep what the contractor or the User agreed to do, with dates.")
 
 AUDIO = "audio-1"
 SPOKEN = Transcript(
@@ -50,7 +42,7 @@ GENERIC = {"session_summary": "", "proposed_actions": [
 ANSWERS = {
     "corporate": {"proposed_actions": [{"id": "s1-1", "action_type": "work_item", "fields": {"deliverable": "report"}}]},
     "medical": {"proposed_actions": [{"id": "s1-1", "action_type": "schedule_visit", "fields": {"reason": "Report"}}]},
-    "others": {"proposed_actions": [{"id": "s1-1", "action_type": "follow_up", "fields": {"note": "report"}}]},
+    "others": {"proposed_actions": [{"id": "s1-1", "action_type": "action_item", "fields": {"deliverable": "report"}}]},
 }
 
 
@@ -58,10 +50,13 @@ class Flow:
     """One Session transcribed with Speakers by #24's use case; `llm` answers the translation
     first, then the Domain stage."""
 
-    def __init__(self, domain: Domain, llm_answers: list, spoken: Transcript = SPOKEN, store=None) -> None:
+    def __init__(self, domain: Domain, llm_answers: list, spoken: Transcript = SPOKEN, store=None,
+                 others_prompt: OthersPrompt | None = OTHERS_PROMPT) -> None:
         self.domain = domain
         self.store = store or InMemorySessionStore()
-        self.store.save_session(Session("s1", datetime(2026, 11, 6, 10, tzinfo=timezone.utc), domain.name, audio_ref=AUDIO))
+        prompt = others_prompt if domain.name == "others" else None  # confirmed by the User before recording
+        self.store.save_session(Session("s1", datetime(2026, 11, 6, 10, tzinfo=timezone.utc), domain.name,
+                                        audio_ref=AUDIO, others_prompt=prompt))
         transcribe_session("s1", self.store, FakeTranscriber({AUDIO: spoken}), FakeDiarizer({AUDIO: TURNS}))
         self.llm = FakeLlmClient([a if isinstance(a, str) else json.dumps(a) for a in llm_answers])
         self.extractor = FakeActionExtractor(GENERIC)
@@ -78,9 +73,8 @@ class SelectDomainTest(unittest.TestCase):
         self.assertEqual(select_domain(), "corporate")
         self.assertEqual(select_domain("medical"), "medical")
 
-    def test_others_is_recognized_but_needs_21(self):
-        with self.assertRaisesRegex(ValueError, "#21"):
-            select_domain("others")
+    def test_others_is_explicit(self):
+        self.assertEqual(select_domain("others"), "others")
 
     def test_unknown_domain_is_an_error_not_a_fallback(self):
         for name in ("Corporate", "", "finance"):

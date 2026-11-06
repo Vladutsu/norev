@@ -1,0 +1,54 @@
+# Others Domain: any conversation, guided by a prompt the User confirms (#21). Format: domains/README.md
+# The Action Type, its fields, the Workflow and the answer schema are fixed; the User's context only
+# changes the instructions that fill {{user_instructions}} in the Domain stage prompt.
+format = 1
+name = "others"
+label = "Others"
+
+[model]
+# Candidate only: the generic model (norev.sh default), not yet validated for this Domain (#25).
+gguf = "Qwen3-8B-Q4_K_M.gguf"
+context = 8192
+
+[prompts]
+domain_stage = "prompts/domain_stage.md"
+domain_stage_schema = "prompts/domain_stage.schema.json"
+# Others only: the prompt and schema the local model uses to write the context-specific instructions
+instructions = "prompts/instructions.md"
+instructions_schema = "prompts/instructions.schema.json"
+
+[[roles]]
+name = "organizer"
+label = "Organizator"
+description = "The person who records the Session (the User)."
+
+[[roles]]
+name = "participant"
+label = "Participant"
+description = "Anyone else who takes part in the conversation."
+
+[[action_types]]
+name = "action_item"
+label = "Acțiune"
+description = "Something someone committed to or was asked to do and accepted."
+
+[[action_types.fields]]
+name = "deliverable"
+label = "Rezultat"
+type = "string"
+required = false
+description = "The concrete output of the action (a document, a call, a payment, a booking), only if it was said."
+
+[[action_types.workflow]]
+name = "build_document"
+label = "Pregătește documentul"
+
+[[action_types.workflow]]
+name = "save_document"
+label = "Salvează documentul local"
+connector = "local_document"
+sends = ["title", "description", "owner", "due_date", "deliverable", "transcript_excerpt"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"

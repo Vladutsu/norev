@@ -50,7 +50,7 @@ class SessionToLocalDocumentTest(unittest.TestCase):
         return WorkflowExecutor(self.processor, flow.store, InMemoryExecutionStore(), domain, local).execute("s1", "s1-1")
 
     def test_corporate_and_others_end_in_an_approved_local_document(self):
-        for domain, expected in ((CORPORATE, "deliverable: report"), (OTHERS, "note: report")):
+        for domain, expected in ((CORPORATE, "deliverable: report"), (OTHERS, "deliverable: report")):
             with self.subTest(domain=domain.name):
                 self.audit.events.clear()
                 for f in os.listdir(self.export_dir):

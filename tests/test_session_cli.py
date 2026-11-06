@@ -93,7 +93,7 @@ class SessionCliTest(unittest.TestCase):
         self.assertIn("S2] Bine, mulțumesc.", out)
 
     def test_unknown_domain_and_others_are_refused_before_anything_runs(self):
-        for domain, message in (("finance", "unknown Domain"), ("others", "#21")):
+        for domain, message in (("finance", "unknown Domain"), ("others", "confirmed prompt")):
             with self.subTest(domain=domain):
                 code, out, err = self._main("transcribe", str(self.audio), "--domain", domain)
                 self.assertEqual((code, out), (2, ""))
