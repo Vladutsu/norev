@@ -6,7 +6,7 @@ import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from norev.adapters.store.encrypted import (
@@ -14,6 +14,7 @@ from norev.adapters.store.encrypted import (
     StoreCorrupted,
     StoreKeyError,
     StoreSettings,
+    _action_dict,
     create_key_file,
     open_store,
     read_key_file,
@@ -248,6 +249,14 @@ class StoreContract:
         self.store.save_speakers("s1", [Speaker("S1", "caregiver", role_confirmed=True)])  # a new User correction wins
         self.assertEqual(self.store.load_speakers("s1"), [Speaker("S1", "caregiver", True)])
 
+    def test_who_approved_and_when_round_trip(self):
+        action = approved_action()
+        action.approved_by, action.approved_at = "local:ana", datetime(2026, 11, 6, 9, 30, tzinfo=timezone.utc)
+        self.store.save_session(a_session())
+        self.store.save_actions("s1", [action], expected_revision=0)
+        [loaded] = self.store.load_actions("s1")
+        self.assertEqual((loaded.approved_by, loaded.approved_at), ("local:ana", action.approved_at))
+
     def test_audit_keeps_events_in_order(self):
         first, second = an_event(), AuditEvent(AT, "s1-2", "local_document", {"n": 2}, "user")
         self.audit.record(first)
@@ -366,6 +375,15 @@ class EncryptedStoreTest(TempStoreCase):
             self.store.load_actions("s1")
         self.assertIn("actions", str(caught.exception))
         self.assertNotIn(SENTINEL, str(caught.exception))
+
+    def test_an_action_saved_before_approved_at_existed_still_loads(self):
+        self.store.save_session(a_session())
+        record = _action_dict(approved_action())
+        del record["approved_at"]
+        self.store._put("actions", "s1", [record])  # as written before #18
+        [loaded] = self.store.load_actions("s1")
+        self.assertIsNone(loaded.approved_at)
+        self.assertEqual(loaded.approved_payload, approved_action().approved_payload)
 
     def test_a_record_moved_to_another_id_is_refused(self):
         self.store.save_session(a_session("s1"))

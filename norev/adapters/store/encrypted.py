@@ -367,11 +367,13 @@ def _aad(kind: str, record_id: str) -> bytes:
 def _action_dict(action: ProposedAction) -> dict[str, Any]:
     d = dataclasses.asdict(action)
     d["due_date"] = action.due_date.isoformat() if action.due_date else None
+    d["approved_at"] = action.approved_at.isoformat() if action.approved_at else None
     d["status"] = action.status.value
     return d
 
 
 def _action(d: dict[str, Any]) -> ProposedAction:
     d["due_date"] = date.fromisoformat(d["due_date"]) if d["due_date"] else None
+    d["approved_at"] = datetime.fromisoformat(d["approved_at"]) if d.get("approved_at") else None
     d["status"] = ActionStatus(d["status"])
     return ProposedAction(**d)
