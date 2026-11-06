@@ -78,6 +78,9 @@ class WhisperCliApp:
                 language=language,
                 llm_provider=runtime_inputs.llm_provider or None,
                 llm_model=runtime_inputs.llm_model or None,
+                # The staged pipeline (norev.sh) runs the LLM steps itself, after Whisper exits
+                skip_llm=os.getenv("WHISPER_SKIP_LLM", "0").strip().lower()
+                not in {"0", "false", "no", "off"},
             )
             output_path = self._media_service.output_json_path_for_input(file_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)

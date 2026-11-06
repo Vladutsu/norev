@@ -1,64 +1,139 @@
 import json
 import os
+from datetime import date, timedelta
 
 
 PM_TASK_PROMPT = """
-You are a senior Project Manager with a rigorous, execution-focused mindset. You receive a meeting transcript and must extract actionable tasks.
+You are a senior Project Manager with a rigorous, execution-focused mindset. You receive (part of) a
+meeting transcript and must extract every action item. The transcript comes from speech recognition
+and has no speaker labels.
 
-Objective:
-1) Identify only concrete actions (not vague ideas).
-2) Convert each action into a clear, executable task.
-3) Do not invent information that is not present in the transcript.
+What is a task:
+- Any commitment or request to do something: "X, can you ...?" followed by agreement, "please send ...",
+  "I'll do it", "I'll ask IT today".
+- Include small items too: giving someone access, sending a draft, checking figures, writing rules,
+  calling someone, submitting something for approval.
+- One action per task: split "write the tests and update the docs" into two tasks.
+- NOT a task: items that were cancelled or dropped ("we won't do X anymore" - record it as a decision),
+  ideas nobody committed to, and decisions.
+
+Owner:
+- The person who accepted the task or was asked to do it, written as in the transcript.
+- If a task was reassigned ("Ionuț was supposed to, but Elena takes it over"), use only the final owner.
+- If the speaker commits themself ("I'll do it", "I'll send it") and their name is not stated, owner=null.
+  Never pick a person who is only mentioned in the sentence.
+- If assignable team members are provided and the transcript names no owner, choose one only when their
+  skills clearly match the task; use the exact candidate name. Otherwise owner=null.
+
+Due date:
+- Resolve "today", "tomorrow", weekday names ("by Monday", "on Thursday") and "next week" with the
+  calendar above. "By Monday" means that Monday.
+- If no deadline is stated, due_date=null. The date of a later meeting is not a deadline unless the task
+  has to be finished before it.
 
 Rules:
 - Response language: English.
-- If the transcript explicitly names an owner, use that person.
-- If the owner is not explicit and assignable team members are provided, choose an owner only when one member's skills clearly match the task.
-- When choosing from assignable team members, use the exact candidate name.
-- If there is no clear skill match or the match is ambiguous, set owner=null.
-- If the deadline is not explicit, set due_date=null.
-- Normalize dates to YYYY-MM-DD when available.
-- Be exhaustive: capture every concrete action item in the transcript.
-- Split combined statements into separate tasks when they refer to different actions.
-- Do not merge different actions into one broad task.
-- Remove duplicates.
-- Separate tasks from decisions and risks.
-- Add a confidence score between 0 and 1.
-- For each task, include a short evidence quote from the transcript.
+- Do not invent information that is not present in the transcript.
+- Normalize dates to YYYY-MM-DD.
+- Remove duplicates. Keep tasks separate from decisions and risks.
+- evidence_quote: the shortest transcript quote (at most 15 words) that shows the task.
 
 Return ONLY valid JSON, with no extra text, using this schema:
 
 {
-  "meeting_summary": "maximum 5 sentences",
+  "meeting_summary": "maximum 4 sentences",
   "tasks": [
     {
       "id": "T1",
       "title": "infinitive verb + clear objective",
-      "description": "specific expected deliverable",
+      "description": "one short sentence",
       "owner": "person name or null",
       "due_date": "YYYY-MM-DD or null",
       "priority": "high|medium|low",
-      "status": "open",
-      "dependencies": ["task id or description"],
-      "confidence": 0.0,
-      "evidence_quote": "short relevant quote from transcript"
+      "evidence_quote": "short quote from the transcript"
     }
   ],
-  "decisions": [
-    "decisions made in the meeting"
-  ],
-  "risks": [
-    "identified blockers or risks"
-  ],
-  "follow_up_questions": [
-    "questions needed for tasks with unclear owner/deadline"
-  ]
+  "decisions": ["decisions made in the meeting"],
+  "risks": ["identified blockers or risks"],
+  "follow_up_questions": ["questions needed for tasks with unclear owner/deadline"]
 }
 
 Transcript:
 {{TRANSCRIPT}}
 """.strip()
 
+
+_TEXT = {"type": "string", "maxLength": 400}
+_NULLABLE = {"type": ["string", "null"], "maxLength": 200}
+
+# Decoding constraint for PM_TASK_PROMPT. Plain JSON mode lets a model answer "{}" (Qwen3 did, on
+# whole meetings); with required keys and a non-empty summary that is no longer a valid answer.
+PM_TASK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "meeting_summary": {"type": "string", "minLength": 10, "maxLength": 1000},
+        "tasks": {
+            "type": "array",
+            "maxItems": 40,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "maxLength": 10},
+                    "title": {"type": "string", "minLength": 3, "maxLength": 200},
+                    "description": _TEXT,
+                    "owner": _NULLABLE,
+                    "due_date": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+                    "priority": {"enum": ["high", "medium", "low"]},
+                    "evidence_quote": _TEXT,
+                },
+                "required": ["id", "title", "description", "owner", "due_date", "priority", "evidence_quote"],
+                "additionalProperties": False,
+            },
+        },
+        "decisions": {"type": "array", "items": _TEXT, "maxItems": 20},
+        "risks": {"type": "array", "items": _TEXT, "maxItems": 20},
+        "follow_up_questions": {"type": "array", "items": _TEXT, "maxItems": 20},
+    },
+    "required": ["meeting_summary", "tasks", "decisions", "risks", "follow_up_questions"],
+    "additionalProperties": False,
+}
+
+GAP_INSTRUCTION = """
+SECOND PASS. These action items were already extracted from this transcript:
+{{EXISTING}}
+
+Find only the action items that are MISSING from that list, following the same rules. Look especially
+for small ones: giving access, sending a draft, checking or reviewing something, calling someone,
+submitting something, writing rules or documentation. Do not repeat or reword items already listed.
+If nothing is missing, return an empty "tasks" list.
+""".strip()
+
+GAP_SCHEMA = {
+    "type": "object",
+    "properties": {"tasks": PM_TASK_SCHEMA["properties"]["tasks"]},
+    "required": ["tasks"],
+    "additionalProperties": False,
+}
+
+SUMMARY_PROMPT = """
+Write the summary of one meeting in English, at most 4 sentences, from the summaries of its consecutive
+parts and its decisions below. Use only this information.
+
+Part summaries:
+{{SUMMARIES}}
+
+Decisions:
+{{DECISIONS}}
+
+Return ONLY valid JSON: {"meeting_summary": "..."}
+""".strip()
+
+SUMMARY_SCHEMA = {
+    "type": "object",
+    "properties": {"meeting_summary": PM_TASK_SCHEMA["properties"]["meeting_summary"]},
+    "required": ["meeting_summary"],
+    "additionalProperties": False,
+}
 
 class DeepSeekPromptBuilder:
     def __init__(
@@ -70,7 +145,9 @@ class DeepSeekPromptBuilder:
         self._assignee_candidates = assignee_candidates or []
 
     def build(self, previous_json: str, new_chunk: str) -> str:
-        base_prompt = self._template.replace("{{TRANSCRIPT}}", new_chunk.strip())
+        base_prompt = f"{self._date_context()}\n\n" + self._template.replace(
+            "{{TRANSCRIPT}}", new_chunk.strip()
+        )
         assignee_context = self._format_assignee_context()
         if assignee_context:
             base_prompt = f"{assignee_context}\n\n{base_prompt}"
@@ -88,6 +165,37 @@ class DeepSeekPromptBuilder:
             "and deduplicate tasks. Return ONLY valid JSON.\n\n"
             f"Previous JSON:\n{self._compact_json(previous_json)}\n\n"
             f"{base_prompt}"
+        )
+
+    def build_gap(self, chunk: str, existing_tasks: list[dict]) -> str:
+        lines = [
+            f"- {t.get('title')} (owner: {t.get('owner') or '-'}, due: {t.get('due_date') or '-'})"
+            for t in existing_tasks
+            if isinstance(t, dict) and t.get("title")
+        ]
+        return self.build("", chunk) + "\n\n" + GAP_INSTRUCTION.replace(
+            "{{EXISTING}}", "\n".join(lines) or "(none)"
+        )
+
+    @staticmethod
+    def _date_context() -> str:
+        """Today's date plus a calendar of the coming weeks. Small models get the year of
+        "Friday, 13 November" wrong without the date and the day of "by Monday" wrong without
+        the calendar; a lookup table is far more reliable than date arithmetic."""
+        raw = os.getenv("LLM_MEETING_DATE", "").strip()
+        today = date.fromisoformat(raw) if raw else date.today()
+        labels = {0: " (today)", 1: " (tomorrow)"}
+        days = [today + timedelta(days=offset) for offset in range(42)]
+        calendar = "\n".join(
+            "  " + ", ".join(
+                f"{d.strftime('%a')} {d.isoformat()}{labels.get((d - today).days, '')}"
+                for d in days[week:week + 7]
+            )
+            for week in range(0, len(days), 7)
+        )
+        return (
+            f"The meeting took place today, {today.isoformat()} ({today.strftime('%A')}).\n"
+            f"Calendar for resolving dates:\n{calendar}"
         )
 
     def _compact_json(self, raw_json: str) -> str:
