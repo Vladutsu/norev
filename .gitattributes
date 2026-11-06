@@ -1,2 +1,5 @@
 # Shell scripts must keep LF, or bash fails on \r (container, WSL, CI)
 *.sh text eol=lf
+
+# Windows batch files need CRLF
+*.cmd text eol=crlf
