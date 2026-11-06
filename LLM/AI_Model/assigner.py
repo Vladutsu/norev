@@ -7,12 +7,12 @@ from LLM.AI_Model.prompt import AssignmentPromptBuilder
 from LLM.AI_Model.settings import DeepSeekSettings
 
 
-class TaskAssigner:
+class ProposedActionAssigner:
     """Second DeepSeek pass.
 
-    Takes the tasks already extracted into the session JSON plus every team
+    Takes the actions already extracted into the session JSON plus every team
     member's skills (pulled from the database) and asks the model to assign each
-    task to the best-fit member, then writes the chosen owner back into the JSON.
+    action to the best-fit member, then writes the chosen owner back into the JSON.
     """
 
     def __init__(
@@ -57,15 +57,15 @@ class TaskAssigner:
         if not isinstance(payload, dict):
             return False
 
-        tasks = payload.get("tasks")
-        if not isinstance(tasks, list) or not tasks:
+        actions = payload.get("proposed_actions")
+        if not isinstance(actions, list) or not actions:
             return False
 
-        assignment_map = self._request_assignments(tasks)
+        assignment_map = self._request_assignments(actions)
         if not assignment_map:
             return False
 
-        if not self._apply_assignments(tasks, assignment_map):
+        if not self._apply_assignments(actions, assignment_map):
             return False
 
         path.write_text(
@@ -74,8 +74,8 @@ class TaskAssigner:
         )
         return True
 
-    def _request_assignments(self, tasks: list[dict[str, Any]]) -> dict[str, dict[str, Any] | None]:
-        prompt = self._prompt_builder.build(tasks, self._candidates)
+    def _request_assignments(self, actions: list[dict[str, Any]]) -> dict[str, dict[str, Any] | None]:
+        prompt = self._prompt_builder.build(actions, self._candidates)
         try:
             generated = self._client.generate_json(prompt, model=self._settings.model)
             payload = json.loads(generated)
@@ -90,10 +90,10 @@ class TaskAssigner:
         for item in assignments:
             if not isinstance(item, dict):
                 continue
-            task_id = self._normalize_text(item.get("task_id"))
-            if not task_id:
+            action_id = self._normalize_text(item.get("action_id"))
+            if not action_id:
                 continue
-            resolved[task_id] = self._resolve_candidate(item)
+            resolved[action_id] = self._resolve_candidate(item)
         return resolved
 
     def _resolve_candidate(self, item: dict[str, Any]) -> dict[str, Any] | None:
@@ -109,30 +109,30 @@ class TaskAssigner:
 
     def _apply_assignments(
         self,
-        tasks: list[dict[str, Any]],
+        actions: list[dict[str, Any]],
         assignment_map: dict[str, dict[str, Any] | None],
     ) -> bool:
         changed = False
-        for task in tasks:
-            if not isinstance(task, dict):
+        for action in actions:
+            if not isinstance(action, dict):
                 continue
-            task_id = self._normalize_text(task.get("id"))
-            if not task_id or task_id not in assignment_map:
+            action_id = self._normalize_text(action.get("id"))
+            if not action_id or action_id not in assignment_map:
                 continue
 
-            candidate = assignment_map[task_id]
+            candidate = assignment_map[action_id]
             if candidate is None:
                 continue
 
             if (
-                task.get("owner") == candidate["name"]
-                and task.get("assigned_user_id") == candidate["id"]
+                action.get("owner") == candidate["name"]
+                and action.get("assigned_user_id") == candidate["id"]
             ):
                 continue
 
-            task["owner"] = candidate["name"]
-            task["assigned_user_id"] = candidate["id"]
-            task["assignment_reason"] = "llm-skill-match"
+            action["owner"] = candidate["name"]
+            action["assigned_user_id"] = candidate["id"]
+            action["assignment_reason"] = "llm-skill-match"
             changed = True
         return changed
 

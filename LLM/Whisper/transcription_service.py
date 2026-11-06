@@ -25,24 +25,24 @@ class TranscriptionService:
         assignee_candidates: list[dict] | None = None,
     ) -> dict:
         total_started_at = time.perf_counter()
-        pm_tasks_output_path = deepseek.output_path_for_input(file_path, self._settings.output_dir)
+        proposed_actions_output_path = deepseek.output_path_for_input(file_path, self._settings.output_dir)
         llm_settings = self._resolve_llm_settings(
             llm_provider=llm_provider,
             llm_model=llm_model,
         )
 
         transcribe_started_at = time.perf_counter()
-        out_segments, full_text, transcript_items_for_tasks, info = (
+        out_segments, full_text, transcript_items_for_actions, info = (
             self._transcribe_segments_with_recovery(file_path, language, on_segment=on_segment)
         )
         transcription_elapsed = time.perf_counter() - transcribe_started_at
 
         if skip_llm:
-            pm_tasks_error, pm_tasks_elapsed = None, 0.0
+            proposed_actions_error, proposed_actions_elapsed = None, 0.0
         else:
-            pm_tasks_error, pm_tasks_elapsed = self._extract_pm_tasks(
-                pm_tasks_output_path=pm_tasks_output_path,
-                transcript_items=transcript_items_for_tasks,
+            proposed_actions_error, proposed_actions_elapsed = self._extract_proposed_actions(
+                proposed_actions_output_path=proposed_actions_output_path,
+                transcript_items=transcript_items_for_actions,
                 llm_settings=llm_settings,
                 assignee_candidates=assignee_candidates,
             )
@@ -57,8 +57,8 @@ class TranscriptionService:
             "runtime_compute_type": self._model_manager.runtime_compute_type,
             "model": self._settings.model_name,
             "input_file": file_path,
-            "pm_tasks_output_file": str(pm_tasks_output_path),
-            "pm_tasks_error": pm_tasks_error,
+            "proposed_actions_output_file": str(proposed_actions_output_path),
+            "proposed_actions_error": proposed_actions_error,
             "llm_provider": llm_settings.provider,
             "llm_model": llm_settings.model,
             "llm_generation_options": {
@@ -70,7 +70,7 @@ class TranscriptionService:
                 "keep_alive": llm_settings.keep_alive,
             },
             "transcription_elapsed_seconds": round(transcription_elapsed, 3),
-            "pm_tasks_elapsed_seconds": round(pm_tasks_elapsed, 3),
+            "proposed_actions_elapsed_seconds": round(proposed_actions_elapsed, 3),
             "total_elapsed_seconds": round(total_elapsed, 3),
         }
 
@@ -99,13 +99,13 @@ class TranscriptionService:
     ) -> tuple[list[dict[str, float | str]], list[str], list[str]]:
         out_segments: list[dict[str, float | str]] = []
         full_text: list[str] = []
-        transcript_items_for_tasks: list[str] = []
+        transcript_items_for_actions: list[str] = []
         for seg in segments:
             txt = seg.text.strip()
             if not txt:
                 continue
             full_text.append(txt)
-            transcript_items_for_tasks.append(txt)
+            transcript_items_for_actions.append(txt)
             out_segments.append(
                 {
                     "start": round(float(seg.start), 3),
@@ -113,11 +113,11 @@ class TranscriptionService:
                     "text": txt,
                 }
             )
-        return out_segments, full_text, transcript_items_for_tasks
+        return out_segments, full_text, transcript_items_for_actions
 
-    def _extract_pm_tasks(
+    def _extract_proposed_actions(
         self,
-        pm_tasks_output_path: Path,
+        proposed_actions_output_path: Path,
         transcript_items: list[str],
         llm_settings: deepseek.DeepSeekSettings,
         assignee_candidates: list[dict] | None = None,
@@ -127,21 +127,21 @@ class TranscriptionService:
 
         started_at = time.perf_counter()
         try:
-            extractor = deepseek.RealtimeTaskExtractor(
-                output_path=pm_tasks_output_path,
+            extractor = deepseek.RealtimeActionExtractor(
+                output_path=proposed_actions_output_path,
                 settings=llm_settings,
                 assignee_candidates=assignee_candidates,
             )
         except Exception as exc:
             elapsed = time.perf_counter() - started_at
-            return f"Could not start DeepSeek task extractor: {exc}", elapsed
+            return f"Could not start DeepSeek action extractor: {exc}", elapsed
 
         try:
             for text in transcript_items:
                 extractor.push_segment(text)
             extractor.close()
-            self._assign_pm_tasks(
-                pm_tasks_output_path=pm_tasks_output_path,
+            self._assign_proposed_actions(
+                proposed_actions_output_path=proposed_actions_output_path,
                 llm_settings=llm_settings,
                 assignee_candidates=assignee_candidates,
             )
@@ -149,15 +149,15 @@ class TranscriptionService:
         except Exception as exc:
             return str(exc), time.perf_counter() - started_at
 
-    def _assign_pm_tasks(
+    def _assign_proposed_actions(
         self,
-        pm_tasks_output_path: Path,
+        proposed_actions_output_path: Path,
         llm_settings: deepseek.DeepSeekSettings,
         assignee_candidates: list[dict] | None,
     ) -> None:
-        """Second DeepSeek pass: assign each extracted task to the best-fit team member.
+        """Second DeepSeek pass: assign each extracted action to the best-fit team member.
 
-        Best-effort. A failure here never discards the tasks already extracted.
+        Best-effort. A failure here never discards the actions already extracted.
         """
         if os.getenv("LLM_AUTO_ASSIGN", "1").strip().lower() in {"0", "false", "no", "off"}:
             return
@@ -170,13 +170,13 @@ class TranscriptionService:
         )
 
         try:
-            assigner = deepseek.TaskAssigner(
+            assigner = deepseek.ProposedActionAssigner(
                 settings=assign_settings,
                 assignee_candidates=assignee_candidates,
             )
-            assigner.assign_file(pm_tasks_output_path)
+            assigner.assign_file(proposed_actions_output_path)
         except Exception:
-            # Assignment is optional polish; keep the extracted tasks regardless.
+            # Assignment is optional polish; keep the extracted actions regardless.
             pass
 
     def list_llm_models(self, provider: str | None = None) -> list[str]:

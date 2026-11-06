@@ -12,17 +12,17 @@ from typing import Any
 from LLM.AI_Model.client import LLMClient, OllamaTimeoutError, build_llm_client
 from LLM.AI_Model.prompt import (
     GAP_SCHEMA,
-    PM_TASK_SCHEMA,
+    PROPOSED_ACTION_SCHEMA,
     SUMMARY_PROMPT,
     SUMMARY_SCHEMA,
     DeepSeekPromptBuilder,
 )
 from LLM.AI_Model.settings import DeepSeekSettings
 
-# Words that do not tell two tasks apart ("Fix the iOS issue" == "Fix iOS")
+# Words that do not tell two actions apart ("Fix the iOS issue" == "Fix iOS")
 _TITLE_STOPWORDS = {
     "the", "and", "for", "with", "from", "into", "onto", "about", "all", "any", "new",
-    "issue", "issues", "problem", "problems", "task", "tasks", "item", "items",
+    "issue", "issues", "problem", "problems", "task", "tasks", "action", "actions", "item", "items",
 }
 # Extra filler in decisions/risks ("Decide to...", "Risk of ... could lead to ...")
 _STATEMENT_STOPWORDS = _TITLE_STOPWORDS | {
@@ -37,7 +37,7 @@ _ANONYMOUS_OWNERS = {
 }
 
 
-class RealtimeTaskExtractor:
+class RealtimeActionExtractor:
     def __init__(
         self,
         output_path: Path,
@@ -88,7 +88,7 @@ class RealtimeTaskExtractor:
             self._closed = True
 
         if self._error is not None:
-            raise RuntimeError(f"Realtime task extraction failed: {self._error}") from self._error
+            raise RuntimeError(f"Realtime action extraction failed: {self._error}") from self._error
 
         if self._latest_json.strip():
             self._persist(self._latest_json)
@@ -130,7 +130,7 @@ class RealtimeTaskExtractor:
             with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
                 results = list(pool.map(self._generate_chunk, chunks))
                 summaries = [
-                    s for s in (self._parse_json_object(r).get("meeting_summary") for rs in results for r in rs)
+                    s for s in (self._parse_json_object(r).get("session_summary") for rs in results for r in rs)
                     if isinstance(s, str) and s.strip()
                 ]
                 for chunk_results in results:
@@ -138,8 +138,8 @@ class RealtimeTaskExtractor:
                         self._latest_json = self._merge_results(self._latest_json, generated_json)
 
                 if os.getenv("LLM_SECOND_PASS", "0").strip().lower() not in {"0", "false", "no", "off"}:
-                    existing = self._parse_json_object(self._latest_json).get("tasks", [])
-                    for found in pool.map(lambda c: self._find_missed_tasks(c, existing), chunks):
+                    existing = self._parse_json_object(self._latest_json).get("proposed_actions", [])
+                    for found in pool.map(lambda c: self._find_missed_actions(c, existing), chunks):
                         self._latest_json = self._merge_results(self._latest_json, found)
 
             if len(summaries) > 1:
@@ -149,20 +149,20 @@ class RealtimeTaskExtractor:
             self._persist(self._latest_json)
         return self._latest_json
 
-    def _find_missed_tasks(self, chunk_text: str, existing_tasks: list[dict[str, Any]]) -> str:
+    def _find_missed_actions(self, chunk_text: str, existing_actions: list[dict[str, Any]]) -> str:
         """Second pass: the model sees what was found and looks only for what is missing."""
-        prompt = self._prompt_builder.build_gap(chunk_text, existing_tasks)
+        prompt = self._prompt_builder.build_gap(chunk_text, existing_actions)
         try:
             raw = self._client.generate_json(prompt, model=self._settings.model, json_schema=GAP_SCHEMA)
         except Exception:
             return "{}"  # the first pass already produced a result; a failed check adds nothing
-        tasks = self._parse_json_object(raw).get("tasks", [])
+        actions = self._parse_json_object(raw).get("proposed_actions", [])
         # Found only on a second look: more likely to have the wrong owner, so flag for review.
-        # A task that duplicates a first-pass task merges into it and keeps that task's flag.
-        for task in tasks if isinstance(tasks, list) else []:
-            if isinstance(task, dict):
-                task["needs_review"] = True
-        return json.dumps({"tasks": tasks}, ensure_ascii=False)
+        # A Proposed Action that duplicates a first-pass action merges into it and keeps that action's flag.
+        for action in actions if isinstance(actions, list) else []:
+            if isinstance(action, dict):
+                action["needs_review"] = True
+        return json.dumps({"proposed_actions": actions}, ensure_ascii=False)
 
     def _summarize(self, summaries: list[str]) -> None:
         """Each chunk summarises only its own part; merging keeps the last one. Rewrite it from all."""
@@ -173,17 +173,17 @@ class RealtimeTaskExtractor:
         ).replace("{{DECISIONS}}", "\n".join(f"- {d}" for d in decisions) or "-")
         try:
             raw = self._client.generate_json(prompt, model=self._settings.model, json_schema=SUMMARY_SCHEMA)
-            summary = self._parse_json_object(raw).get("meeting_summary")
+            summary = self._parse_json_object(raw).get("session_summary")
         except Exception:
             summary = None
-        merged["meeting_summary"] = summary.strip() if isinstance(summary, str) and summary.strip() else " ".join(summaries)
+        merged["session_summary"] = summary.strip() if isinstance(summary, str) and summary.strip() else " ".join(summaries)
         self._latest_json = json.dumps(merged, ensure_ascii=False, indent=2)
 
     def _generate_chunk(self, chunk_text: str) -> list[str]:
         """Chunk-local generation; splits the chunk and retries like _process_chunk."""
         prompt = self._prompt_builder.build("", chunk_text)
         try:
-            return [self._client.generate_json(prompt, model=self._settings.model, json_schema=PM_TASK_SCHEMA)]
+            return [self._client.generate_json(prompt, model=self._settings.model, json_schema=PROPOSED_ACTION_SCHEMA)]
         except Exception as exc:
             if self._should_split_chunk(chunk_text, exc):
                 left, right = self._split_chunk(chunk_text)
@@ -207,7 +207,7 @@ class RealtimeTaskExtractor:
         prompt = self._prompt_builder.build(self._latest_json, chunk_text)
         try:
             generated_json = self._client.generate_json(
-                prompt, model=self._settings.model, json_schema=PM_TASK_SCHEMA
+                prompt, model=self._settings.model, json_schema=PROPOSED_ACTION_SCHEMA
             )
             self._latest_json = self._merge_results(self._latest_json, generated_json)
             self._persist(self._latest_json)
@@ -270,13 +270,13 @@ class RealtimeTaskExtractor:
         merged = self._normalize_result_shape(previous_obj)
         current_normalized = self._normalize_result_shape(current_obj)
 
-        current_summary = current_normalized.get("meeting_summary")
+        current_summary = current_normalized.get("session_summary")
         if isinstance(current_summary, str) and current_summary.strip():
-            merged["meeting_summary"] = current_summary.strip()
+            merged["session_summary"] = current_summary.strip()
 
-        merged["tasks"] = self._merge_tasks(
-            merged.get("tasks", []),
-            current_normalized.get("tasks", []),
+        merged["proposed_actions"] = self._merge_actions(
+            merged.get("proposed_actions", []),
+            current_normalized.get("proposed_actions", []),
         )
         merged["decisions"] = self._merge_text_lists(
             merged.get("decisions", []),
@@ -303,20 +303,20 @@ class RealtimeTaskExtractor:
         return parsed
 
     def _normalize_result_shape(self, payload: dict[str, Any]) -> dict[str, Any]:
-        summary = payload.get("meeting_summary")
-        meeting_summary = summary.strip() if isinstance(summary, str) else ""
+        summary = payload.get("session_summary")
+        session_summary = summary.strip() if isinstance(summary, str) else ""
 
-        tasks_raw = payload.get("tasks", [])
-        tasks: list[dict[str, Any]] = []
-        if isinstance(tasks_raw, list):
-            for item in tasks_raw:
-                normalized = self._normalize_task(item)
+        actions_raw = payload.get("proposed_actions", [])
+        actions: list[dict[str, Any]] = []
+        if isinstance(actions_raw, list):
+            for item in actions_raw:
+                normalized = self._normalize_action(item)
                 if normalized is not None:
-                    tasks.append(normalized)
+                    actions.append(normalized)
 
         return {
-            "meeting_summary": meeting_summary,
-            "tasks": self._assign_task_ids(tasks),
+            "session_summary": session_summary,
+            "proposed_actions": self._assign_action_ids(actions),
             "decisions": self._normalize_text_list(payload.get("decisions", [])),
             "risks": self._normalize_text_list(payload.get("risks", [])),
             "follow_up_questions": self._normalize_text_list(
@@ -324,7 +324,7 @@ class RealtimeTaskExtractor:
             ),
         }
 
-    def _normalize_task(self, item: Any) -> dict[str, Any] | None:
+    def _normalize_action(self, item: Any) -> dict[str, Any] | None:
         if not isinstance(item, dict):
             return None
 
@@ -341,7 +341,7 @@ class RealtimeTaskExtractor:
         if priority not in {"high", "medium", "low"}:
             priority = "medium"
 
-        status = self._normalize_text(item.get("status")).lower() or "open"
+        status = self._normalize_text(item.get("status")).lower() or "proposed"  # GLOSSARY: Proposed -> Approved / Rejected -> Executed / Failed
 
         dependencies_raw = item.get("dependencies", [])
         dependencies: list[str] = []
@@ -371,7 +371,7 @@ class RealtimeTaskExtractor:
             "status": status,
             "dependencies": dependencies,
             "confidence": confidence_value,
-            "evidence_quote": self._normalize_text(item.get("evidence_quote")),
+            "transcript_excerpt": self._normalize_text(item.get("transcript_excerpt")),
             "needs_review": bool(item.get("needs_review")),
         }
 
@@ -423,33 +423,33 @@ class RealtimeTaskExtractor:
             kept_words.append(words)
         return merged
 
-    def _merge_tasks(self, previous_tasks_raw: Any, current_tasks_raw: Any) -> list[dict[str, Any]]:
-        previous_tasks = self._normalize_tasks_for_merge(previous_tasks_raw)
-        current_tasks = self._normalize_tasks_for_merge(current_tasks_raw)
+    def _merge_actions(self, previous_actions_raw: Any, current_actions_raw: Any) -> list[dict[str, Any]]:
+        previous_actions = self._normalize_actions_for_merge(previous_actions_raw)
+        current_actions = self._normalize_actions_for_merge(current_actions_raw)
 
-        merged = previous_tasks.copy()
-        for current_task in current_tasks:
-            idx = self._find_same_task(merged, current_task)
+        merged = previous_actions.copy()
+        for current_action in current_actions:
+            idx = self._find_same_action(merged, current_action)
             if idx is None:
-                merged.append(current_task)
+                merged.append(current_action)
             else:
-                merged[idx] = self._merge_single_task(merged[idx], current_task)
+                merged[idx] = self._merge_single_action(merged[idx], current_action)
 
-        return self._assign_task_ids(merged)
+        return self._assign_action_ids(merged)
 
-    def _find_same_task(self, tasks: list[dict[str, Any]], candidate: dict[str, Any]) -> int | None:
-        """The same action is often worded differently in each chunk (or each time a long meeting
+    def _find_same_action(self, actions: list[dict[str, Any]], candidate: dict[str, Any]) -> int | None:
+        """The same action is often worded differently in each chunk (or each time a long session
         comes back to it): "Implement export of invoices in PDF" vs "Implement invoice export in PDF".
         Match on compatible owners plus overlapping title words rather than on exact text."""
         owner = self._owner_key(candidate)
         words = self._title_words(candidate)
         title = " ".join(sorted(words))
         best_idx, best_score = None, 0.0
-        for idx, task in enumerate(tasks):
-            other_owner = self._owner_key(task)
+        for idx, action in enumerate(actions):
+            other_owner = self._owner_key(action)
             if owner not in _ANONYMOUS_OWNERS and other_owner not in _ANONYMOUS_OWNERS and owner != other_owner:
                 continue
-            other_words = self._title_words(task)
+            other_words = self._title_words(action)
             if not words or not other_words:
                 continue
             jaccard = len(words & other_words) / len(words | other_words)
@@ -459,29 +459,29 @@ class RealtimeTaskExtractor:
                 best_idx, best_score = idx, score
         return best_idx
 
-    def _owner_key(self, task: dict[str, Any]) -> str:
+    def _owner_key(self, action: dict[str, Any]) -> str:
         """"Ionuț" and "Ionut" are the same person (speech recognition and translation drop diacritics)."""
-        owner = unicodedata.normalize("NFKD", self._normalize_text(task.get("owner")).lower())
+        owner = unicodedata.normalize("NFKD", self._normalize_text(action.get("owner")).lower())
         return "".join(ch for ch in owner if not unicodedata.combining(ch))
 
-    def _title_words(self, task: dict[str, Any]) -> set[str]:
-        title = self._normalize_text(task.get("title")).lower()
+    def _title_words(self, action: dict[str, Any]) -> set[str]:
+        title = self._normalize_text(action.get("title")).lower()
         words = re.findall(r"[^\W_]+", title)
         # crude singular form so "invoices"/"invoice" and "tests"/"test" compare equal
         return {w[:-1] if w.endswith("s") and len(w) > 3 else w for w in words
                 if len(w) > 2 and w not in _TITLE_STOPWORDS}
 
-    def _normalize_tasks_for_merge(self, value: Any) -> list[dict[str, Any]]:
+    def _normalize_actions_for_merge(self, value: Any) -> list[dict[str, Any]]:
         if not isinstance(value, list):
             return []
         normalized: list[dict[str, Any]] = []
         for item in value:
-            task = self._normalize_task(item)
-            if task is not None:
-                normalized.append(task)
+            action = self._normalize_action(item)
+            if action is not None:
+                normalized.append(action)
         return normalized
 
-    def _merge_single_task(self, previous: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
+    def _merge_single_action(self, previous: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
         merged = previous.copy()
         for field in [
             "title",
@@ -491,7 +491,7 @@ class RealtimeTaskExtractor:
             "priority",
             "status",
             "confidence",
-            "evidence_quote",
+            "transcript_excerpt",
         ]:
             value = current.get(field)
             if value in ("", None):
@@ -506,25 +506,25 @@ class RealtimeTaskExtractor:
             merged["id"] = current.get("id", "")
         return merged
 
-    def _assign_task_ids(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _assign_action_ids(self, actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
         assigned: list[dict[str, Any]] = []
         used_ids: set[str] = set()
         numeric_ids = [
-            int(task_id[1:])
-            for task_id in (self._normalize_text(task.get("id")) for task in tasks)
-            if task_id.startswith("T") and task_id[1:].isdigit()
+            int(action_id[1:])
+            for action_id in (self._normalize_text(action.get("id")) for action in actions)
+            if action_id.startswith("A") and action_id[1:].isdigit()
         ]
         next_id = (max(numeric_ids) if numeric_ids else 0) + 1
 
-        for task in tasks:
-            normalized_task = task.copy()
-            task_id = self._normalize_text(normalized_task.get("id"))
-            if not task_id or task_id in used_ids:
-                task_id = f"T{next_id}"
+        for action in actions:
+            normalized_action = action.copy()
+            action_id = self._normalize_text(normalized_action.get("id"))
+            if not action_id or action_id in used_ids:
+                action_id = f"A{next_id}"
                 next_id += 1
-            normalized_task["id"] = task_id
-            used_ids.add(task_id)
-            assigned.append(normalized_task)
+            normalized_action["id"] = action_id
+            used_ids.add(action_id)
+            assigned.append(normalized_action)
 
         return assigned
 

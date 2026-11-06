@@ -6,4 +6,4 @@ class DeepSeekPathResolver:
         stem = Path(file_path).stem.strip() or "output"
         safe_stem = "".join(ch if (ch.isalnum() or ch in "-_") else "_" for ch in stem)
         deepseek_output_dir = output_dir.parent / "Json"
-        return deepseek_output_dir / f"{safe_stem}.pm_tasks.json"
+        return deepseek_output_dir / f"{safe_stem}.proposed_actions.json"

@@ -1,8 +1,8 @@
 """LLM stages of the norev pipeline, run one at a time against the llama-server that norev.sh started.
 
   python -m LLM.pipeline translate <transcript.json>   -> Outputs/Audio/<name>.en.json (prints path)
-  python -m LLM.pipeline extract <transcript.json>     -> Outputs/Json/<name>.pm_tasks.json (prints path)
-  python -m LLM.pipeline show <transcript.json> <pm_tasks.json>
+  python -m LLM.pipeline extract <transcript.json>     -> Outputs/Json/<name>.proposed_actions.json (prints path)
+  python -m LLM.pipeline show <transcript.json> <proposed_actions.json>
 """
 import argparse
 import json
@@ -57,21 +57,21 @@ def extract(transcript_path: str) -> int:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     started = time.perf_counter()
-    extractor = deepseek.RealtimeTaskExtractor(output_path=output_path)
+    extractor = deepseek.RealtimeActionExtractor(output_path=output_path)
     segments = [s.get("text", "") for s in transcript.get("segments") or []]
     extractor.extract_batch(segments or split_sentences(transcript.get("text", "")), workers=WORKERS)
 
-    transcript["pm_tasks_output_file"] = str(output_path)
-    transcript["pm_tasks_llm_model"] = extractor.llm_model
-    transcript["pm_tasks_elapsed_seconds"] = round(time.perf_counter() - started, 3)
+    transcript["proposed_actions_output_file"] = str(output_path)
+    transcript["proposed_actions_llm_model"] = extractor.llm_model
+    transcript["proposed_actions_elapsed_seconds"] = round(time.perf_counter() - started, 3)
     Path(transcript_path).write_text(json.dumps(transcript, ensure_ascii=False, indent=2), encoding="utf-8")
     print(output_path)
     return 0
 
 
-def show(transcript_path: str, pm_tasks_path: str) -> int:
+def show(transcript_path: str, proposed_actions_path: str) -> int:
     data = _load(transcript_path)
-    pm = _load(pm_tasks_path)
+    result = _load(proposed_actions_path)
     source = data.get("source_language")
     language = f"{source} -> en" if source else data.get("detected_language")
     print()
@@ -79,20 +79,20 @@ def show(transcript_path: str, pm_tasks_path: str) -> int:
         f"Language: {language} | device: {data.get('runtime_device')}"
         f" | transcription: {data.get('transcription_elapsed_seconds')}s"
         + (f" | translation: {data['translation_elapsed_seconds']}s" if source else "")
-        + f" | tasks: {data.get('pm_tasks_elapsed_seconds')}s"
+        + f" | Proposed Actions: {data.get('proposed_actions_elapsed_seconds')}s"
     )
-    print("Tasks file:", pm_tasks_path)
-    if pm.get("meeting_summary"):
-        print("\nSummary:\n ", pm["meeting_summary"])
-    tasks = pm.get("tasks") or []
-    print(f"\nTasks ({len(tasks)}):")
-    for task in tasks:
-        who = task.get("assignee") or task.get("owner") or "-"
-        due = task.get("due_date") or task.get("deadline") or "-"
-        review = "  [verifică]" if task.get("needs_review") else ""
-        print(f"  - [{task.get('priority', '-')}] {task.get('title')}  (who: {who}, due: {due}){review}")
+    print("Proposed Actions file:", proposed_actions_path)
+    if result.get("session_summary"):
+        print("\nSession summary:\n ", result["session_summary"])
+    actions = result.get("proposed_actions") or []
+    print(f"\nProposed Actions ({len(actions)}):")
+    for action in actions:
+        who = action.get("assignee") or action.get("owner") or "-"
+        due = action.get("due_date") or action.get("deadline") or "-"
+        review = "  [verifică]" if action.get("needs_review") else ""
+        print(f"  - [{action.get('priority', '-')}] {action.get('title')}  (who: {who}, due: {due}){review}")
     for key in ("decisions", "risks"):
-        items = pm.get(key) or []
+        items = result.get(key) or []
         if items:
             print(f"\n{key.capitalize()}:")
             for item in items:
@@ -107,7 +107,7 @@ def main(argv: list[str]) -> int:
     sub.add_parser("extract").add_argument("transcript_json")
     show_parser = sub.add_parser("show")
     show_parser.add_argument("transcript_json")
-    show_parser.add_argument("pm_tasks_json")
+    show_parser.add_argument("proposed_actions_json")
     args = parser.parse_args(argv)
 
     try:
@@ -115,7 +115,7 @@ def main(argv: list[str]) -> int:
             return translate(args.transcript_json)
         if args.stage == "extract":
             return extract(args.transcript_json)
-        return show(args.transcript_json, args.pm_tasks_json)
+        return show(args.transcript_json, args.proposed_actions_json)
     except Exception as exc:
         print(json.dumps({"error": f"{args.stage} failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
         return 1

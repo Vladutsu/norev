@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Transcribe a meeting recording and extract PM tasks, all locally.
+# Transcribe a recorded Session and extract Proposed Actions, all locally.
 #
 #   1. Whisper        transcript in the spoken language (preselected list or auto-detection)
-#   2. LLM translator  transcript -> English (skipped when the meeting is already in English)
-#   3. LLM extractor   English transcript -> summary, tasks, decisions, risks
+#   2. LLM translator  transcript -> English (skipped when the Session is already in English)
+#   3. LLM extractor   English Transcript -> Session summary, Proposed Actions, decisions, risks
 #
 # Each LLM stage can use its own GGUF model. Models are loaded one at a time, so a stage only
 # needs the GPU memory of its own model; consecutive stages with the same model share one server.
 #
 # Usage: ./norev.sh <audio_or_video_file> [language]
-#        NOREV_LANGUAGES=ro,en,de ./norev.sh meeting.mp4
+#        NOREV_LANGUAGES=ro,en,de ./norev.sh session.mp4
 #        ./norev.sh --list-llm-models
 set -euo pipefail
 
@@ -26,7 +26,7 @@ die()  { echo -e "${RED}[norev] ERROR:${NC} $*" >&2; exit 1; }
 # ── config (override from the environment) ────────────────────────────────────
 
 LLAMA_SERVER="${LLAMA_SERVER:-$HOME/Repositories/llama.cpp/build/bin/llama-server}"
-# Qwen3-8B for both stages: best translation and extraction in the test meetings, and one model
+# Qwen3-8B for both stages: best translation and extraction in the test Sessions, and one model
 # means no reload between stages
 LLAMACPP_MODEL="${LLAMACPP_MODEL:-$HOME/models/qwen3-8b/Qwen3-8B-Q4_K_M.gguf}"
 NOREV_EXTRACT_MODEL="${NOREV_EXTRACT_MODEL:-$LLAMACPP_MODEL}"
@@ -35,15 +35,15 @@ NOREV_TRANSLATE_MODEL="${NOREV_TRANSLATE_MODEL:-$LLAMACPP_MODEL}"
 NOREV_TRANSLATE="${NOREV_TRANSLATE:-auto}"
 # Comma-separated Whisper language codes to choose from, e.g. ro,en,de. Empty: auto-detect any.
 export WHISPER_LANGUAGES="${NOREV_LANGUAGES:-${WHISPER_LANGUAGES:-}}"
-# Meeting date (YYYY-MM-DD) used to resolve "Friday", "13 November"... Empty: today.
-export LLM_MEETING_DATE="${NOREV_DATE:-${LLM_MEETING_DATE:-}}"
+# Session date (YYYY-MM-DD) used to resolve "Friday", "13 November"... Empty: today.
+export LLM_SESSION_DATE="${NOREV_DATE:-${LLM_SESSION_DATE:-}}"
 
 LLAMACPP_PORT="${LLAMACPP_PORT:-8080}"
 # 4096 fits one transcript chunk + prompt and leaves room for Whisper on an 8 GB GPU
 LLAMACPP_CTX="${LLAMACPP_CTX:-4096}"
 LLAMACPP_GPU_LAYERS="${LLAMACPP_GPU_LAYERS:-99}"
 # Chunks are independent, so translation and extraction send this many requests at once; the GPU
-# batches them, which is what keeps 30-60 minute meetings fast. Each slot gets LLAMACPP_CTX tokens.
+# batches them, which is what keeps 30-60 minute Sessions fast. Each slot gets LLAMACPP_CTX tokens.
 export LLM_PARALLEL="${LLM_PARALLEL:-4}"
 
 export LLM_PROVIDER="${LLM_PROVIDER:-llamacpp}"
@@ -53,10 +53,10 @@ export LLM_FORCE_JSON_FORMAT="${LLM_FORCE_JSON_FORMAT:-1}"
 # Process each transcript chunk on its own and merge in Python; feeding the accumulated
 # JSON back into every prompt overflows the context on long recordings
 export LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT="${LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT:-0}"
-# Deterministic output: the same recording gives the same tasks
+# Deterministic output: the same recording gives the same Proposed Actions
 export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0}"
-# Second look per chunk for missed tasks, marked [verifică]. Off by default: in tests it found 2 of 3
-# missed tasks but gave both the wrong owner, and it triples extraction time on long meetings
+# Second look per chunk for missed Proposed Actions, marked [verifică]. Off by default: in tests it
+# found 2 of 3 missed ones but gave both the wrong owner, and it triples extraction time on long Sessions
 export LLM_SECOND_PASS="${LLM_SECOND_PASS:-0}"
 
 PYTHON="$SCRIPT_DIR/.venv/bin/python"
@@ -140,11 +140,11 @@ else
     log "[2/3] Translation skipped (language: $LANGUAGE)"
 fi
 
-# ── 3. Task extraction ─────────────────────────────────────────────────────────
+# ── 3. Proposed Action extraction ──────────────────────────────────────────────
 
 use_model "$NOREV_EXTRACT_MODEL"
-log "[3/3] Extracting tasks (LLM: $LLM_MODEL)"
-TASKS="$("$PYTHON" -m LLM.pipeline extract "$TRANSCRIPT")"
+log "[3/3] Extracting Proposed Actions (LLM: $LLM_MODEL)"
+PROPOSED_ACTIONS="$("$PYTHON" -m LLM.pipeline extract "$TRANSCRIPT")"
 stop_llama_server
 
-"$PYTHON" -m LLM.pipeline show "$TRANSCRIPT" "$TASKS"
+"$PYTHON" -m LLM.pipeline show "$TRANSCRIPT" "$PROPOSED_ACTIONS"
