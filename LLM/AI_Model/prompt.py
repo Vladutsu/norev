@@ -140,9 +140,11 @@ class DeepSeekPromptBuilder:
         self,
         template: str = PROPOSED_ACTION_PROMPT,
         assignee_candidates: list[dict] | None = None,
+        session_date: date | None = None,
     ) -> None:
         self._template = template
         self._assignee_candidates = assignee_candidates or []
+        self._session_date = session_date
 
     def build(self, previous_json: str, new_chunk: str) -> str:
         base_prompt = f"{self._date_context()}\n\n" + self._template.replace(
@@ -177,13 +179,13 @@ class DeepSeekPromptBuilder:
             "{{EXISTING}}", "\n".join(lines) or "(none)"
         )
 
-    @staticmethod
-    def _date_context() -> str:
-        """Today's date plus a calendar of the coming weeks. Small models get the year of
+    def _date_context(self) -> str:
+        """The Session date plus a calendar of the coming weeks. Small models get the year of
         "Friday, 13 November" wrong without the date and the day of "by Monday" wrong without
-        the calendar; a lookup table is far more reliable than date arithmetic."""
+        the calendar; a lookup table is far more reliable than date arithmetic.
+        Session date: the constructor argument, else LLM_SESSION_DATE, else today."""
         raw = os.getenv("LLM_SESSION_DATE", "").strip()
-        today = date.fromisoformat(raw) if raw else date.today()
+        today = self._session_date or (date.fromisoformat(raw) if raw else date.today())
         labels = {0: " (today)", 1: " (tomorrow)"}
         days = [today + timedelta(days=offset) for offset in range(42)]
         calendar = "\n".join(
