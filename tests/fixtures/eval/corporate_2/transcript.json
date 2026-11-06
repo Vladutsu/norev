@@ -1,0 +1,107 @@
+{
+  "synthetic": "Written for tests. No real person.",
+  "about": "Apel cu un client: acțiuni ale clientului, o acțiune fără termen, sume.",
+  "domain": "corporate",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "organizer"
+    },
+    {
+      "id": "S2",
+      "role": "participant"
+    },
+    {
+      "id": "S3",
+      "role": "participant"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.5,
+      "end": 5.3,
+      "speaker_id": "S1",
+      "text": "Bună ziua, doamna Popescu. Vă mulțumim că ați găsit timp pentru apel."
+    },
+    {
+      "start": 5.8,
+      "end": 10.6,
+      "speaker_id": "S2",
+      "text": "Bună ziua. Vreau să discutăm oferta pentru licențe și termenul de livrare."
+    },
+    {
+      "start": 11.1,
+      "end": 19.4,
+      "speaker_id": "S1",
+      "text": "Oferta noastră este pentru douăzeci și cinci de licențe, la un preț total de douăsprezece mii cinci sute de lei pe an."
+    },
+    {
+      "start": 19.9,
+      "end": 24.7,
+      "speaker_id": "S2",
+      "text": "E în regulă, dar avem nevoie de factură până la sfârșitul lunii."
+    },
+    {
+      "start": 25.2,
+      "end": 30.0,
+      "speaker_id": "S3",
+      "text": "Eu emit factura până pe treizeci noiembrie și o trimit pe email."
+    },
+    {
+      "start": 30.5,
+      "end": 34.6,
+      "speaker_id": "S1",
+      "text": "Mulțumim, Mihai. Doamna Popescu, ne puteți trimite lista de utilizatori?"
+    },
+    {
+      "start": 35.1,
+      "end": 37.45,
+      "speaker_id": "S2",
+      "text": "Da, v-o trimit până marți."
+    },
+    {
+      "start": 37.95,
+      "end": 41.7,
+      "speaker_id": "S1",
+      "text": "Instalarea o putem face în prima săptămână din decembrie."
+    },
+    {
+      "start": 42.2,
+      "end": 46.65,
+      "speaker_id": "S2",
+      "text": "Perfect. Mai avem nevoie și de un training pentru echipa noastră."
+    },
+    {
+      "start": 47.15,
+      "end": 51.25,
+      "speaker_id": "S3",
+      "text": "Pot organiza eu trainingul, dar trebuie să stabilim o dată."
+    },
+    {
+      "start": 51.75,
+      "end": 55.5,
+      "speaker_id": "S1",
+      "text": "Stabilim data trainingului după ce primim lista de utilizatori."
+    },
+    {
+      "start": 56.0,
+      "end": 60.1,
+      "speaker_id": "S2",
+      "text": "De acord. Și vă rog să ne trimiteți contractul semnat."
+    },
+    {
+      "start": 60.6,
+      "end": 62.6,
+      "speaker_id": "S1",
+      "text": "Vi-l trimit eu mâine."
+    },
+    {
+      "start": 63.1,
+      "end": 65.1,
+      "speaker_id": "S2",
+      "text": "Mulțumesc, o zi bună."
+    }
+  ]
+}

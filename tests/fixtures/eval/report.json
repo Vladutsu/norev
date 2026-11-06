@@ -1,0 +1,1306 @@
+{
+ "thresholds": {
+  "status": "proposed, to confirm before the final evaluation",
+  "applies_to": "corporate_others (Medical is reported, as an example, without a threshold)",
+  "limits": {
+   "omission_rate": 0.15,
+   "invented_rate": 0.15,
+   "owner_wrong_rate": 0.1,
+   "date_wrong_rate": 0.1,
+   "cancelled_listed": 0,
+   "numbers_changed": 0
+  }
+ },
+ "variants": {
+  "neutral": {
+   "summary": {
+    "corporate_others": {
+     "sessions": [
+      "corporate_1",
+      "corporate_2",
+      "corporate_3",
+      "others_1",
+      "others_2"
+     ],
+     "expected": 22,
+     "produced": 21,
+     "found": 19,
+     "omission_rate": 0.136,
+     "invented_rate": 0.0,
+     "owner_wrong_rate": 0.286,
+     "owner_missing": 0,
+     "date_wrong_rate": 0.381,
+     "date_missing": 0,
+     "cancelled_listed": 0,
+     "numbers": 18,
+     "numbers_changed": 0,
+     "meets_thresholds": {
+      "omission_rate": true,
+      "invented_rate": true,
+      "owner_wrong_rate": false,
+      "date_wrong_rate": false,
+      "cancelled_listed": true,
+      "numbers_changed": true
+     }
+    },
+    "medical": {
+     "sessions": [
+      "consult_1",
+      "consult_2",
+      "consult_3"
+     ],
+     "expected": 18,
+     "produced": 17,
+     "found": 16,
+     "omission_rate": 0.111,
+     "invented_rate": 0.0,
+     "owner_wrong_rate": 0.176,
+     "owner_missing": 0,
+     "date_wrong_rate": 0.118,
+     "date_missing": 0,
+     "cancelled_listed": 0,
+     "numbers": 13,
+     "numbers_changed": 1
+    }
+   },
+   "sessions": {
+    "consult_1": {
+     "expected": 5,
+     "produced": 5,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [],
+     "owner_missing": [],
+     "date_wrong": [],
+     "date_missing": [],
+     "found": 5,
+     "matched": 5,
+     "numbers": 5,
+     "numbers_changed": [
+      "emergency-112"
+     ],
+     "details": {
+      "home-bp": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Measure Blood Pressure",
+        "owner": "Mrs. Ionescu",
+        "due_date": "2026-11-12"
+       }
+      },
+      "amlodipine": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Take Amlodipine",
+        "owner": "Mrs. Ionescu",
+        "due_date": null
+       }
+      },
+      "blood-tests": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Get Blood Tests",
+        "owner": "Mrs. Ionescu",
+        "due_date": "2026-11-11"
+       }
+      },
+      "ecg": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule Electrocardiogram",
+        "owner": "Maria",
+        "due_date": "2026-11-06"
+       }
+      },
+      "follow-up": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Follow Up Appointment",
+        "owner": "Mrs. Ionescu",
+        "due_date": "2026-11-13"
+       }
+      }
+     },
+     "known_cases": [
+      {
+       "id": "112-becomes-122",
+       "what": "The translation must keep the emergency number 112",
+       "solved": false
+      },
+      {
+       "id": "follow-up-missed",
+       "what": "The follow-up visit on 13 November must be found",
+       "solved": true
+      }
+     ]
+    },
+    "consult_2": {
+     "expected": 6,
+     "produced": 7,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [],
+     "owner_missing": [],
+     "date_wrong": [
+      "smoking-program"
+     ],
+     "date_missing": [],
+     "found": 6,
+     "matched": 7,
+     "numbers": 4,
+     "numbers_changed": [],
+     "details": {
+      "xray": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule Chest X-ray",
+        "owner": "Patient",
+        "due_date": "2026-11-07"
+       }
+      },
+      "antibiotic": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Take Medication",
+        "owner": "Patient",
+        "due_date": null
+       }
+      },
+      "blood-tests": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Undergo Blood Tests",
+        "owner": "Patient",
+        "due_date": "2026-11-07"
+       }
+      },
+      "sick-leave": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Get Sick Leave Certificate",
+        "owner": "Patient",
+        "due_date": "2026-11-10"
+       }
+      },
+      "follow-up": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Attend Follow-up Appointment",
+        "owner": "Patient",
+        "due_date": "2026-11-10"
+       }
+      },
+      "smoking-program": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Attend Smoking Cessation Program",
+        "owner": "Patient",
+        "due_date": "2026-11-17"
+       }
+      },
+      "paracetamol": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Take Paracetamol for Fever",
+        "owner": "Patient",
+        "due_date": null
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "consult_3": {
+     "expected": 7,
+     "produced": 5,
+     "omitted": [
+      "community-nurse",
+      "pill-box-buy"
+     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "dressing",
+      "lab-tests",
+      "surgery-appointment"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "pill-box-prepare"
+     ],
+     "date_missing": [],
+     "found": 5,
+     "matched": 5,
+     "numbers": 4,
+     "numbers_changed": [],
+     "details": {
+      "pill-box-prepare": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Prepare Weekly Medication Box",
+        "owner": "Ana",
+        "due_date": "2026-11-06"
+       }
+      },
+      "surgery-appointment": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Schedule Surgery Appointment",
+        "owner": "Doctor",
+        "due_date": "2026-11-07"
+       }
+      },
+      "dressing": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Perform Daily Wound Care",
+        "owner": "Community Assistant",
+        "due_date": "2026-11-08"
+       }
+      },
+      "lab-tests": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Schedule Lab Tests",
+        "owner": "Doctor",
+        "due_date": "2026-11-12"
+       }
+      },
+      "follow-up": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule Follow-Up Appointment",
+        "owner": "Mrs. Georgescu",
+        "due_date": "2026-11-20"
+       }
+      }
+     },
+     "known_cases": [
+      {
+       "id": "surgery-appointment-owner",
+       "what": "The surgery appointment Ana said she would book must have Ana as owner",
+       "solved": false
+      }
+     ]
+    },
+    "corporate_1": {
+     "expected": 5,
+     "produced": 5,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [],
+     "owner_missing": [],
+     "date_wrong": [
+      "payment-design"
+     ],
+     "date_missing": [],
+     "found": 5,
+     "matched": 5,
+     "numbers": 5,
+     "numbers_changed": [],
+     "details": {
+      "payment-tests": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Take over automated tests for payments",
+        "owner": "Radu",
+        "due_date": "2026-11-18"
+       }
+      },
+      "db-migration": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Finish database migration",
+        "owner": "Andrei",
+        "due_date": "2026-11-11"
+       }
+      },
+      "payment-design": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Send dashboard design for review",
+        "owner": "Maria",
+        "due_date": "2026-11-08"
+       }
+      },
+      "api-docs": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Update API documentation",
+        "owner": "Maria",
+        "due_date": "2026-11-20"
+       }
+      },
+      "progress-report": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Send progress report to client",
+        "owner": null,
+        "due_date": "2026-11-09"
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "corporate_2": {
+     "expected": 5,
+     "produced": 4,
+     "omitted": [
+      "installation",
+      "training"
+     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "signed-contract"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "user-list"
+     ],
+     "date_missing": [],
+     "found": 3,
+     "matched": 4,
+     "numbers": 3,
+     "numbers_changed": [],
+     "details": {
+      "user-list": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Send user list",
+        "owner": "Mrs. Popescu",
+        "due_date": "2026-11-09"
+       }
+      },
+      "training-date": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Organize training",
+        "owner": "Mihai",
+        "due_date": null
+       }
+      },
+      "invoice": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Issue invoice",
+        "owner": "Mihai",
+        "due_date": "2026-11-30"
+       }
+      },
+      "signed-contract": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Send signed contract",
+        "owner": "Mrs. Popescu",
+        "due_date": "2026-11-07"
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "corporate_3": {
+     "expected": 4,
+     "produced": 4,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "monitoring-alert"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "auto-renewal",
+      "incident-report",
+      "monitoring-alert"
+     ],
+     "date_missing": [],
+     "found": 4,
+     "matched": 4,
+     "numbers": 3,
+     "numbers_changed": [],
+     "details": {
+      "auto-renewal": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Renew SSL certificate",
+        "owner": "Ana",
+        "due_date": "2026-11-10"
+       }
+      },
+      "monitoring-alert": {
+       "owner": false,
+       "due": false,
+       "got": {
+        "title": "Add SSL certificate alert",
+        "owner": "Ana",
+        "due_date": "2026-11-10"
+       }
+      },
+      "support-email": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Send customer notification",
+        "owner": "Support team",
+        "due_date": "2026-11-06"
+       }
+      },
+      "incident-report": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Write incident report",
+        "owner": null,
+        "due_date": "2026-11-10"
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "others_1": {
+     "expected": 4,
+     "produced": 4,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "call-owner",
+      "documents-list",
+      "viewing"
+     ],
+     "owner_missing": [],
+     "date_wrong": [],
+     "date_missing": [],
+     "found": 4,
+     "matched": 4,
+     "numbers": 4,
+     "numbers_changed": [],
+     "details": {
+      "call-owner": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Call apartment owner for price reduction",
+        "owner": "Mr. Ionescu",
+        "due_date": "2026-11-07"
+       }
+      },
+      "viewing": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Schedule viewing for three-room apartment",
+        "owner": "Mr. Ionescu",
+        "due_date": "2026-11-07"
+       }
+      },
+      "documents-list": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Send list of loan documents",
+        "owner": "Mr. Ionescu",
+        "due_date": "2026-11-06"
+       }
+      },
+      "bank": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Talk with bank for pre-approval",
+        "owner": "Mr. Ionescu",
+        "due_date": "2026-11-14"
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "others_2": {
+     "expected": 4,
+     "produced": 4,
+     "omitted": [
+      "attendance"
+     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "recovery-lessons"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "recovery-lessons",
+      "sign-gradebook",
+      "worksheet"
+     ],
+     "date_missing": [],
+     "found": 3,
+     "matched": 4,
+     "numbers": 3,
+     "numbers_changed": [],
+     "details": {
+      "recovery-lessons": {
+       "owner": false,
+       "due": false,
+       "got": {
+        "title": "Conduct Recovery Classes",
+        "owner": "Mrs. Dumitrescu",
+        "due_date": "2026-11-07"
+       }
+      },
+      "worksheet": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Prepare Exercise Sheet",
+        "owner": "Mrs. Teacher",
+        "due_date": "2026-11-08"
+       }
+      },
+      "sign-gradebook": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Sign Grade Book",
+        "owner": "Mrs. Dumitrescu",
+        "due_date": "2026-11-12"
+       }
+      },
+      "recovery-test": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule Recovery Test",
+        "owner": "Mrs. Teacher",
+        "due_date": "2026-11-25"
+       }
+      }
+     },
+     "known_cases": []
+    }
+   }
+  },
+  "speakers": {
+   "summary": {
+    "corporate_others": {
+     "sessions": [
+      "corporate_1",
+      "corporate_2",
+      "corporate_3",
+      "others_1",
+      "others_2"
+     ],
+     "expected": 22,
+     "produced": 21,
+     "found": 19,
+     "omission_rate": 0.136,
+     "invented_rate": 0.0,
+     "owner_wrong_rate": 0.429,
+     "owner_missing": 0,
+     "date_wrong_rate": 0.381,
+     "date_missing": 0,
+     "cancelled_listed": 0,
+     "numbers": 18,
+     "numbers_changed": 0,
+     "meets_thresholds": {
+      "omission_rate": true,
+      "invented_rate": true,
+      "owner_wrong_rate": false,
+      "date_wrong_rate": false,
+      "cancelled_listed": true,
+      "numbers_changed": true
+     }
+    },
+    "medical": {
+     "sessions": [
+      "consult_1",
+      "consult_2",
+      "consult_3"
+     ],
+     "expected": 18,
+     "produced": 18,
+     "found": 16,
+     "omission_rate": 0.111,
+     "invented_rate": 0.0,
+     "owner_wrong_rate": 0.167,
+     "owner_missing": 0,
+     "date_wrong_rate": 0.111,
+     "date_missing": 0,
+     "cancelled_listed": 0,
+     "numbers": 13,
+     "numbers_changed": 1
+    }
+   },
+   "sessions": {
+    "consult_1": {
+     "expected": 5,
+     "produced": 5,
+     "omitted": [
+      "amlodipine"
+     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [],
+     "owner_missing": [],
+     "date_wrong": [],
+     "date_missing": [],
+     "found": 4,
+     "matched": 5,
+     "numbers": 5,
+     "numbers_changed": [
+      "emergency-112"
+     ],
+     "details": {
+      "home-bp": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Measure blood pressure at home",
+        "owner": "Mrs. Ionescu",
+        "due_date": "2026-11-06"
+       }
+      },
+      "blood-tests": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule blood tests",
+        "owner": "Mrs. Ionescu",
+        "due_date": "2026-11-11"
+       }
+      },
+      "ecg": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule electrocardiogram",
+        "owner": "Mrs. Ionescu",
+        "due_date": "2026-11-06"
+       }
+      },
+      "follow-up": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Attend follow-up appointment",
+        "owner": "Mrs. Ionescu",
+        "due_date": "2026-11-13"
+       }
+      },
+      "lifestyle": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Reduce coffee intake",
+        "owner": "Mrs. Ionescu",
+        "due_date": "2026-11-06"
+       }
+      }
+     },
+     "known_cases": [
+      {
+       "id": "112-becomes-122",
+       "what": "The translation must keep the emergency number 112",
+       "solved": false
+      },
+      {
+       "id": "follow-up-missed",
+       "what": "The follow-up visit on 13 November must be found",
+       "solved": true
+      }
+     ]
+    },
+    "consult_2": {
+     "expected": 6,
+     "produced": 7,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [],
+     "owner_missing": [],
+     "date_wrong": [
+      "smoking-program"
+     ],
+     "date_missing": [],
+     "found": 6,
+     "matched": 7,
+     "numbers": 4,
+     "numbers_changed": [],
+     "details": {
+      "xray": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule Chest X-ray",
+        "owner": "Patient",
+        "due_date": "2026-11-07"
+       }
+      },
+      "antibiotic": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Take Medication",
+        "owner": "Patient",
+        "due_date": null
+       }
+      },
+      "blood-tests": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Complete Hematology Panel and C-Reactive Protein Test",
+        "owner": "Patient",
+        "due_date": "2026-11-07"
+       }
+      },
+      "sick-leave": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Obtain Sick Leave Certificate",
+        "owner": "Patient",
+        "due_date": null
+       }
+      },
+      "follow-up": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Attend Follow-Up Appointment",
+        "owner": "Patient",
+        "due_date": "2026-11-10"
+       }
+      },
+      "smoking-program": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Enroll in Smoking Cessation Program",
+        "owner": "Patient",
+        "due_date": "2026-11-17"
+       }
+      },
+      "paracetamol": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Take Paracetamol for Fever",
+        "owner": "Patient",
+        "due_date": null
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "consult_3": {
+     "expected": 7,
+     "produced": 6,
+     "omitted": [
+      "community-nurse"
+     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "dressing",
+      "pill-box-buy",
+      "surgery-appointment"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "pill-box-prepare"
+     ],
+     "date_missing": [],
+     "found": 6,
+     "matched": 6,
+     "numbers": 4,
+     "numbers_changed": [],
+     "details": {
+      "pill-box-prepare": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Prepare Weekly Medication Box",
+        "owner": "Ana",
+        "due_date": "2026-11-07"
+       }
+      },
+      "surgery-appointment": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Schedule Surgery Appointment",
+        "owner": "Mrs. Georgescu",
+        "due_date": "2026-11-14"
+       }
+      },
+      "dressing": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Perform Home Care Dressing",
+        "owner": "Community Assistant",
+        "due_date": "2026-11-08"
+       }
+      },
+      "pill-box-buy": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Buy Diabetes Tablets",
+        "owner": "Mrs. Georgescu",
+        "due_date": "2026-11-06"
+       }
+      },
+      "lab-tests": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule Lab Tests",
+        "owner": "Mrs. Georgescu",
+        "due_date": "2026-11-12"
+       }
+      },
+      "follow-up": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Attend Follow-Up Appointment",
+        "owner": "Mrs. Georgescu",
+        "due_date": "2026-11-20"
+       }
+      }
+     },
+     "known_cases": [
+      {
+       "id": "surgery-appointment-owner",
+       "what": "The surgery appointment Ana said she would book must have Ana as owner",
+       "solved": false
+      }
+     ]
+    },
+    "corporate_1": {
+     "expected": 5,
+     "produced": 5,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "progress-report"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "payment-design"
+     ],
+     "date_missing": [],
+     "found": 5,
+     "matched": 5,
+     "numbers": 5,
+     "numbers_changed": [],
+     "details": {
+      "payment-tests": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Take over automated tests for payments",
+        "owner": "Radu",
+        "due_date": "2026-11-18"
+       }
+      },
+      "db-migration": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Finish database migration",
+        "owner": "Andrei",
+        "due_date": "2026-11-11"
+       }
+      },
+      "payment-design": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Send dashboard design for review",
+        "owner": "Maria",
+        "due_date": "2026-11-08"
+       }
+      },
+      "api-docs": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Update API documentation",
+        "owner": "Maria",
+        "due_date": "2026-11-20"
+       }
+      },
+      "progress-report": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Send progress report to client",
+        "owner": "Andrei",
+        "due_date": "2026-11-09"
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "corporate_2": {
+     "expected": 5,
+     "produced": 4,
+     "omitted": [
+      "installation",
+      "training"
+     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "signed-contract"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "user-list"
+     ],
+     "date_missing": [],
+     "found": 3,
+     "matched": 4,
+     "numbers": 3,
+     "numbers_changed": [],
+     "details": {
+      "user-list": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Send user list",
+        "owner": "Mrs. Popescu",
+        "due_date": "2026-11-08"
+       }
+      },
+      "training-date": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Organize training",
+        "owner": "Mihai",
+        "due_date": null
+       }
+      },
+      "invoice": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Issue invoice",
+        "owner": "Mihai",
+        "due_date": "2026-11-30"
+       }
+      },
+      "signed-contract": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Send signed contract",
+        "owner": "S1",
+        "due_date": "2026-11-07"
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "corporate_3": {
+     "expected": 4,
+     "produced": 4,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "incident-report",
+      "monitoring-alert"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "auto-renewal",
+      "incident-report",
+      "monitoring-alert"
+     ],
+     "date_missing": [],
+     "found": 4,
+     "matched": 4,
+     "numbers": 3,
+     "numbers_changed": [],
+     "details": {
+      "auto-renewal": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Renew SSL certificate",
+        "owner": "Ana",
+        "due_date": "2026-11-10"
+       }
+      },
+      "monitoring-alert": {
+       "owner": false,
+       "due": false,
+       "got": {
+        "title": "Add SSL certificate alert",
+        "owner": "S3",
+        "due_date": "2026-11-10"
+       }
+      },
+      "support-email": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Send customer notification",
+        "owner": "Support team",
+        "due_date": "2026-11-06"
+       }
+      },
+      "incident-report": {
+       "owner": false,
+       "due": false,
+       "got": {
+        "title": "Write incident report",
+        "owner": "S1",
+        "due_date": "2026-11-10"
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "others_1": {
+     "expected": 4,
+     "produced": 4,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "bank",
+      "call-owner",
+      "documents-list",
+      "viewing"
+     ],
+     "owner_missing": [],
+     "date_wrong": [],
+     "date_missing": [],
+     "found": 4,
+     "matched": 4,
+     "numbers": 4,
+     "numbers_changed": [],
+     "details": {
+      "call-owner": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Contact apartment owner for price reduction",
+        "owner": "Mr. Ionescu",
+        "due_date": "2026-11-07"
+       }
+      },
+      "viewing": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Schedule apartment viewing",
+        "owner": "Mr. Ionescu",
+        "due_date": "2026-11-07"
+       }
+      },
+      "documents-list": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Send list of loan documents",
+        "owner": "Mr. Ionescu",
+        "due_date": "2026-11-06"
+       }
+      },
+      "bank": {
+       "owner": false,
+       "due": true,
+       "got": {
+        "title": "Seek bank pre-approval",
+        "owner": "S2",
+        "due_date": "2026-11-14"
+       }
+      }
+     },
+     "known_cases": []
+    },
+    "others_2": {
+     "expected": 4,
+     "produced": 4,
+     "omitted": [
+      "attendance"
+     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [
+      "recovery-lessons"
+     ],
+     "owner_missing": [],
+     "date_wrong": [
+      "recovery-lessons",
+      "sign-gradebook",
+      "worksheet"
+     ],
+     "date_missing": [],
+     "found": 3,
+     "matched": 4,
+     "numbers": 3,
+     "numbers_changed": [],
+     "details": {
+      "recovery-lessons": {
+       "owner": false,
+       "due": false,
+       "got": {
+        "title": "Conduct recovery classes",
+        "owner": "S1",
+        "due_date": "2026-11-09"
+       }
+      },
+      "worksheet": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Prepare exercise sheet on fractions",
+        "owner": null,
+        "due_date": "2026-11-08"
+       }
+      },
+      "sign-gradebook": {
+       "owner": true,
+       "due": false,
+       "got": {
+        "title": "Sign grade book",
+        "owner": "Mrs. Dumitrescu",
+        "due_date": "2026-11-12"
+       }
+      },
+      "recovery-test": {
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Administer recovery test",
+        "owner": "S1",
+        "due_date": "2026-11-25"
+       }
+      }
+     },
+     "known_cases": []
+    }
+   }
+  }
+ },
+ "variance": {
+  "runs": 3,
+  "values_seen": {
+   "neutral": {
+    "consult_1": {
+     "produced": [
+      5,
+      7
+     ],
+     "omitted": [
+      0
+     ],
+     "invented": [
+      0,
+      1
+     ],
+     "owner_wrong": [
+      0
+     ],
+     "date_wrong": [
+      0
+     ]
+    },
+    "consult_2": {
+     "produced": [
+      7
+     ],
+     "omitted": [
+      0
+     ],
+     "invented": [
+      0
+     ],
+     "owner_wrong": [
+      0
+     ],
+     "date_wrong": [
+      0,
+      1
+     ]
+    },
+    "consult_3": {
+     "produced": [
+      5
+     ],
+     "omitted": [
+      2
+     ],
+     "invented": [
+      0
+     ],
+     "owner_wrong": [
+      2,
+      3
+     ],
+     "date_wrong": [
+      1,
+      2
+     ]
+    },
+    "others_2": {
+     "produced": [
+      4,
+      5
+     ],
+     "omitted": [
+      1
+     ],
+     "invented": [
+      0,
+      1
+     ],
+     "owner_wrong": [
+      1
+     ],
+     "date_wrong": [
+      3
+     ]
+    }
+   }
+  }
+ }
+}

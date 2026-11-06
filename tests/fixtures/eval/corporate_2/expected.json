@@ -1,0 +1,143 @@
+{
+ "verified_by": null,
+ "actions": [
+  {
+   "key": "invoice",
+   "what": "Mihai issues the invoice and emails it",
+   "match": [
+    [
+     "invoice"
+    ]
+   ],
+   "owner": [
+    "Mihai"
+   ],
+   "due": [
+    "2026-11-30"
+   ]
+  },
+  {
+   "key": "user-list",
+   "what": "The client (Popescu) sends the user list",
+   "match": [
+    [
+     "user"
+    ],
+    [
+     "list"
+    ]
+   ],
+   "owner": [
+    "Popescu"
+   ],
+   "due": [
+    "2026-11-10"
+   ]
+  },
+  {
+   "key": "installation",
+   "what": "Installation in the first week of December",
+   "match": [
+    [
+     "install"
+    ]
+   ],
+   "owner": [
+    null,
+    "organizer",
+    "Mihai"
+   ],
+   "due": [
+    null,
+    "2026-12-01",
+    "2026-12-02",
+    "2026-12-03",
+    "2026-12-04",
+    "2026-12-05",
+    "2026-12-06",
+    "2026-12-07"
+   ]
+  },
+  {
+   "key": "training-date",
+   "what": "Set the training date once the user list arrives",
+   "match": [
+    [
+     "training"
+    ],
+    [
+     "date"
+    ]
+   ],
+   "owner": [
+    null,
+    "organizer",
+    "Mihai"
+   ],
+   "due": [
+    null
+   ],
+   "optional": true
+  },
+  {
+   "key": "training",
+   "what": "Mihai organizes the training (no deadline said)",
+   "match": [
+    [
+     "training"
+    ]
+   ],
+   "owner": [
+    "Mihai"
+   ],
+   "due": [
+    null
+   ]
+  },
+  {
+   "key": "signed-contract",
+   "what": "The organizer sends the signed contract tomorrow",
+   "match": [
+    [
+     "contract"
+    ]
+   ],
+   "owner": [
+    null,
+    "organizer"
+   ],
+   "due": [
+    "2026-11-07"
+   ]
+  }
+ ],
+ "not_actions": [],
+ "numbers": [
+  {
+   "key": "licenses-25",
+   "said": "douăzeci și cinci de licențe",
+   "english": [
+    "25",
+    "twenty-five"
+   ]
+  },
+  {
+   "key": "price-12500",
+   "said": "douăsprezece mii cinci sute de lei",
+   "english": [
+    "12,500",
+    "12500",
+    "12.500",
+    "twelve thousand five hundred"
+   ]
+  },
+  {
+   "key": "date-30",
+   "said": "treizeci noiembrie",
+   "english": [
+    "30",
+    "thirtieth"
+   ]
+  }
+ ]
+}

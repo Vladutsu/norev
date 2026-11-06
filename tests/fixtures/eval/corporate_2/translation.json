@@ -1,0 +1,178 @@
+{
+ "model": "Qwen3-8B-Q4_K_M",
+ "elapsed_seconds": 7.7,
+ "calls": [
+  {
+   "stage": "translate",
+   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună ziua, doamna Popescu. Vă mulțumim că ați găsit timp pentru apel.\"}\n{\"id\": \"2\", \"text\": \"Bună ziua. Vreau să discutăm oferta pentru licențe și termenul de livrare.\"}\n{\"id\": \"3\", \"text\": \"Oferta noastră este pentru douăzeci și cinci de licențe, la un preț total de douăsprezece mii cinci sute de lei pe an.\"}\n{\"id\": \"4\", \"text\": \"E în regulă, dar avem nevoie de factură până la sfârșitul lunii.\"}\n{\"id\": \"5\", \"text\": \"Eu emit factura până pe treizeci noiembrie și o trimit pe email.\"}\n{\"id\": \"6\", \"text\": \"Mulțumim, Mihai. Doamna Popescu, ne puteți trimite lista de utilizatori?\"}\n{\"id\": \"7\", \"text\": \"Da, v-o trimit până marți.\"}\n{\"id\": \"8\", \"text\": \"Instalarea o putem face în prima săptămână din decembrie.\"}\n{\"id\": \"9\", \"text\": \"Perfect. Mai avem nevoie și de un training pentru echipa noastră.\"}\n{\"id\": \"10\", \"text\": \"Pot organiza eu trainingul, dar trebuie să stabilim o dată.\"}\n{\"id\": \"11\", \"text\": \"Stabilim data trainingului după ce primim lista de utilizatori.\"}\n{\"id\": \"12\", \"text\": \"De acord. Și vă rog să ne trimiteți contractul semnat.\"}\n{\"id\": \"13\", \"text\": \"Vi-l trimit eu mâine.\"}\n{\"id\": \"14\", \"text\": \"Mulțumesc, o zi bună.\"}",
+   "json_schema": {
+    "type": "object",
+    "properties": {
+     "turns": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14"
+         ]
+        },
+        "text": {
+         "type": "string",
+         "minLength": 1
+        }
+       },
+       "required": [
+        "id",
+        "text"
+       ],
+       "additionalProperties": false
+      },
+      "minItems": 14,
+      "maxItems": 14
+     }
+    },
+    "required": [
+     "turns"
+    ],
+    "additionalProperties": false
+   },
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Popescu. Thank you for finding time for the call.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day. I would like to discuss the offer for licenses and the delivery term.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Our offer is for twenty-five licenses, at a total price of twelve thousand five hundred lei per year.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"That's fine, but we need the invoice by the end of the month.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"I issue the invoice by thirty November and send it by email.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Thank you, Mihai. Mrs. Popescu, can you send us the list of users?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Yes, I'll send it by Tuesday.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"We can do the installation in the first week of December.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Perfect. We also need a training for our team.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"I can organize the training, but we need to set a date.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"We set the training date after we receive the list of users.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"Agreed. And please send us the signed contract.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"I'll send it to you tomorrow.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Thank you, have a good day.\"\n    }\n  ]\n}"
+  }
+ ],
+ "english": {
+  "synthetic": "Written for tests. No real person.",
+  "session_date": "2026-11-06",
+  "language": "en",
+  "source_language": "ro",
+  "speakers": [
+   {
+    "id": "S1",
+    "role": "organizer"
+   },
+   {
+    "id": "S2",
+    "role": "participant"
+   },
+   {
+    "id": "S3",
+    "role": "participant"
+   }
+  ],
+  "segments": [
+   {
+    "start": 0.5,
+    "end": 5.3,
+    "speaker_id": "S1",
+    "text": "Good day, Mrs. Popescu. Thank you for finding time for the call.",
+    "untranslated": false
+   },
+   {
+    "start": 5.8,
+    "end": 10.6,
+    "speaker_id": "S2",
+    "text": "Good day. I would like to discuss the offer for licenses and the delivery term.",
+    "untranslated": false
+   },
+   {
+    "start": 11.1,
+    "end": 19.4,
+    "speaker_id": "S1",
+    "text": "Our offer is for twenty-five licenses, at a total price of twelve thousand five hundred lei per year.",
+    "untranslated": false
+   },
+   {
+    "start": 19.9,
+    "end": 24.7,
+    "speaker_id": "S2",
+    "text": "That's fine, but we need the invoice by the end of the month.",
+    "untranslated": false
+   },
+   {
+    "start": 25.2,
+    "end": 30.0,
+    "speaker_id": "S3",
+    "text": "I issue the invoice by thirty November and send it by email.",
+    "untranslated": false
+   },
+   {
+    "start": 30.5,
+    "end": 34.6,
+    "speaker_id": "S1",
+    "text": "Thank you, Mihai. Mrs. Popescu, can you send us the list of users?",
+    "untranslated": false
+   },
+   {
+    "start": 35.1,
+    "end": 37.45,
+    "speaker_id": "S2",
+    "text": "Yes, I'll send it by Tuesday.",
+    "untranslated": false
+   },
+   {
+    "start": 37.95,
+    "end": 41.7,
+    "speaker_id": "S1",
+    "text": "We can do the installation in the first week of December.",
+    "untranslated": false
+   },
+   {
+    "start": 42.2,
+    "end": 46.65,
+    "speaker_id": "S2",
+    "text": "Perfect. We also need a training for our team.",
+    "untranslated": false
+   },
+   {
+    "start": 47.15,
+    "end": 51.25,
+    "speaker_id": "S3",
+    "text": "I can organize the training, but we need to set a date.",
+    "untranslated": false
+   },
+   {
+    "start": 51.75,
+    "end": 55.5,
+    "speaker_id": "S1",
+    "text": "We set the training date after we receive the list of users.",
+    "untranslated": false
+   },
+   {
+    "start": 56.0,
+    "end": 60.1,
+    "speaker_id": "S2",
+    "text": "Agreed. And please send us the signed contract.",
+    "untranslated": false
+   },
+   {
+    "start": 60.6,
+    "end": 62.6,
+    "speaker_id": "S1",
+    "text": "I'll send it to you tomorrow.",
+    "untranslated": false
+   },
+   {
+    "start": 63.1,
+    "end": 65.1,
+    "speaker_id": "S2",
+    "text": "Thank you, have a good day.",
+    "untranslated": false
+   }
+  ]
+ }
+}

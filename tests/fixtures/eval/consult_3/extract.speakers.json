@@ -1,0 +1,205 @@
+{
+ "model": "Qwen3-8B-Q4_K_M",
+ "elapsed_seconds": 17.4,
+ "calls": [
+  {
+   "stage": "extract",
+   "prompt": "The session took place today, 2026-11-06 (Friday).\nCalendar for resolving dates:\n  Fri 2026-11-06 (today), Sat 2026-11-07 (tomorrow), Sun 2026-11-08, Mon 2026-11-09, Tue 2026-11-10, Wed 2026-11-11, Thu 2026-11-12\n  Fri 2026-11-13, Sat 2026-11-14, Sun 2026-11-15, Mon 2026-11-16, Tue 2026-11-17, Wed 2026-11-18, Thu 2026-11-19\n  Fri 2026-11-20, Sat 2026-11-21, Sun 2026-11-22, Mon 2026-11-23, Tue 2026-11-24, Wed 2026-11-25, Thu 2026-11-26\n  Fri 2026-11-27, Sat 2026-11-28, Sun 2026-11-29, Mon 2026-11-30, Tue 2026-12-01, Wed 2026-12-02, Thu 2026-12-03\n  Fri 2026-12-04, Sat 2026-12-05, Sun 2026-12-06, Mon 2026-12-07, Tue 2026-12-08, Wed 2026-12-09, Thu 2026-12-10\n  Fri 2026-12-11, Sat 2026-12-12, Sun 2026-12-13, Mon 2026-12-14, Tue 2026-12-15, Wed 2026-12-16, Thu 2026-12-17\n\nYou extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a\nSession (one recorded conversation) and must extract every Proposed Action: a concrete action someone has\nto carry out. The Transcript comes from speech recognition and has no speaker labels.\n\nWhat is a Proposed Action:\n- Any commitment or request to do something: \"X, can you ...?\" followed by agreement, \"please ...\",\n  \"I'll do it\".\n- Include small items too.\n- One action per Proposed Action: split \"write the tests and update the docs\" into two Proposed Actions.\n- NOT a Proposed Action: items that were cancelled or dropped (\"we won't do X anymore\" - record it as a decision),\n  ideas nobody committed to, and decisions.\n\nOwner:\n- The person who accepted the action or was asked to do it, written as in the transcript.\n- If a Proposed Action was reassigned (\"Ionuț was supposed to, but Elena takes it over\"), use only the final owner.\n- If the speaker commits themself (\"I'll do it\", \"I'll send it\") and their name is not stated, owner=null.\n  Never pick a person who is only mentioned in the sentence.\n- If assignable team members are provided and the transcript names no owner, choose one only when their\n  skills clearly match the action; use the exact candidate name. Otherwise owner=null.\n\nDue date:\n- Resolve \"today\", \"tomorrow\", weekday names (\"by Monday\", \"on Thursday\") and \"next week\" with the\n  calendar above. \"By Monday\" means that Monday.\n- If no deadline is stated, due_date=null. The date of a later session is not a deadline unless the action\n  has to be finished before it.\n\nRules:\n- Response language: English.\n- Do not invent information that is not present in the transcript.\n- Normalize dates to YYYY-MM-DD.\n- Remove duplicates. Keep actions separate from decisions and risks.\n- transcript_excerpt: the shortest transcript quote (at most 15 words) that shows the action.\n\nReturn ONLY valid JSON, with no extra text, using this schema:\n\n{\n  \"session_summary\": \"maximum 4 sentences\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"infinitive verb + clear objective\",\n      \"description\": \"one short sentence\",\n      \"owner\": \"person name or null\",\n      \"due_date\": \"YYYY-MM-DD or null\",\n      \"priority\": \"high|medium|low\",\n      \"transcript_excerpt\": \"short quote from the transcript\"\n    }\n  ],\n  \"decisions\": [\"decisions made in the session\"],\n  \"risks\": [\"identified blockers or risks\"],\n  \"follow_up_questions\": [\"questions needed for actions with unclear owner/deadline\"]\n}\n\nTranscript:\n[S1] Good day, Mrs. Georgescu. I see you came with your daughter. [S2] Good day, Doctor. Yes, Ana brought me, because I don't remember everything I need anymore. [S3] Good day. Mom lost her diabetes tablets again last week and her blood sugar was high. [S1] How high was it? [S3] In the morning two hundred ten, last night one hundred eighty. I measured it with her device. [S1] Mrs. Georgescu, what tablets are you taking now? [S2] Metformin, I think of a thousand, in the morning and evening. But sometimes I forget the evening one. [S1] And how is the left foot? Last time you had a small wound on the heel. [S2] It still hurts me and turns red in the evening. [S1] Let me check. The wound hasn't closed and the skin around it is red. You need to see a surgeon. [S3] Where do we go? [S1] I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week. [S3] I will take care of the appointment, I'll call tomorrow morning. [S1] Very well. Until then, daily dressing with physiological serum and betadine. The community assistant can come to your home to show you how to do it. [S3] That would be a great help, I work until five. [S1] I will inform the community assistant, Mrs. Ioana, to visit you on Monday afternoon. [S2] And what about the tablets, what do I do, because I keep forgetting them? [S1] I recommend a box of pills for the days of the week. Ana, please prepare it for the whole week on Sunday evening. [S3] Sure, I will buy them from the pharmacy today. [S1] I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday. [S3] We will do them on Thursday, because I have free time. [S1] Come back then on twenty November, at eleven o'clock, with the results and with the medical letter from the surgeon. [S2] Twenty November, at eleven. Ana, please write it down, please. [S3] I have noted. Thank you very much, Doctor. [S1] You're welcome. If fever appears or the foot swells, come immediately.",
+   "json_schema": {
+    "type": "object",
+    "properties": {
+     "session_summary": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 1000
+     },
+     "proposed_actions": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "maxLength": 10
+        },
+        "title": {
+         "type": "string",
+         "minLength": 3,
+         "maxLength": 200
+        },
+        "description": {
+         "type": "string",
+         "maxLength": 400
+        },
+        "owner": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "maxLength": 200
+        },
+        "due_date": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "priority": {
+         "enum": [
+          "high",
+          "medium",
+          "low"
+         ]
+        },
+        "transcript_excerpt": {
+         "type": "string",
+         "maxLength": 400
+        }
+       },
+       "required": [
+        "id",
+        "title",
+        "description",
+        "owner",
+        "due_date",
+        "priority",
+        "transcript_excerpt"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "decisions": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "maxLength": 400
+      },
+      "maxItems": 20
+     },
+     "risks": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "maxLength": 400
+      },
+      "maxItems": 20
+     },
+     "follow_up_questions": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "maxLength": 400
+      },
+      "maxItems": 20
+     }
+    },
+    "required": [
+     "session_summary",
+     "proposed_actions",
+     "decisions",
+     "risks",
+     "follow_up_questions"
+    ],
+    "additionalProperties": false
+   },
+   "response": "{\n  \"session_summary\": \"A medical session discussing Mrs. Georgescu's diabetes management and foot wound. A referral to surgery was made, and plans for home care and tests were outlined.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Schedule Surgery Appointment\",\n      \"description\": \"Get an appointment at the county hospital outpatient clinic during the next week.\",\n      \"owner\": \"Mrs. Georgescu\",\n      \"due_date\": \"2026-11-14\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Prepare Weekly Medication Box\",\n      \"description\": \"Ana should prepare a weekly medication box for Mrs. Georgescu on Sunday evening.\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Ana, please prepare it for the whole week on Sunday evening.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Buy Diabetes Tablets\",\n      \"description\": \"Mrs. Georgescu should buy the diabetes tablets from the pharmacy today.\",\n      \"owner\": \"Mrs. Georgescu\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I will buy them from the pharmacy today.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Perform Home Care Dressing\",\n      \"description\": \"Daily dressing with physiological serum and betadine should be done at home.\",\n      \"owner\": \"Community Assistant\",\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"The community assistant can come to your home to show you how to do it.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Schedule Lab Tests\",\n      \"description\": \"Hemoglobin A1c and urine tests should be done at the lab by Friday.\",\n      \"owner\": \"Mrs. Georgescu\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.\"\n    },\n    {\n      \"id\": \"A6\",\n      \"title\": \"Attend Follow-Up Appointment\",\n      \"description\": \"Mrs. Georgescu should return on 20 November at 11:00 with test results and a medical letter from the surgeon.\",\n      \"owner\": \"Mrs. Georgescu\",\n      \"due_date\": \"2026-11-20\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Come back then on twenty November, at eleven o'clock, with the results and with the medical letter from the surgeon.\"\n    }\n  ],\n  \"decisions\": [\n    \"Mrs. Georgescu will be referred to the outpatient clinic of the county hospital for surgery.\",\n    \"The community assistant will visit Mrs. Georgescu on Monday afternoon.\"\n  ],\n  \"risks\": [\n    \"The foot wound may worsen if not properly managed.\",\n    \"Mrs. Georgescu may forget to take her diabetes tablets.\"\n  ],\n  \"follow_up_questions\": [\n    \"Who will be responsible for the home care dressing if the community assistant is unavailable?\",\n    \"What is the exact schedule for the lab tests if they are not done on Thursday?\"\n  ]\n}"
+  }
+ ],
+ "result": {
+  "session_summary": "A medical session discussing Mrs. Georgescu's diabetes management and foot wound. A referral to surgery was made, and plans for home care and tests were outlined.",
+  "proposed_actions": [
+   {
+    "id": "A1",
+    "title": "Schedule Surgery Appointment",
+    "description": "Get an appointment at the county hospital outpatient clinic during the next week.",
+    "owner": "Mrs. Georgescu",
+    "due_date": "2026-11-14",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.",
+    "needs_review": false
+   },
+   {
+    "id": "A2",
+    "title": "Prepare Weekly Medication Box",
+    "description": "Ana should prepare a weekly medication box for Mrs. Georgescu on Sunday evening.",
+    "owner": "Ana",
+    "due_date": "2026-11-07",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "Ana, please prepare it for the whole week on Sunday evening.",
+    "needs_review": false
+   },
+   {
+    "id": "A3",
+    "title": "Buy Diabetes Tablets",
+    "description": "Mrs. Georgescu should buy the diabetes tablets from the pharmacy today.",
+    "owner": "Mrs. Georgescu",
+    "due_date": "2026-11-06",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "I will buy them from the pharmacy today.",
+    "needs_review": false
+   },
+   {
+    "id": "A4",
+    "title": "Perform Home Care Dressing",
+    "description": "Daily dressing with physiological serum and betadine should be done at home.",
+    "owner": "Community Assistant",
+    "due_date": "2026-11-08",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "The community assistant can come to your home to show you how to do it.",
+    "needs_review": false
+   },
+   {
+    "id": "A5",
+    "title": "Schedule Lab Tests",
+    "description": "Hemoglobin A1c and urine tests should be done at the lab by Friday.",
+    "owner": "Mrs. Georgescu",
+    "due_date": "2026-11-12",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.",
+    "needs_review": false
+   },
+   {
+    "id": "A6",
+    "title": "Attend Follow-Up Appointment",
+    "description": "Mrs. Georgescu should return on 20 November at 11:00 with test results and a medical letter from the surgeon.",
+    "owner": "Mrs. Georgescu",
+    "due_date": "2026-11-20",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "Come back then on twenty November, at eleven o'clock, with the results and with the medical letter from the surgeon.",
+    "needs_review": false
+   }
+  ],
+  "decisions": [
+   "Mrs. Georgescu will be referred to the outpatient clinic of the county hospital for surgery.",
+   "The community assistant will visit Mrs. Georgescu on Monday afternoon."
+  ],
+  "risks": [
+   "The foot wound may worsen if not properly managed.",
+   "Mrs. Georgescu may forget to take her diabetes tablets."
+  ],
+  "follow_up_questions": [
+   "Who will be responsible for the home care dressing if the community assistant is unavailable?",
+   "What is the exact schedule for the lab tests if they are not done on Thursday?"
+  ]
+ }
+}

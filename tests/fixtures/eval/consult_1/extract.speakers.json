@@ -1,0 +1,191 @@
+{
+ "model": "Qwen3-8B-Q4_K_M",
+ "elapsed_seconds": 14.3,
+ "calls": [
+  {
+   "stage": "extract",
+   "prompt": "The session took place today, 2026-11-06 (Friday).\nCalendar for resolving dates:\n  Fri 2026-11-06 (today), Sat 2026-11-07 (tomorrow), Sun 2026-11-08, Mon 2026-11-09, Tue 2026-11-10, Wed 2026-11-11, Thu 2026-11-12\n  Fri 2026-11-13, Sat 2026-11-14, Sun 2026-11-15, Mon 2026-11-16, Tue 2026-11-17, Wed 2026-11-18, Thu 2026-11-19\n  Fri 2026-11-20, Sat 2026-11-21, Sun 2026-11-22, Mon 2026-11-23, Tue 2026-11-24, Wed 2026-11-25, Thu 2026-11-26\n  Fri 2026-11-27, Sat 2026-11-28, Sun 2026-11-29, Mon 2026-11-30, Tue 2026-12-01, Wed 2026-12-02, Thu 2026-12-03\n  Fri 2026-12-04, Sat 2026-12-05, Sun 2026-12-06, Mon 2026-12-07, Tue 2026-12-08, Wed 2026-12-09, Thu 2026-12-10\n  Fri 2026-12-11, Sat 2026-12-12, Sun 2026-12-13, Mon 2026-12-14, Tue 2026-12-15, Wed 2026-12-16, Thu 2026-12-17\n\nYou extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a\nSession (one recorded conversation) and must extract every Proposed Action: a concrete action someone has\nto carry out. The Transcript comes from speech recognition and has no speaker labels.\n\nWhat is a Proposed Action:\n- Any commitment or request to do something: \"X, can you ...?\" followed by agreement, \"please ...\",\n  \"I'll do it\".\n- Include small items too.\n- One action per Proposed Action: split \"write the tests and update the docs\" into two Proposed Actions.\n- NOT a Proposed Action: items that were cancelled or dropped (\"we won't do X anymore\" - record it as a decision),\n  ideas nobody committed to, and decisions.\n\nOwner:\n- The person who accepted the action or was asked to do it, written as in the transcript.\n- If a Proposed Action was reassigned (\"Ionuț was supposed to, but Elena takes it over\"), use only the final owner.\n- If the speaker commits themself (\"I'll do it\", \"I'll send it\") and their name is not stated, owner=null.\n  Never pick a person who is only mentioned in the sentence.\n- If assignable team members are provided and the transcript names no owner, choose one only when their\n  skills clearly match the action; use the exact candidate name. Otherwise owner=null.\n\nDue date:\n- Resolve \"today\", \"tomorrow\", weekday names (\"by Monday\", \"on Thursday\") and \"next week\" with the\n  calendar above. \"By Monday\" means that Monday.\n- If no deadline is stated, due_date=null. The date of a later session is not a deadline unless the action\n  has to be finished before it.\n\nRules:\n- Response language: English.\n- Do not invent information that is not present in the transcript.\n- Normalize dates to YYYY-MM-DD.\n- Remove duplicates. Keep actions separate from decisions and risks.\n- transcript_excerpt: the shortest transcript quote (at most 15 words) that shows the action.\n\nReturn ONLY valid JSON, with no extra text, using this schema:\n\n{\n  \"session_summary\": \"maximum 4 sentences\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"infinitive verb + clear objective\",\n      \"description\": \"one short sentence\",\n      \"owner\": \"person name or null\",\n      \"due_date\": \"YYYY-MM-DD or null\",\n      \"priority\": \"high|medium|low\",\n      \"transcript_excerpt\": \"short quote from the transcript\"\n    }\n  ],\n  \"decisions\": [\"decisions made in the session\"],\n  \"risks\": [\"identified blockers or risks\"],\n  \"follow_up_questions\": [\"questions needed for actions with unclear owner/deadline\"]\n}\n\nTranscript:\n[S1] Good day, Mrs. Ionescu. Please take a seat. What brings you here today? [S2] Good day, Doctor. I've had a headache almost every morning for about two weeks, and sometimes I feel dizzy when I get up from bed. [S1] Have you measured your blood pressure at home? [S2] Yes, I have a device from my daughter. Yesterday morning I had 160 with 95. [S1] It's quite high. I'll measure it now. Please stay still for a few seconds. [S2] Alright. Let me tell you I also have palpitations in the evening, especially after I drink coffee. [S1] Now you have 155 with 92. How many coffees do you drink a day? [S2] Three, sometimes four. And I sleep quite poorly, about five hours a night. [S1] Please reduce your coffee to at most one a day, in the morning. Salt as little as possible. [S2] I understand. Do I need to take pills? [S1] Yes. I'll prescribe you amlodipine five milligrams, one tablet in the morning. I'll give you the prescription now. [S2] And for how long should I take it? [S1] For now, continue. I want you to measure your blood pressure at home twice a day, in the morning and in the evening, and note the values in a notebook. [S2] Alright, I'll note them all. [S1] I'll also give you a referral for blood tests: cholesterol, blood sugar, creatinine, and ionogram. Please do them by Wednesday, on the spot. [S2] Can I do them at the lab next to the polyclinic? [S1] Yes, they have a contract with the insurance company. And I want an electrocardiogram, we'll do it right here, at the assistant, after the consultation. [S2] Perfect. When should I come back? [S1] Come back on Friday, on the 13th of November, at ten o'clock, with the blood pressure notebook and the results of the tests. [S2] I'll note that. If my headache gets very bad in the meantime? [S1] If your blood pressure goes over 180 or you have numbness, blurred vision, or chest pain, call 122 immediately. [S2] I understand. Thank you very much, Doctor. [S1] You're welcome. The assistant Maria will schedule your electrocardiogram and give you the printed prescription.",
+   "json_schema": {
+    "type": "object",
+    "properties": {
+     "session_summary": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 1000
+     },
+     "proposed_actions": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "maxLength": 10
+        },
+        "title": {
+         "type": "string",
+         "minLength": 3,
+         "maxLength": 200
+        },
+        "description": {
+         "type": "string",
+         "maxLength": 400
+        },
+        "owner": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "maxLength": 200
+        },
+        "due_date": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "priority": {
+         "enum": [
+          "high",
+          "medium",
+          "low"
+         ]
+        },
+        "transcript_excerpt": {
+         "type": "string",
+         "maxLength": 400
+        }
+       },
+       "required": [
+        "id",
+        "title",
+        "description",
+        "owner",
+        "due_date",
+        "priority",
+        "transcript_excerpt"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "decisions": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "maxLength": 400
+      },
+      "maxItems": 20
+     },
+     "risks": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "maxLength": 400
+      },
+      "maxItems": 20
+     },
+     "follow_up_questions": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "maxLength": 400
+      },
+      "maxItems": 20
+     }
+    },
+    "required": [
+     "session_summary",
+     "proposed_actions",
+     "decisions",
+     "risks",
+     "follow_up_questions"
+    ],
+    "additionalProperties": false
+   },
+   "response": "{\n  \"session_summary\": \"A patient visited her doctor due to persistent headaches and high blood pressure. The doctor prescribed medication, recommended lifestyle changes, and scheduled follow-up tests and appointments.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Reduce coffee intake\",\n      \"description\": \"Limit coffee consumption to one cup per day in the morning\",\n      \"owner\": \"Mrs. Ionescu\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Please reduce your coffee to at most one a day, in the morning.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Measure blood pressure at home\",\n      \"description\": \"Measure blood pressure twice daily and record values in a notebook\",\n      \"owner\": \"Mrs. Ionescu\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I want you to measure your blood pressure at home twice a day, in the morning and in the evening\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Schedule blood tests\",\n      \"description\": \"Complete blood tests by Wednesday\",\n      \"owner\": \"Mrs. Ionescu\",\n      \"due_date\": \"2026-11-11\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Please do them by Wednesday, on the spot.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Schedule electrocardiogram\",\n      \"description\": \"Undergo electrocardiogram at the assistant's office after consultation\",\n      \"owner\": \"Mrs. Ionescu\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"we'll do it right here, at the assistant, after the consultation.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Attend follow-up appointment\",\n      \"description\": \"Return to the clinic on Friday, November 13th at 10:00 AM\",\n      \"owner\": \"Mrs. Ionescu\",\n      \"due_date\": \"2026-11-13\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Come back on Friday, on the 13th of November, at ten o'clock\"\n    }\n  ],\n  \"decisions\": [\n    \"Prescribe amlodipine five milligrams, one tablet in the morning\",\n    \"Schedule blood tests: cholesterol, blood sugar, creatinine, and ionogram\",\n    \"Schedule electrocardiogram at the assistant's office after consultation\"\n  ],\n  \"risks\": [\n    \"If blood pressure goes over 180 or symptoms like numbness, blurred vision, or chest pain occur, call 122 immediately\"\n  ],\n  \"follow_up_questions\": [\n    \"What specific tests are required for the blood tests?\"\n  ]\n}"
+  }
+ ],
+ "result": {
+  "session_summary": "A patient visited her doctor due to persistent headaches and high blood pressure. The doctor prescribed medication, recommended lifestyle changes, and scheduled follow-up tests and appointments.",
+  "proposed_actions": [
+   {
+    "id": "A1",
+    "title": "Reduce coffee intake",
+    "description": "Limit coffee consumption to one cup per day in the morning",
+    "owner": "Mrs. Ionescu",
+    "due_date": "2026-11-06",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "Please reduce your coffee to at most one a day, in the morning.",
+    "needs_review": false
+   },
+   {
+    "id": "A2",
+    "title": "Measure blood pressure at home",
+    "description": "Measure blood pressure twice daily and record values in a notebook",
+    "owner": "Mrs. Ionescu",
+    "due_date": "2026-11-06",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "I want you to measure your blood pressure at home twice a day, in the morning and in the evening",
+    "needs_review": false
+   },
+   {
+    "id": "A3",
+    "title": "Schedule blood tests",
+    "description": "Complete blood tests by Wednesday",
+    "owner": "Mrs. Ionescu",
+    "due_date": "2026-11-11",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "Please do them by Wednesday, on the spot.",
+    "needs_review": false
+   },
+   {
+    "id": "A4",
+    "title": "Schedule electrocardiogram",
+    "description": "Undergo electrocardiogram at the assistant's office after consultation",
+    "owner": "Mrs. Ionescu",
+    "due_date": "2026-11-06",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "we'll do it right here, at the assistant, after the consultation.",
+    "needs_review": false
+   },
+   {
+    "id": "A5",
+    "title": "Attend follow-up appointment",
+    "description": "Return to the clinic on Friday, November 13th at 10:00 AM",
+    "owner": "Mrs. Ionescu",
+    "due_date": "2026-11-13",
+    "priority": "high",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "Come back on Friday, on the 13th of November, at ten o'clock",
+    "needs_review": false
+   }
+  ],
+  "decisions": [
+   "Prescribe amlodipine five milligrams, one tablet in the morning",
+   "Schedule blood tests: cholesterol, blood sugar, creatinine, and ionogram",
+   "Schedule electrocardiogram at the assistant's office after consultation"
+  ],
+  "risks": [
+   "If blood pressure goes over 180 or symptoms like numbness, blurred vision, or chest pain occur, call 122 immediately"
+  ],
+  "follow_up_questions": [
+   "What specific tests are required for the blood tests?"
+  ]
+ }
+}

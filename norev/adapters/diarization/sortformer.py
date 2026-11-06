@@ -4,8 +4,10 @@ Needs `requirements-diarization.txt`; the imports are inside the methods, so the
 without them. The model (CC-BY-4.0, not gated) is downloaded once from Hugging Face; after that,
 HF_HUB_OFFLINE=1 runs it with no network (ADR 0001).
 """
+import contextlib
 import io
 import os
+import sys
 
 from norev.core.models import SpeakerTurn
 from norev.core.ports import SessionStore
@@ -29,7 +31,8 @@ class SortformerDiarizer:
         import torch
 
         audio = decode_audio(io.BytesIO(self._store.load_audio(audio_ref)), sampling_rate=SAMPLE_RATE)
-        with torch.inference_mode():
+        # NeMo logs to stdout; callers such as `python -m norev.session transcribe` print their result there
+        with contextlib.redirect_stdout(sys.stderr), torch.inference_mode():
             segments = self._load().diarize(audio=audio, sample_rate=SAMPLE_RATE, batch_size=1, verbose=False)[0]
         turns = []
         for segment in segments:

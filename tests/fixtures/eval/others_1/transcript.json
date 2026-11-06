@@ -1,0 +1,80 @@
+{
+  "synthetic": "Written for tests. No real person.",
+  "about": "Agent imobiliar cu un client.",
+  "domain": "others",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": null
+    },
+    {
+      "id": "S2",
+      "role": null
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.5,
+      "end": 6.0,
+      "speaker_id": "S1",
+      "text": "Bună ziua, domnule Ionescu. Ați reușit să vă uitați la apartamentul din Drumul Taberei?"
+    },
+    {
+      "start": 6.5,
+      "end": 13.05,
+      "speaker_id": "S2",
+      "text": "Da, ne-a plăcut, dar prețul de nouăzeci și cinci de mii de euro ni se pare mare."
+    },
+    {
+      "start": 13.55,
+      "end": 18.0,
+      "speaker_id": "S1",
+      "text": "Pot să vorbesc cu proprietarul pentru o reducere. Îl sun mâine."
+    },
+    {
+      "start": 18.5,
+      "end": 24.35,
+      "speaker_id": "S2",
+      "text": "Ar fi bine. Și am vrea să vedem și apartamentul cu trei camere din Militari."
+    },
+    {
+      "start": 24.85,
+      "end": 28.25,
+      "speaker_id": "S1",
+      "text": "Vă programez o vizionare sâmbătă la ora unsprezece."
+    },
+    {
+      "start": 28.75,
+      "end": 31.8,
+      "speaker_id": "S2",
+      "text": "Perfect. Ce acte ne trebuie pentru credit?"
+    },
+    {
+      "start": 32.3,
+      "end": 36.05,
+      "speaker_id": "S1",
+      "text": "Vă trimit pe email lista de acte până diseară."
+    },
+    {
+      "start": 36.55,
+      "end": 39.95,
+      "speaker_id": "S2",
+      "text": "Eu vorbesc cu banca săptămâna viitoare pentru preaprobare."
+    },
+    {
+      "start": 40.45,
+      "end": 44.9,
+      "speaker_id": "S1",
+      "text": "Bun. Dacă proprietarul acceptă optzeci și opt de mii, facem antecontractul."
+    },
+    {
+      "start": 45.4,
+      "end": 47.05,
+      "speaker_id": "S2",
+      "text": "De acord. Mulțumesc."
+    }
+  ],
+  "user_context": "Sunt agent imobiliar. Discut cu clienți care vor să cumpere sau să închirieze locuințe și țin evidența vizionărilor, a ofertelor și a actelor."
+}
