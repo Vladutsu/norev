@@ -15,7 +15,7 @@ from norev.adapters.llm.translator import TurnTranslator
 from norev.core.models import Segment, Session, Transcript
 from norev.core.ports import LlmClient
 from norev.processor.central import CentralProcessor
-from norev.processor.compose import build_central_processor
+from norev.processor.compose import build_central_processor, build_google_calendar
 from norev.processor.identity import LocalUser
 from norev.testing.fakes import FakeLlmClient, FixedClock, InMemorySessionStore
 from norev.usecases.domain_stage import run_domain_stage
@@ -62,6 +62,16 @@ class CompositionTest(unittest.TestCase):
             processor = build_central_processor(audit=None, identity=LocalUser("u"))
         self.assertIsInstance(processor, LlmClient)
         self.assertIsInstance(processor._llm, LlamaCppLLMClient)  # built, not connected: port 9 has no server
+
+    def test_google_calendar_is_built_here_and_given_to_the_processor(self) -> None:
+        from norev.adapters.connectors.google_calendar import GoogleCalendarSettings
+        from test_connectors_google_auth import MemorySecrets
+
+        auth, connector = build_google_calendar(MemorySecrets(), GoogleCalendarSettings("id", "secret"))
+        self.assertFalse(auth.connected())  # built, nothing contacted
+        with patch.dict(os.environ, {"LLM_PROVIDER": "llamacpp", "LLAMACPP_URL": "http://127.0.0.1:9"}):
+            processor = build_central_processor(audit=None, identity=LocalUser("u"), connectors=[connector])
+        self.assertTrue(processor.has_connector("google_calendar"))
 
 
 class StagesGoThroughTheProcessorTest(unittest.TestCase):

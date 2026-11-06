@@ -325,6 +325,26 @@ class EncryptedStoreTest(TempStoreCase):
         for encoding in ("utf-8", "utf-16-le"):
             self.assertNotIn(SENTINEL.encode(encoding), self.data_bytes())
 
+    def test_secrets_are_encrypted_survive_reopening_and_can_be_deleted(self):
+        from norev.adapters.connectors.google_calendar import SecretStore
+
+        self.assertIsInstance(self.store, SecretStore)
+        self.assertIsNone(self.store.load_secret("google_calendar.refresh_token"))
+        self.store.save_secret("google_calendar.refresh_token", f"refresh {SENTINEL}")
+        for encoding in ("utf-8", "utf-16-le"):
+            self.assertNotIn(SENTINEL.encode(encoding), self.data_bytes())
+        self.store.close()
+        self.store = self.open()
+        self.assertEqual(self.store.load_secret("google_calendar.refresh_token"), f"refresh {SENTINEL}")
+        self.store.delete_secret("google_calendar.refresh_token")
+        self.store.delete_secret("google_calendar.refresh_token")  # deleting twice is fine
+        self.assertIsNone(self.store.load_secret("google_calendar.refresh_token"))
+        self.store.close()
+        self.store = self.open()
+        self.assertIsNone(self.store.load_secret("google_calendar.refresh_token"))
+        with self.assertRaises(ValueError):
+            self.store.save_secret("google_calendar.refresh_token", "")
+
     def test_wrong_key_is_refused_and_changes_nothing(self):
         self.fill()
         self.store.close()

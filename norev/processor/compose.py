@@ -8,6 +8,12 @@ from datetime import datetime
 
 from LLM.AI_Model.client import build_llm_client
 from LLM.AI_Model.settings import DeepSeekSettings
+from norev.adapters.connectors.google_calendar import (
+    GoogleAuth,
+    GoogleCalendarConnector,
+    GoogleCalendarSettings,
+    SecretStore,
+)
 from norev.core.ports import Clock, Connector, Diarizer, Transcriber
 from norev.processor.central import CentralProcessor, ExecutionAuditLog
 from norev.processor.identity import LocalUser
@@ -39,3 +45,13 @@ def build_central_processor(
         transcriber=transcriber,
         diarizer=diarizer,
     )
+
+
+def build_google_calendar(
+    secrets: SecretStore, settings: GoogleCalendarSettings | None = None,
+) -> tuple[GoogleAuth, GoogleCalendarConnector]:
+    """The Google Calendar Connector (#45) and its authorization. The app passes the Connector to
+    build_central_processor and keeps the GoogleAuth for the connect/disconnect actions; `secrets` is
+    the encrypted store. Building them connects to nothing."""
+    auth = GoogleAuth(settings or GoogleCalendarSettings.from_environment(), secrets)
+    return auth, GoogleCalendarConnector(auth)

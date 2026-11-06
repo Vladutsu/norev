@@ -117,6 +117,7 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `LLM_TEMPERATURE` | `0` | sampling temperature |
 | `NOREV_DATE` | today | Session date used to resolve relative dates |
 | `NOREV_TIMEZONE` | `Europe/Bucharest` | IANA time zone of Google Calendar events (explicit in every payload) |
+| `NOREV_GOOGLE_CLIENT_ID` / `NOREV_GOOGLE_CLIENT_SECRET` | empty (Google Calendar off) | OAuth client of your Google Cloud project, type "Desktop app"; never commit them. The User's refresh token goes into the encrypted store |
 | `LLAMA_SERVER` | `~/Repositories/llama.cpp/build/bin/llama-server` | llama.cpp server binary |
 | `LLAMACPP_PORT` / `LLAMACPP_CTX` / `LLAMACPP_GPU_LAYERS` | `8080` / `4096` / `99` | server options (`LLAMACPP_CTX` is per slot) |
 | `WHISPER_MODEL` | `large-v3-turbo` | `small`, `medium`, `large-v3-turbo`, … |
