@@ -72,7 +72,7 @@ class CorporateDomainStageTest(unittest.TestCase):
         self.domain = load_domain(DOMAINS / "corporate")
         self.store = InMemorySessionStore()
         self.store.save_session(Session(id="m1", started_at=datetime(2026, 11, 6, 10, 0), domain="corporate"))
-        self.store.save_actions("m1", GENERIC)
+        self.store.save_actions("m1", GENERIC, expected_revision=0)
         self.llm = FakeLlmClient([json.dumps(ANSWER)])
         self.actions, self.suggestions = run_domain_stage("m1", self.store, self.domain, self.llm, TRANSCRIPT)
         self.by_id = {a.id: a for a in self.actions}
