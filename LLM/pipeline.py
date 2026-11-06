@@ -3,6 +3,9 @@
   python -m LLM.pipeline translate <transcript.json>   -> Outputs/Audio/<name>.en.json (prints path)
   python -m LLM.pipeline extract <transcript.json>     -> Outputs/Json/<name>.proposed_actions.json (prints path)
   python -m LLM.pipeline show <transcript.json> <proposed_actions.json>
+
+Deprecated (#19): translate and extract write plaintext JSON to Outputs/ and extract outside the
+new core. Use `python -m norev.session` (what ./norev.sh runs); they still work and print a warning.
 """
 import argparse
 import json
@@ -109,6 +112,9 @@ def main(argv: list[str]) -> int:
     show_parser.add_argument("transcript_json")
     show_parser.add_argument("proposed_actions_json")
     args = parser.parse_args(argv)
+    if args.stage in ("translate", "extract"):
+        print(f"[deprecated] LLM.pipeline {args.stage} writes plaintext files; use python -m norev.session",
+              file=sys.stderr)
 
     try:
         if args.stage == "translate":

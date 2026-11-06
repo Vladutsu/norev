@@ -15,7 +15,7 @@ from norev.core.models import (
     WorkflowStep,
 )
 from norev.testing.fakes import FakeActionExtractor, FakeLlmClient, FakeTranscriber, InMemorySessionStore
-from norev.usecases.session_flow import run_session, select_domain
+from norev.usecases.session_flow import run_session, select_domain, transcribe_session
 
 DOMAINS = Path(__file__).resolve().parents[1] / "domains"
 CORPORATE = load_domain(DOMAINS / "corporate")
@@ -124,7 +124,23 @@ class RunSessionTest(unittest.TestCase):
         flow = Flow(CORPORATE, [ANSWERS["corporate"]], spoken=english)
         flow.run()
         self.assertEqual(len(flow.llm.calls), 1)  # only the Domain stage
-        self.assertIsNone(flow.store.get_session("s1").source_transcript_ref)
+        session = flow.store.get_session("s1")
+        self.assertEqual(session.transcript_ref, session.source_transcript_ref)
+
+    def test_translation_can_be_turned_off(self):
+        flow = Flow(CORPORATE, [ANSWERS["corporate"]])
+        run_session("s1", store=flow.store, transcriber=flow.transcriber, translator=TurnTranslator(flow.llm),
+                    extractor=flow.extractor, domain=CORPORATE, llm=flow.llm, translate=False)
+        self.assertEqual(flow.extractor.calls[0][0].language, "ro")
+        self.assertEqual(len(flow.llm.calls), 1)
+
+    def test_transcription_alone_then_analysis_transcribes_once(self):
+        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
+        spoken = transcribe_session("s1", store=flow.store, transcriber=flow.transcriber)
+        self.assertEqual(spoken.segments[0].speaker_id, "speaker_0")
+        self.assertIsNone(flow.store.get_session("s1").transcript_ref)
+        flow.transcriber = None  # analysis must reuse the saved Transcript
+        self.assertEqual([a.action_type for a in flow.run().actions], ["work_item"])
 
     def test_untranslated_turn_makes_the_result_partial(self):
         only_first = {"turns": [TRANSLATION["turns"][0]]}
