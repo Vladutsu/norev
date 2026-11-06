@@ -1,0 +1,136 @@
+# Medical Domain: family doctor, Romanian Sessions. Format: domains/README.md
+format = 1
+name = "medical"
+label = "Medicină de familie"
+
+[model]
+# Candidate only: the medical model is not chosen yet (OPEN-QUESTIONS #10).
+gguf = "medgemma-4b-it-Q4_K_M.gguf"
+context = 8192
+
+[prompts]
+domain_stage = "prompts/domain_stage.md"
+domain_stage_schema = "prompts/domain_stage.schema.json"
+
+[[roles]]
+name = "doctor"
+label = "Medic"
+description = "The family doctor who records the Session (the User)."
+
+[[roles]]
+name = "patient"
+label = "Pacient"
+description = "The person being consulted (the Contact)."
+
+[[roles]]
+name = "caregiver"
+label = "Aparținător"
+description = "A family member or carer who speaks for or helps the patient."
+
+[[action_types]]
+name = "schedule_visit"
+label = "Programare vizită"
+description = "A visit the patient must make: a follow-up at this practice, a specialist, a lab test or an imaging exam."
+
+[[action_types.fields]]
+name = "reason"
+label = "Motiv"
+type = "string"
+required = true
+description = "What the visit is for, e.g. follow-up for blood pressure, blood tests, chest X-ray."
+
+[[action_types.fields]]
+name = "visit_date"
+label = "Data"
+type = "date"
+required = true
+description = "Day of the visit, only if it was said or follows from a relative date."
+
+[[action_types.fields]]
+name = "visit_time"
+label = "Ora"
+type = "time"
+required = true
+description = "Time of the visit, only if it was said."
+
+[[action_types.fields]]
+name = "location"
+label = "Locație"
+type = "string"
+required = false
+description = "Where the visit takes place (this practice, a clinic, a lab), only if it was said."
+
+[[action_types.workflow]]
+name = "build_invite"
+label = "Pregătește invitația"
+
+[[action_types.workflow]]
+name = "send_invite"
+label = "Trimite în Google Calendar"
+connector = "google_calendar"
+sends = ["reason", "visit_date", "visit_time", "location"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"
+
+[[action_types]]
+name = "medication_reminder"
+label = "Luat pastilă"
+description = "A medicine the patient must take on a schedule."
+
+[[action_types.fields]]
+name = "medication"
+label = "Medicament"
+type = "string"
+required = true
+description = "Name of the medicine as it was said."
+
+[[action_types.fields]]
+name = "dose"
+label = "Doză"
+type = "string"
+required = true
+description = "Amount per intake, e.g. 5 mg, one tablet."
+
+[[action_types.fields]]
+name = "frequency"
+label = "Frecvență"
+type = "string"
+required = true
+description = "How often, as it was said, e.g. once a day in the morning, every 8 hours."
+
+[[action_types.fields]]
+name = "times"
+label = "Ore"
+type = "string"
+required = true
+description = "Clock times of the intakes (e.g. 08:00, 20:00), only if they were said."
+
+[[action_types.fields]]
+name = "start_date"
+label = "Începând cu"
+type = "date"
+required = true
+description = "First day, only if it was said or follows from a relative date (e.g. starting today)."
+
+[[action_types.fields]]
+name = "end_date"
+label = "Până la"
+type = "date"
+required = false
+description = "Last day, only if a duration or end was said; empty means until the doctor says otherwise."
+
+[[action_types.workflow]]
+name = "build_reminders"
+label = "Pregătește mementourile"
+
+[[action_types.workflow]]
+name = "send_reminders"
+label = "Trimite în Google Calendar"
+connector = "google_calendar"
+sends = ["medication", "dose", "frequency", "times", "start_date", "end_date"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"
