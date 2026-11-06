@@ -16,7 +16,7 @@ relying on discipline. Terms follow `GLOSSARY.md`. This is a proposal: anything 
 | `adapters` | Whisper, LLM client (llama.cpp/ollama), encrypted store, Connectors | `core` (implement its ports) |
 | `domains` | per-industry model, Roles, Action Types, Workflows, prompts (ADR 0005) | nothing; the core loads them |
 
-Ports: `Transcriber`, `Diarizer`, `LlmClient`, `ActionExtractor`, `Connector`, `SessionStore`, `AuditLog`, `Clock`.
+Ports: `Transcriber`, `Diarizer`, `LlmClient`, `ActionExtractor`, `Connector`, `SessionStore`, `AuditLog`, `ExecutionAuditLog`, `ExecutionStore`, `Clock`.
 
 A small pytest walks the imports of `core` and `usecases` and fails on network or
 framework modules (`socket`, `urllib`, `requests`, `http`, `faster_whisper`, `webview`, ...)

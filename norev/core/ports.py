@@ -6,7 +6,7 @@ which is the only module that holds real `LlmClient` and `Connector` implementat
 from datetime import date, datetime
 from typing import Any, Protocol, runtime_checkable
 
-from norev.core.models import ActionsSnapshot, Domain, AuditEvent, OthersPrompt, ProposedAction, Session, Speaker, SpeakerTurn, StepRecord, Suggestion, Transcript
+from norev.core.models import ActionsSnapshot, Domain, AuditEvent, OthersPrompt, ProposedAction, SendResult, Session, Speaker, SpeakerTurn, StepRecord, Suggestion, Transcript
 
 
 @runtime_checkable
@@ -161,6 +161,16 @@ class ExecutionStore(Protocol):
 @runtime_checkable
 class AuditLog(Protocol):
     def record(self, event: AuditEvent) -> None: ...
+
+
+@runtime_checkable
+class ExecutionAuditLog(Protocol):
+    """AuditLog plus the result of each attempt. An attempt with no result is an uncertain send:
+    it is shown for reconciliation, never retried automatically (#23)."""
+
+    def record(self, event: AuditEvent) -> None: ...
+
+    def record_result(self, result: SendResult) -> None: ...
 
 
 @runtime_checkable

@@ -31,7 +31,7 @@ WORKERS = max(1, int(os.getenv("LLM_PARALLEL", "1")))
 
 
 def _processor(store, **models):
-    # The store is the audit log; record_result is never needed here: no Connector is configured,
+    # The store is the audit log (with send results, #51); no Connector is configured,
     # so nothing can be sent from the CLI (execution is #23).
     return build_central_processor(store, **models)
 

@@ -1,7 +1,7 @@
-"""SessionStore and AuditLog encrypted at rest (ADR 0004, issue #26).
+"""SessionStore, AuditLog and the execution state, encrypted at rest (ADR 0004, issues #26, #51).
 
 One SQLite file. Every value is a JSON document encrypted with AES-256-GCM; the only data in
-clear are the record kind, opaque ids and the audit sequence number. The record kind and id are
+clear are the record kind, opaque ids and the audit and result sequence numbers. The record kind and id are
 the GCM associated data, so a record moved to another id or kind fails to decrypt.
 
 The key is 32 random bytes in a file named by NOREV_STORE_KEY_FILE, kept outside the store's
@@ -30,6 +30,7 @@ from norev.core.models import (
     OthersPrompt,
     ProposedAction,
     Segment,
+    SendResult,
     Session,
     Speaker,
     StaleRevision,
@@ -50,6 +51,8 @@ _SCHEMA = (
     "CREATE TABLE records (kind TEXT NOT NULL, id TEXT NOT NULL, blob BLOB NOT NULL, PRIMARY KEY (kind, id))",
     "CREATE TABLE audit (seq INTEGER PRIMARY KEY, blob BLOB NOT NULL)",
 )
+# Added by #51; IF NOT EXISTS so a store created before it gets the table when opened
+_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (seq INTEGER PRIMARY KEY, blob BLOB NOT NULL)"
 
 
 class StoreKeyError(Exception):
@@ -109,7 +112,10 @@ def open_store(settings: StoreSettings) -> "EncryptedStore":
 
 
 class EncryptedStore:
-    """SessionStore and AuditLog in one encrypted SQLite file."""
+    """SessionStore, ExecutionAuditLog and ExecutionStore in one encrypted SQLite file.
+
+    Every write is committed before it returns (synchronous = FULL), so a crash right after
+    record() or save_step(started) does not lose it."""
 
     def __init__(self, path: Path, key: bytes) -> None:
         if len(key) != KEY_BYTES:
@@ -126,11 +132,13 @@ class EncryptedStore:
         self._db.text_factory = bytes  # a blob rewritten as text on disk then fails authentication, not decoding
         self._db.execute("PRAGMA secure_delete = ON")
         self._db.execute("PRAGMA temp_store = MEMORY")
+        self._db.execute("PRAGMA synchronous = FULL")
         if is_new:
             with self._transaction():
                 for statement in _SCHEMA:
                     self._db.execute(statement)
                 self._db.execute("INSERT INTO meta VALUES ('check', ?)", (self._seal(_CHECK_PLAINTEXT, b"meta\0check"),))
+        self._db.execute(_RESULTS_TABLE)
 
     def _check_key(self) -> None:
         db = sqlite3.connect(f"{self._path.resolve().as_uri()}?mode=ro", uri=True)
@@ -281,6 +289,8 @@ class EncryptedStore:
     # --- ExecutionStore (#23): one record per action, holding each step's state
 
     def load_steps(self, action_id: str) -> dict[str, StepRecord]:
+        # shortcut: a deleted or rolled-back steps record (disk write access, no key) is not detected, so a done
+        # step could run again; check against the audit attempts or a hash chain when that threat is in scope.
         return {name: StepRecord(name, StepState(d["state"]), d["result"], d["error_type"])
                 for name, d in (self._get("steps", action_id) or {}).items()}
 
@@ -303,12 +313,6 @@ class EncryptedStore:
             seq = self._db.execute("SELECT COALESCE(MAX(seq), 0) + 1 FROM audit").fetchone()[0]
             self._db.execute("INSERT INTO audit VALUES (?, ?)", (seq, self._seal(plaintext, f"audit\0{seq}".encode())))
 
-    def record_result(self, result: Any) -> None:
-        """The result of one send (the Central Processor's SendResult, #22): with no result, the send is uncertain."""
-        d = dataclasses.asdict(result)
-        d["at"] = result.at.isoformat()
-        self._put("send_result", f"r-{uuid.uuid4().hex}", d)
-
     def load_events(self) -> list[AuditEvent]:
         # shortcut: a deleted audit row is not detected; a hash chain over the rows would catch it.
         events = []
@@ -319,6 +323,27 @@ class EncryptedStore:
             d["at"] = datetime.fromisoformat(d["at"])
             events.append(AuditEvent(**d))
         return events
+
+    def record_result(self, result: SendResult) -> None:
+        """The result of one send; an attempt with no result is an uncertain send."""
+        d = dataclasses.asdict(result)
+        d["at"] = result.at.isoformat()
+        plaintext = _encode(d)
+        with self._transaction():
+            seq = self._db.execute("SELECT COALESCE(MAX(seq), 0) + 1 FROM results").fetchone()[0]
+            self._db.execute("INSERT INTO results VALUES (?, ?)", (seq, self._seal(plaintext, f"result\0{seq}".encode())))
+
+    def load_results(self) -> list[SendResult]:
+        """In the order they were written, for display and reconciliation (#43)."""
+        # shortcut: like load_events, a deleted row is not detected; a hash chain over the rows would catch it.
+        results = []
+        with self._lock:
+            rows = self._db.execute("SELECT seq, blob FROM results ORDER BY seq").fetchall()
+        for seq, blob in rows:
+            d = json.loads(self._open(blob, f"result\0{seq}".encode(), f"result {seq}"))
+            d["at"] = datetime.fromisoformat(d["at"])
+            results.append(SendResult(**d))
+        return results
 
     # --- revisions (the review revision of a Session, as in norev.core.ports.SessionStore)
 
