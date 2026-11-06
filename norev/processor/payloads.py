@@ -1,4 +1,5 @@
-"""PayloadBuilders (core/ports, #18) for the `local_document` (#23) and `google_calendar` (#44) Connectors.
+"""PayloadBuilders (core/ports, #18) for the `local_document` (#23), `google_calendar` (#44) and
+`email_draft` (#61) Connectors.
 
 It makes, at preview time, the final payload of each `local_document` step: the exact document text
 and the path it will be written to, so the User approves both (ADR 0002). The folder is the app's,
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from norev.adapters.connectors import email_draft
 from norev.adapters.connectors.local_document import NAME, destination, export_dir_of, render
 from norev.core.models import Domain, ProposedAction, UnsupportedWorkflow, ValidationError
 from norev.core.ports import PayloadBuilder
@@ -177,3 +179,47 @@ class ConnectorPayloadBuilder:
         if len(connectors) != 1 or next(iter(connectors)) not in self.builders:
             raise UnsupportedWorkflow(f"no payload builder for Connectors {sorted(connectors)!r}")
         return self.builders[connectors.pop()].build(action, domain, options)
+
+
+EMAIL_FIELDS = ("recipients", "subject", "body")  # what an email_draft step sends (domains/corporate)
+
+
+class EmailDraftPayloadBuilder:
+    """For Workflows whose Connector steps are all `email_draft` (#61).
+
+    Each step's payload is the exact draft file and its path, `{"destination", "content"}`, made from
+    the action's `recipients` (emails the User typed), `subject` and `body`. The folder is the app's
+    and the file name comes from the content. options must be `{}`: the User edits the fields.
+    """
+
+    def __init__(self, export_dir: Path) -> None:
+        self.export_dir = export_dir_of(export_dir)
+
+    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
+        action_type = domain.action_type(action.action_type)
+        if action_type is None:
+            raise ValidationError("unknown_action_type", "action_type")
+        if options:
+            raise ValidationError("unknown_options", "options")
+        connector_steps = [s for s in action_type.workflow.steps if s.connector]
+        for step in connector_steps:
+            if step.connector != email_draft.NAME:
+                raise UnsupportedWorkflow(f"no payload builder for Connector {step.connector!r}")
+            if set(step.sends) != set(EMAIL_FIELDS):
+                raise UnsupportedWorkflow(f"step {step.name!r} must send exactly {', '.join(EMAIL_FIELDS)}")
+        steps = []
+        for step in connector_steps:
+            content = email_draft.build_eml(*(action.fields.get(name) for name in EMAIL_FIELDS))
+            payload = {"destination": str(email_draft.destination(self.export_dir, content)), "content": content}
+            steps.append({"step": step.name, "connector": email_draft.NAME, "payload": payload})
+        return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
+                "action_type": action.action_type, "steps": steps}
+
+
+def email_preview(content: Any) -> dict[str, str] | None:
+    """To, Subject and body of an email_draft payload, decoded for the preview next to the exact file
+    (#61); None if it is not a draft made by norev."""
+    try:
+        return email_draft.read_eml(content)
+    except ValueError:
+        return None
