@@ -13,8 +13,9 @@ from norev.core.ports import LlmClient
 class LegacyActionExtractor:
     """Wraps RealtimeActionExtractor.extract_batch; writes nothing to disk (ADR 0004).
 
-    Extracts from whatever Transcript it is given. ./norev.sh translates to English first; without
-    translation this is the NOREV_TRANSLATE=0 mode. Where translation belongs is an open question.
+    The pipeline translates the Transcript to English first and extracts from the translation
+    (tests/fixtures/llm: translate, then extract), so pass the English translation; the Transcript
+    excerpts then come out in English.
     Two env vars are read at call time, not from settings: LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT and
     LLM_SECOND_PASS; the tuned values are 0 and 0, as ./norev.sh sets them (the code default "1"
     runs chunks one at a time and ignores `workers`).
