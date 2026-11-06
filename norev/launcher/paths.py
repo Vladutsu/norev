@@ -3,7 +3,8 @@
 Everything lives in the User's profile, never in the app folder:
 
   %LOCALAPPDATA%\\norev\\norev.db          encrypted store (same default as the store itself, #26)
-  %LOCALAPPDATA%\\norev\\keys\\norev.key   store key, in its own folder
+  %LOCALAPPDATA%\\norev\\keys\\norev.key.dpapi   store key sealed to the Windows account (#63)
+  %LOCALAPPDATA%\\norev\\keys\\norev.key         plain key: Linux, or Windows before `protect-key`
   %LOCALAPPDATA%\\norev\\models\\          GGUF models; Whisper and diarization under models\\hf
   %LOCALAPPDATA%\\norev\\llama.cpp\\       llama-server.exe and its DLLs
   %LOCALAPPDATA%\\norev\\logs\\            llama-server.log
@@ -43,6 +44,11 @@ class AppPaths:
 
     @property
     def key(self) -> Path:
+        """Where the key belongs: DPAPI-sealed on Windows, a plain file elsewhere (#63)."""
+        return self.plain_key.with_name("norev.key.dpapi") if self.windows else self.plain_key
+
+    @property
+    def plain_key(self) -> Path:
         return self.root / "keys" / "norev.key"
 
     @property
@@ -70,14 +76,17 @@ def apply_defaults(paths: AppPaths, env: MutableMapping[str, str], *, offline: b
     """Fill the variables the rest of norev reads, without overriding what the User set.
 
     offline=True keeps Hugging Face from downloading anything; only `setup-models` turns it off.
-    The key variable is set only when the key exists, so a missing key is reported, not opened.
+    The key variable is set only when a key exists (the sealed one first), so a missing key is
+    reported, not opened.
     """
     env.setdefault("HF_HOME", str(paths.hf_home))
     if offline:
         env.setdefault("HF_HUB_OFFLINE", "1")
     env.setdefault("NOREV_STORE_PATH", str(paths.store))
-    if paths.key.is_file():
-        env.setdefault("NOREV_STORE_KEY_FILE", str(paths.key))
+    for key in (paths.key, paths.plain_key):
+        if key.is_file():
+            env.setdefault("NOREV_STORE_KEY_FILE", str(key))
+            break
     env.setdefault("LLAMA_SERVER", str(paths.llama_server))
     env.setdefault("NOREV_EXTRACT_MODEL", env.get("LLAMACPP_MODEL") or str(paths.gguf))
 
