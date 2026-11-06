@@ -303,6 +303,20 @@ class EncryptedStore:
             steps[record.step] = d
             self._write("steps", action_id, _encode(steps))
 
+    # --- secrets (the SecretStore of norev/adapters/connectors/google_calendar.py, #45)
+
+    def load_secret(self, name: str) -> str | None:
+        return self._get("secret", name)
+
+    def save_secret(self, name: str, value: str) -> None:
+        if not isinstance(value, str) or not value:
+            raise ValueError("a secret must be a non-empty string")
+        self._put("secret", name, value)
+
+    def delete_secret(self, name: str) -> None:
+        with self._transaction():  # secure_delete is on: the deleted blob is overwritten in the file
+            self._db.execute("DELETE FROM records WHERE kind = 'secret' AND id = ?", (name,))
+
     # --- AuditLog
 
     def record(self, event: AuditEvent) -> None:
