@@ -24,13 +24,14 @@ Each folder:
 - `proposed_actions.json`: the generic Proposed Actions the extractor built from those responses.
 
 The Proposed Actions are **what the model produced, not a gold standard**. They were recorded with
-the neutral generic extraction prompt (#20). Known mistakes, kept on purpose so tests see real output:
-- In `consult_3`, the surgery appointment that Ana said she would book is given to the doctor (#40).
+the neutral generic extraction prompt (#20). The raw model response in `consult_3` assigns the surgery appointment to the doctor (#40).
+The adapter now resolves Ana's explicit commitment using the Transcript and its Speakers;
+`responses.json` preserves the original model answer and `proposed_actions.json` records the checked result.
 
 Numbers said in words are sent to the translation as digits (#39), so "o sută doisprezece" stays 112.
 
-The generic extraction still ignores Speakers (it sees only the text); the Domain stage sees
-them. Re-recording can change the Proposed Actions a little even at temperature 0. Expected results
+The generic extraction model still sees only the text; the adapter uses Speakers to check
+owners, and the Domain stage also sees them. Re-recording can change the Proposed Actions a little even at temperature 0. Expected results
 checked by a person, separate from these recordings, come with #25.
 
 ## Using them in a test

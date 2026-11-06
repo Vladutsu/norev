@@ -85,6 +85,14 @@ class RecordedEvaluationTest(unittest.TestCase):
             code = evaluate.check_all()
         self.assertEqual(code, 0, out.getvalue())
 
+    def test_production_follow_up_regressions_are_solved(self):
+        report = evaluate.build_report()
+        production = report["variants"]["neutral"]
+        for session in production["sessions"].values():
+            for case in session["known_cases"]:
+                with self.subTest(case=case["id"]):
+                    self.assertTrue(case["solved"], case.get("follow_up"))
+
     def test_every_session_has_a_person_checked_expectation_file(self):
         for folder in evaluate.sessions():
             with self.subTest(folder.name):

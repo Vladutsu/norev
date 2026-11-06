@@ -48,3 +48,26 @@ python tests/fixtures/eval/evaluate.py variance 2   # GPU laptop: 2 more extract
   - wrong or missing dates;
   - cancelled ideas listed as actions;
   - numbers changed by the translation. Spelled-out numbers count as kept ("two hundred ten" = 210).
+
+## Follow-up #40 verification — 2026-11-06
+
+The adapter now checks an explicit "I will take care of the <object>" commitment against
+both the action title and its quoted request. It assigns a name only when a separate,
+explicitly addressed request and accepting reply establish that Speaker's name unambiguously.
+Ambiguous identities, conditional commitments and unrelated actions retain the existing checks.
+The generic prompt, human-verified expectations and thresholds are unchanged.
+
+Fresh local GPU recording: Qwen3-8B Q4_K_M, llama.cpp `3ed7284`, RTX 4070 Laptop GPU;
+5,051 MiB GPU memory observed (not a peak measurement). Recorded times total 84 seconds for
+translation, 103 seconds for neutral extraction and 101 seconds for Speaker-label extraction.
+All eight Sessions were re-recorded once; temperature 0 does not guarantee identical later runs.
+
+The production neutral variant meets every confirmed Corporate/Others threshold: owner wrong
+9.1%, date wrong 9.1%, omissions 9.1%, invented 4.3%, and no cancelled actions listed.
+Three expected owners remain missing and are counted separately. Numbers changed: 0/31 across
+Corporate/Others and Medical. All three named regression cases are solved in both variants.
+The experimental Speaker-label variant still fails the owner threshold (22.7%); it is not the
+production prompt. Medical remains an example, not clinical validation.
+
+`bash check.sh` passes 443 tests (one skipped); `record.py --check` and `evaluate.py check` pass.
+Raw model responses remain in the recordings; corrected owners are stored in the derived results.
