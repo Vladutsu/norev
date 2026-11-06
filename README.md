@@ -8,8 +8,12 @@ for speech and local LLMs served by llama.cpp.
 Pipeline:
 
 1. **Whisper** transcribes in the spoken language: a preselected list or auto-detection.
-2. **Translator LLM** translates the Transcript to English (skipped when the Session is in English).
-3. **Extractor LLM** extracts the Proposed Actions from the English Transcript.
+2. **Diarization** (NVIDIA Sortformer, optional) finds who spoke when, so each segment gets a Speaker.
+3. **Translator LLM** translates the Transcript to English (skipped when the Session is in English);
+   with Speakers, per Speaker turn, so who said what survives.
+4. **Extractor LLM** extracts the Proposed Actions from the English Transcript.
+5. **Speaker owners**: a Proposed Action said in the first person ("I'll do it") gets the name of the
+   Speaker who said it, only when that Speaker spoke before and their name was already known (see below).
 
 Each LLM stage can use its own GGUF model (default: Qwen3-8B for both, so it is loaded once). Models
 are loaded one at a time, so each stage only needs the GPU memory of its own model.
@@ -55,10 +59,36 @@ Supported: `.wav .mp3 .m4a .flac .ogg .opus .aac .webm .mp4 .mkv .mov .avi`.
 Output:
 - `Outputs/Audio/<name>.json` — Transcript in the spoken language, with timestamped segments
 - `Outputs/Audio/<name>.en.json` — English translation (when translated)
-- `Outputs/Json/<name>.proposed_actions.json` — `session_summary`, `proposed_actions`, `decisions`, `risks`
+- `Outputs/Json/<name>.proposed_actions.json` — `session_summary`, `proposed_actions`, `decisions`, `risks`,
+  and `speakers` (the names found) when the Session was diarized
 
-The Transcript has no Speaker attribution yet, so "I'll do it" cannot be tied to a person: such
-Proposed Actions get no owner rather than a guessed one.
+## Speakers and owners
+
+Diarization needs NeMo (torch with CUDA, ~6 GB of wheels), installed together with the main
+requirements so their pins hold:
+
+```bash
+.venv/bin/pip install -r requirements.txt -r requirements-diarization.txt
+```
+
+`norev.sh` diarizes whenever NeMo is installed (`NOREV_DIARIZE=auto`); without it, or with
+`NOREV_DIARIZE=0`, it runs as before, with no Speakers. With fewer than 2 Speakers the rest of the
+pipeline is unchanged too. Diarization adds ~10 s per Session (mostly loading the model) and 1.5 GB of
+GPU memory, never at the same time as Whisper or the LLM. At most 4 Speakers.
+
+A Speaker (S1, S2...) gets a name only from what the Transcript shows: they introduce themselves
+("I'm Andrei"), or someone asks them a question by name ("Andrei, how are the tests going?") and they
+answer in the very next turn. A Speaker who gets two names, or a name that goes to two Speakers,
+keeps no name. The LLM only lists the person names it reads; who is who is decided by these rules.
+
+A Proposed Action then gets that name only when its first-person sentence ("I'll send it", "I'm
+handling it") was said in one turn, by a named Speaker who had spoken before that turn and whose name
+was known before it. That name replaces the owner the extractor guessed (kept as `extracted_owner`):
+the extractor sees no Speakers, so it cannot know who "I" is. In every other case the owner stays as
+the extractor gave it, or empty.
+
+Limits: two similar voices can be merged into one Speaker (the two-names rule then usually drops the
+name), and a name Whisper mishears is used as heard.
 
 ## Before pushing
 
@@ -87,5 +117,7 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `LLAMACPP_PORT` / `LLAMACPP_CTX` / `LLAMACPP_GPU_LAYERS` | `8080` / `4096` / `99` | server options (`LLAMACPP_CTX` is per slot) |
 | `WHISPER_MODEL` | `large-v3-turbo` | `small`, `medium`, `large-v3-turbo`, … |
 | `WHISPER_DEVICE` | `cuda` | `cuda` or `cpu` (falls back to CPU on GPU OOM) |
+| `NOREV_DIARIZE` | `auto` | `auto`: diarize if NeMo is installed, `1`: required, `0`: off |
+| `WHISPER_WORD_TIMESTAMPS` | `0` | per-word times (`norev.sh` turns them on when it diarizes) |
 | `LLM_CHUNK_CHARS` | `4000` | Transcript chunk size sent to the extractor |
 | `LLM_PROVIDER` | `llamacpp` | `llamacpp` or `ollama` |

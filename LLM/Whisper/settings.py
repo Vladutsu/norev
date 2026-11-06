@@ -46,6 +46,7 @@ class WhisperSettings:
         vad_min_silence_ms: int = 500,
         cpu_threads: int = 0,
         num_workers: int = 1,
+        word_timestamps: bool = False,
     ) -> None:
         self.input_media_path = input_media_path
         self.input_language = input_language
@@ -65,6 +66,8 @@ class WhisperSettings:
         # 0 lets the backend pick (all logical cores); >0 pins the CPU thread count.
         self.cpu_threads = max(0, int(cpu_threads))
         self.num_workers = max(1, int(num_workers))
+        # Per-word times, so diarization can split a segment that holds several Speakers
+        self.word_timestamps = bool(word_timestamps)
 
     @classmethod
     def from_environment(cls) -> "WhisperSettings":
@@ -83,6 +86,7 @@ class WhisperSettings:
         vad_min_silence_ms = int(os.getenv("WHISPER_VAD_MIN_SILENCE_MS", "500"))
         cpu_threads = int(os.getenv("WHISPER_CPU_THREADS", "0"))
         num_workers = int(os.getenv("WHISPER_NUM_WORKERS", "1"))
+        word_timestamps = _env_bool("WHISPER_WORD_TIMESTAMPS", False)
 
         return cls(
             input_media_path=cls.DEFAULT_INPUT_MEDIA_PATH,
@@ -99,4 +103,5 @@ class WhisperSettings:
             vad_min_silence_ms=vad_min_silence_ms,
             cpu_threads=cpu_threads,
             num_workers=num_workers,
+            word_timestamps=word_timestamps,
         )

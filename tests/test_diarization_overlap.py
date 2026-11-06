@@ -2,7 +2,7 @@ import importlib
 import sys
 import unittest
 
-from norev.adapters.diarization.overlap import assign_speakers
+from norev.adapters.diarization.overlap import assign_speakers, split_by_speaker
 
 
 class AssignSpeakersTest(unittest.TestCase):
@@ -57,6 +57,31 @@ class AssignSpeakersTest(unittest.TestCase):
 
     def test_no_segments(self):
         self.assertEqual(assign_speakers([], [(0.0, 1.0, "A")]), [])
+
+
+class SplitBySpeakerTest(unittest.TestCase):
+    WORDS = [(0.0, 0.5, " Andrei,"), (0.5, 1.0, " ready?"), (1.2, 1.5, " Yes,"), (1.5, 2.0, " done.")]
+
+    def test_one_whisper_segment_with_two_speakers_is_split_at_the_change(self):
+        turns = [(0.0, 1.0, "A"), (1.1, 2.0, "B")]
+        self.assertEqual(
+            split_by_speaker(self.WORDS, turns),
+            [(0.0, 1.0, "A", "Andrei, ready?"), (1.2, 2.0, "B", "Yes, done.")],
+        )
+
+    def test_word_in_a_diarization_gap_stays_with_the_speaker_before(self):
+        turns = [(0.0, 1.0, "A"), (1.6, 2.0, "B")]  # "Yes," (1.2-1.5) overlaps no turn
+        self.assertEqual(
+            split_by_speaker(self.WORDS, turns),
+            [(0.0, 1.5, "A", "Andrei, ready? Yes,"), (1.5, 2.0, "B", "done.")],
+        )
+
+    def test_first_words_in_a_gap_go_to_the_first_speaker(self):
+        turns = [(0.6, 2.0, "A")]
+        self.assertEqual(split_by_speaker(self.WORDS, turns), [(0.0, 2.0, "A", "Andrei, ready? Yes, done.")])
+
+    def test_no_turns_gives_nothing(self):
+        self.assertEqual(split_by_speaker(self.WORDS, []), [])
 
 
 class PrototypeImportTest(unittest.TestCase):

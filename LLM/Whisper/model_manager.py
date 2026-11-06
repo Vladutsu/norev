@@ -94,6 +94,7 @@ class WhisperModelManager:
             "vad_filter": self._settings.vad_filter,
             "vad_parameters": {"min_silence_duration_ms": self._settings.vad_min_silence_ms},
             "condition_on_previous_text": self._settings.condition_on_previous_text,
+            "word_timestamps": self._settings.word_timestamps,
         }
 
         if self._runtime_device != "cpu" and self._active_batch_size > 1:

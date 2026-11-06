@@ -27,3 +27,30 @@ def assign_speakers(segments: Sequence[tuple[float, float]], turns: Sequence[Tur
             continue
         result.append(min(overlap, key=lambda s: (-overlap[s], first_start[s], s)))
     return result
+
+
+def split_by_speaker(words: Sequence[tuple[float, float, str]], turns: Sequence[Turn]) -> list[tuple[float, float, str, str]]:
+    """Regroup Whisper words (start, end, word) into one (start, end, speaker_id) span per Speaker change.
+
+    A Whisper segment can hold several Speakers, so the Speaker is decided per word. A word that
+    overlaps no turn (a gap in the diarization) belongs to the Speaker before it, or after it for
+    the first words. Returns spans with the text joined from the words: (start, end, speaker_id, text).
+    Without any turn, every word has no Speaker and the result is empty.
+    """
+    speakers = assign_speakers([(start, end) for start, end, _ in words], turns)
+    known = [s for s in speakers if s is not None]
+    if not known:
+        return []
+    filled, last = [], known[0]
+    for speaker in speakers:
+        last = speaker or last
+        filled.append(last)
+
+    spans: list[list] = []
+    for (start, end, word), speaker in zip(words, filled):
+        if spans and spans[-1][2] == speaker:
+            spans[-1][1] = end
+            spans[-1][3] += word
+        else:
+            spans.append([start, end, speaker, word])
+    return [(start, end, speaker, " ".join(text.split())) for start, end, speaker, text in spans]

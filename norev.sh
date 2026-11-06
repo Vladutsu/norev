@@ -2,8 +2,10 @@
 # Transcribe a recorded Session and extract Proposed Actions, all locally.
 #
 #   1. Whisper        transcript in the spoken language (preselected list or auto-detection)
-#   2. LLM translator  transcript -> English (skipped when the Session is already in English)
-#   3. LLM extractor   English Transcript -> Session summary, Proposed Actions, decisions, risks
+#   2. Diarization    who spoke when (NVIDIA Sortformer), if NeMo is installed (requirements-diarization.txt)
+#   3. LLM translator  transcript -> English, per Speaker turn when there are Speakers (skipped for English)
+#   4. LLM extractor   English Transcript -> Session summary, Proposed Actions, decisions, risks
+#   5. Speaker owners  "I'll do it" -> the Speaker's name, only if that Speaker spoke before and was named
 #
 # Each LLM stage can use its own GGUF model. Models are loaded one at a time, so a stage only
 # needs the GPU memory of its own model; consecutive stages with the same model share one server.
@@ -33,6 +35,8 @@ NOREV_EXTRACT_MODEL="${NOREV_EXTRACT_MODEL:-$LLAMACPP_MODEL}"
 NOREV_TRANSLATE_MODEL="${NOREV_TRANSLATE_MODEL:-$LLAMACPP_MODEL}"
 # auto: translate unless Whisper heard English | 0: always extract from the original language
 NOREV_TRANSLATE="${NOREV_TRANSLATE:-auto}"
+# auto: diarize when NeMo is installed | 1: required | 0: off (no Speakers, as before)
+NOREV_DIARIZE="${NOREV_DIARIZE:-auto}"
 # Comma-separated Whisper language codes to choose from, e.g. ro,en,de. Empty: auto-detect any.
 export WHISPER_LANGUAGES="${NOREV_LANGUAGES:-${WHISPER_LANGUAGES:-}}"
 # Session date (YYYY-MM-DD) used to resolve "Friday", "13 November"... Empty: today.
@@ -122,29 +126,61 @@ if [[ "$1" == --* ]]; then
     exit 0
 fi
 
+DIARIZE=0
+if [[ "$NOREV_DIARIZE" != 0 ]]; then
+    if "$PYTHON" -c 'import nemo' 2>/dev/null; then
+        DIARIZE=1
+    elif [[ "$NOREV_DIARIZE" == 1 ]]; then
+        die "NOREV_DIARIZE=1 but NeMo is not installed: .venv/bin/pip install -r requirements.txt -r requirements-diarization.txt"
+    fi
+fi
+
 # ── 1. Whisper ─────────────────────────────────────────────────────────────────
 
-log "[1/3] Transcribing $1 (Whisper: ${WHISPER_MODEL:-large-v3-turbo}, languages: ${2:-${WHISPER_LANGUAGES:-auto}})"
-TRANSCRIPT="$(WHISPER_SKIP_LLM=1 "$PYTHON" -m LLM.Whisper.whisper "$@")"
+log "[1/5] Transcribing $1 (Whisper: ${WHISPER_MODEL:-large-v3-turbo}, languages: ${2:-${WHISPER_LANGUAGES:-auto}})"
+# Word times let diarization split a Whisper segment that holds several Speakers
+TRANSCRIPT="$(WHISPER_SKIP_LLM=1 WHISPER_WORD_TIMESTAMPS="$DIARIZE" "$PYTHON" -m LLM.Whisper.whisper "$@")"
 LANGUAGE="$("$PYTHON" -c 'import json,sys; print(json.load(open(sys.argv[1]))["detected_language"] or "")' "$TRANSCRIPT")"
 log "Transcript ($LANGUAGE) written to $TRANSCRIPT"
 
-# ── 2. Translation ─────────────────────────────────────────────────────────────
+# ── 2. Diarization ─────────────────────────────────────────────────────────────
+
+SPEAKERS=0
+if [[ "$DIARIZE" == 1 ]]; then
+    log "[2/5] Diarization (NVIDIA Sortformer, at most 4 Speakers)"
+    # NeMo logs a lot; the stage prints the number of Speakers as its last line
+    SPEAKERS="$("$PYTHON" -m LLM.pipeline diarize "$TRANSCRIPT" 2>>"$SCRIPT_DIR/Outputs/diarization.log" | tail -n 1)"
+    log "$SPEAKERS Speakers"
+else
+    log "[2/5] Diarization skipped (NOREV_DIARIZE=$NOREV_DIARIZE, NeMo installed: no or not asked)"
+fi
+
+# ── 3. Translation ─────────────────────────────────────────────────────────────
 
 if [[ "$NOREV_TRANSLATE" != 0 && "$LANGUAGE" != en ]]; then
     use_model "$NOREV_TRANSLATE_MODEL"
-    log "[2/3] Translating $LANGUAGE -> en (LLM: $LLM_MODEL)"
+    log "[3/5] Translating $LANGUAGE -> en (LLM: $LLM_MODEL)"
     TRANSCRIPT="$("$PYTHON" -m LLM.pipeline translate "$TRANSCRIPT")"
     log "Translation written to $TRANSCRIPT"
 else
-    log "[2/3] Translation skipped (language: $LANGUAGE)"
+    log "[3/5] Translation skipped (language: $LANGUAGE)"
 fi
 
-# ── 3. Proposed Action extraction ──────────────────────────────────────────────
+# ── 4. Proposed Action extraction ──────────────────────────────────────────────
 
 use_model "$NOREV_EXTRACT_MODEL"
-log "[3/3] Extracting Proposed Actions (LLM: $LLM_MODEL)"
+log "[4/5] Extracting Proposed Actions (LLM: $LLM_MODEL)"
 PROPOSED_ACTIONS="$("$PYTHON" -m LLM.pipeline extract "$TRANSCRIPT")"
+
+# ── 5. Owners from named Speakers ──────────────────────────────────────────────
+
+if [[ "$SPEAKERS" -ge 2 ]]; then
+    log "[5/5] Naming Speakers and owners of \"I'll do it\" Proposed Actions (LLM: $LLM_MODEL)"
+    ASSIGNED="$("$PYTHON" -m LLM.pipeline owners "$TRANSCRIPT" "$PROPOSED_ACTIONS")"
+    log "$ASSIGNED Proposed Actions got the name of the Speaker who took them on"
+else
+    log "[5/5] Speaker owners skipped (fewer than 2 Speakers)"
+fi
 stop_llama_server
 
 "$PYTHON" -m LLM.pipeline show "$TRANSCRIPT" "$PROPOSED_ACTIONS"

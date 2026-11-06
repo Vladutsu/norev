@@ -1,3 +1,4 @@
-# The image only needs requirements.txt; the repo is mounted at run time
+# The images only need the requirements files; the repo is mounted at run time
 *
 !requirements.txt
+!requirements-diarization.txt

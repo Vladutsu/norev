@@ -106,13 +106,17 @@ class TranscriptionService:
                 continue
             full_text.append(txt)
             transcript_items_for_actions.append(txt)
-            out_segments.append(
-                {
-                    "start": round(float(seg.start), 3),
-                    "end": round(float(seg.end), 3),
-                    "text": txt,
-                }
-            )
+            out_segment = {
+                "start": round(float(seg.start), 3),
+                "end": round(float(seg.end), 3),
+                "text": txt,
+            }
+            if getattr(seg, "words", None):  # only with WHISPER_WORD_TIMESTAMPS=1
+                out_segment["words"] = [
+                    {"start": round(float(w.start), 3), "end": round(float(w.end), 3), "word": w.word}
+                    for w in seg.words
+                ]
+            out_segments.append(out_segment)
         return out_segments, full_text, transcript_items_for_actions
 
     def _extract_proposed_actions(

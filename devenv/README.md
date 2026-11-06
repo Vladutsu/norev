@@ -7,7 +7,7 @@ Container Toolkit (with podman, see "Laptop 4 with podman").
 | Service | Where | What |
 |---|---|---|
 | `dev` (default) | every laptop | Python 3.12 + `requirements.txt` without the CUDA wheels. No GPU, no models. |
-| `gpu` (profile `gpu`) | laptop 4 only | CUDA 12.8 runtime, every requirement, `llama-server` built from llama.cpp v0.9.0 (`cd959ba`). |
+| `gpu` (profile `gpu`) | laptop 4 only | CUDA 12.8 runtime, `requirements.txt` + `requirements-diarization.txt` (NeMo, for diarization), `llama-server` built from llama.cpp v0.9.0 (`cd959ba`). |
 
 Mounts: the repo at `/workspace` (read-write), dev data at `/data` (read-only), models at `/models`
 (`gpu` only). Each run first calls `scripts/data.py verify` and stops if `/data` does not match
@@ -26,7 +26,8 @@ Setting only your GPU's architecture makes the build faster (RTX 30xx = 86, RTX 
 CUDA_ARCHITECTURES=89 docker compose --profile gpu build gpu
 ```
 
-Rebuild after `requirements.txt` or the `Dockerfile` changes.
+Rebuild after `requirements.txt`, `requirements-diarization.txt` or the `Dockerfile` changes. The `gpu`
+image is ~12 GB, most of it torch with CUDA for the diarization.
 
 ## Run
 
@@ -86,7 +87,12 @@ Environment variables (`README.md`, Configuration) are passed with `-e`, for exa
 | `NOREV_HOST_MODELS` | `../norev-models` | `/models` (`gpu` only) |
 
 `/models` holds `qwen3-8b/Qwen3-8B-Q4_K_M.gguf` (or another model via `-e LLAMACPP_MODEL=/models/...`). Whisper
-downloads its model into `/models/huggingface` on first use.
+and the diarization model (`nvidia/diar_streaming_sortformer_4spk-v2`, 471 MB, CC-BY-4.0, not gated)
+download into `/models/huggingface` on first use; to run offline from the start, copy them there from
+a host Hugging Face cache (`~/.cache/huggingface/hub/models--...`, with `cp -rL`).
+
+In `gpu`, `norev.sh` diarizes and names the Speakers (`README.md`, "Speakers and owners"); turn it
+off with `-e NOREV_DIARIZE=0`. `dev` has no NeMo, so it runs without Speakers, as before.
 
 ## Dev data
 
