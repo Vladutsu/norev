@@ -37,7 +37,7 @@ EXPECTED_GENERIC = _read_json("proposed_actions.json")["proposed_actions"]
 ENGLISH = _read_json("transcript.en.json")
 
 # Generic ids after re-numbering by extract_session_actions (order of proposed_actions.json):
-MEASURE_BP, BLOOD_TESTS, ECG, MEDICATION, COFFEE, SALT = (f"{SESSION_ID}-{n}" for n in range(1, 7))
+MEASURE_BP, BLOOD_TESTS, ECG, MEDICATION, FOLLOW_UP = (f"{SESSION_ID}-{n}" for n in range(1, 6))
 
 SUGGESTION = {
     "text": "The patient reports evening palpitations after coffee; check whether they need follow-up.",
@@ -127,7 +127,7 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
             [(a.title, a.due_date) for a in self.generic],
             [(e["title"], date.fromisoformat(e["due_date"]) if e["due_date"] else None) for e in EXPECTED_GENERIC],
         )
-        self.assertEqual([a.id for a in self.generic], [f"{SESSION_ID}-{n}" for n in range(1, 7)])
+        self.assertEqual([a.id for a in self.generic], [f"{SESSION_ID}-{n}" for n in range(1, 6)])
 
     # Domain stage: what the model is asked
 
@@ -194,13 +194,10 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
                 self.assertEqual(action.due_date, generic[action.id].due_date)
                 self.assertEqual(action.transcript_excerpt, generic[action.id].transcript_excerpt)
 
-    def test_lifestyle_advice_is_dropped(self):
+    def test_actions_left_out_of_the_domain_answer_are_dropped(self):
         saved_ids = [a.id for a in self.store.load_actions(SESSION_ID)]
-        self.assertNotIn(COFFEE, saved_ids)
-        self.assertNotIn(SALT, saved_ids)
-        titles = [a.title for a in self.store.load_actions(SESSION_ID)]
-        self.assertNotIn("Reduce Coffee Intake", titles)
-        self.assertNotIn("Limit Salt Intake", titles)
+        for dropped in (MEASURE_BP, ECG, FOLLOW_UP):
+            self.assertNotIn(dropped, saved_ids)
 
     def test_suggestion_is_saved(self):
         expected = [Suggestion(SUGGESTION["text"], SUGGESTION["transcript_excerpt"])]

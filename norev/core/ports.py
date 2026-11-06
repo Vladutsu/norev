@@ -6,7 +6,7 @@ which is the only module that holds real `LlmClient` and `Connector` implementat
 from datetime import date, datetime
 from typing import Any, Protocol, runtime_checkable
 
-from norev.core.models import ActionsSnapshot, Domain, AuditEvent, ProposedAction, Session, SpeakerTurn, Suggestion, Transcript
+from norev.core.models import ActionsSnapshot, Domain, AuditEvent, ProposedAction, Session, Speaker, SpeakerTurn, Suggestion, Transcript
 
 
 @runtime_checkable
@@ -113,6 +113,22 @@ class SessionStore(Protocol):
         ...
 
     def load_suggestions(self, session_id: str) -> list[Suggestion]: ...
+
+    def save_audio(self, session_id: str, audio: bytes) -> str:
+        """Store the Session's audio (encrypted at rest, ADR 0004); returns its opaque audio_ref."""
+        ...
+
+    def load_audio(self, audio_ref: str) -> bytes:
+        """Unknown ref raises KeyError. Adapters decode it in memory, never through a plain file."""
+        ...
+
+    def save_speakers(self, session_id: str, speakers: list[Speaker]) -> None:
+        """Replace the Session's Speakers, except that a stored Speaker with role_confirmed keeps its
+        Role unless the new one is also role_confirmed: the User's correction is never overwritten
+        automatically. Unknown Session raises LookupError."""
+        ...
+
+    def load_speakers(self, session_id: str) -> list[Speaker]: ...
 
 
 @runtime_checkable

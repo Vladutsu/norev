@@ -23,14 +23,14 @@ Each folder:
   kept its original text because the answer left it out).
 - `proposed_actions.json`: the generic Proposed Actions the extractor built from those responses.
 
-The Proposed Actions are **what the model produced, not a gold standard**. Known mistakes, kept
-on purpose so tests see real output:
-- In `consult_1`, the follow-up visit on 13 November is missed, although the translation has it.
+The Proposed Actions are **what the model produced, not a gold standard**. They were recorded with
+the neutral generic extraction prompt (#20). Known mistakes, kept on purpose so tests see real output:
 - In `consult_3`, the surgery appointment that Ana said she would book is given to the doctor.
 - In `consult_1`, the translation says "call 122" where the doctor said 112 ("o sută doisprezece").
 
 The generic extraction still ignores Speakers (it sees only the text); the Domain stage sees
-them. Re-recording can change the Proposed Actions a little even at temperature 0.
+them. Re-recording can change the Proposed Actions a little even at temperature 0. Expected results
+checked by a person, separate from these recordings, come with #25.
 
 ## Using them in a test
 
