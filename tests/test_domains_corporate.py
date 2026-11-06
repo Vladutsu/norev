@@ -57,7 +57,13 @@ class LoadCorporateDomainTest(unittest.TestCase):
         domain = load_domain(DOMAINS / "corporate")
         self.assertEqual(domain.name, "corporate")
         self.assertEqual([r.name for r in domain.roles], ["organizer", "participant"])
-        work_item, event = domain.action_types
+        work_item, event, follow_up = domain.action_types
+        self.assertEqual(follow_up.name, "follow_up_email")
+        self.assertEqual([(f.name, f.type, f.required) for f in follow_up.fields], [
+            ("recipients", "string", True), ("subject", "string", True), ("body", "string", True)])
+        self.assertEqual([(s.name, s.connector) for s in follow_up.workflow.steps],
+                         [("build_email", None), ("save_email", "email_draft"), ("save_result", None)])
+        self.assertEqual(follow_up.workflow.steps[1].sends, ("recipients", "subject", "body"))
         self.assertEqual((work_item.name, event.name), ("work_item", "calendar_event"))
         self.assertEqual([(f.name, f.type, f.required) for f in event.fields], [
             ("event_date", "date", True), ("start_time", "time", True), ("end_time", "time", True),
@@ -183,6 +189,60 @@ class CorporateCalendarEventTest(unittest.TestCase):
     def test_attendees_are_never_filled_by_the_model(self):
         self.assertIsNone(self.by_id["c1"].fields["attendees"])
         self.assertIsNone(self.by_id["c3"].fields["attendees"])
+
+
+EMAIL_TRANSCRIPT = Transcript(
+    segments=(
+        Segment(0.0, 4.0, "Ana, I'll email you the Q4 figures after the meeting.", "S1"),
+        Segment(4.0, 6.0, "Thanks, the client needs them by Friday.", "S2"),
+        Segment(6.0, 9.0, "I'll prepare the budget report too.", "S1"),
+    ),
+    language="en",
+)
+
+EMAIL_GENERIC = [
+    ProposedAction("e1", "Email Ana the Q4 figures", "Send Ana the Q4 figures by email.",
+                   "I'll email you the Q4 figures after the meeting.", owner="S1"),
+    ProposedAction("e2", "Prepare the budget report", "Prepare the budget report.",
+                   "I'll prepare the budget report too.", owner="S1"),
+]
+
+# The model drafts subject and body; it also tries to fill the recipients, which only the User may do.
+EMAIL_ANSWER = {
+    "proposed_actions": [
+        {"id": "e1", "action_type": "follow_up_email", "fields": {
+            "recipients": "ana@example.com", "subject": "Q4 figures",
+            "body": "Hi, here are the Q4 figures we discussed. The client needs them by Friday."}},
+        {"id": "e2", "action_type": "work_item", "fields": {"deliverable": "the budget report"}},
+    ],
+    "suggestions": [],
+}
+
+
+class CorporateFollowUpEmailTest(unittest.TestCase):
+    def setUp(self):
+        self.domain = load_domain(DOMAINS / "corporate")
+        self.store = InMemorySessionStore()
+        self.store.save_session(Session(id="m3", started_at=datetime(2026, 11, 6, 10, 0), domain="corporate"))
+        self.store.save_actions("m3", EMAIL_GENERIC, expected_revision=0)
+        self.llm = FakeLlmClient([json.dumps(EMAIL_ANSWER)])
+        actions, _ = run_domain_stage("m3", self.store, self.domain, self.llm, EMAIL_TRANSCRIPT)
+        self.by_id = {a.id: a for a in actions}
+
+    def test_an_agreed_email_is_a_follow_up_email_with_a_drafted_subject_and_body(self):
+        email = self.by_id["e1"]
+        self.assertEqual(email.action_type, "follow_up_email")
+        self.assertEqual(email.fields["subject"], "Q4 figures")
+        self.assertIn("by Friday", email.fields["body"])
+        self.assertEqual(self.by_id["e2"].action_type, "work_item")  # preparing it is work, not the email
+
+    def test_recipients_are_never_filled_by_the_model(self):
+        self.assertIsNone(self.by_id["e1"].fields["recipients"])
+
+    def test_the_prompt_asks_for_drafts_only_from_what_was_said(self):
+        prompt = self.llm.calls[0][0]
+        self.assertIn("follow_up_email", prompt)
+        self.assertIn("`recipients`: always null", prompt)
 
 
 if __name__ == "__main__":

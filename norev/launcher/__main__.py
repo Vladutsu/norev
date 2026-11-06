@@ -2,7 +2,10 @@
 
   norev.cmd                     check this machine, then open the app
   norev.cmd doctor              only the check: what is missing and how to add it
-  norev.cmd new-key             create the store key (never overwrites an existing one)
+  norev.cmd new-key             create the store key (never overwrites); on Windows sealed with DPAPI
+  norev.cmd protect-key         once: seal an existing plain key file with DPAPI (asks first)
+  norev.cmd export-key <file>   back the key up, on purpose, outside norev's folder (asks first)
+  norev.cmd import-key <file>   seal a key backup on this Windows account
   norev.cmd setup-models        download the Whisper (and diarization) models, once, on request
   norev.cmd process <file> [ro] the norev.sh flow: transcribe, analyse with llama-server, show
 
@@ -48,16 +51,103 @@ def doctor(paths: AppPaths) -> int:
     return 0 if ready(checks) else 1
 
 
+BACKUP_WARNING = ("Fără cheie, datele salvate nu mai pot fi citite de nimeni. Cheia e legată de acest cont "
+                  "Windows: dacă reinstalezi Windows sau schimbi contul, doar backup-ul o mai poate aduce înapoi.")
+
+
+def _confirmed(question: str, ask) -> bool:
+    return ask(f"{question} Scrie DA ca să continui: ").strip() == "DA"
+
+
 def new_key(paths: AppPaths) -> int:
     from norev.adapters.store.encrypted import create_key_file
+    from norev.launcher.keys import create_protected_key
 
-    try:
-        create_key_file(paths.key)
-    except FileExistsError:
-        print(f"Cheia există deja: {paths.key}. Nu o suprascriu.")
+    existing = next((k for k in (paths.key, paths.plain_key) if k.is_file()), None)
+    if existing:
+        print(f"Cheia există deja: {existing}. Nu o suprascriu.")
         return 0
-    print(f"Am creat cheia: {paths.key}")
-    print("Fă acum o copie a ei pe un stick USB: fără ea, datele salvate nu mai pot fi citite.")
+    if paths.windows:
+        create_protected_key(paths.key)
+        print(f"Am creat cheia, protejată de contul tău Windows: {paths.key}")
+    else:
+        create_key_file(paths.key)
+        print(f"Am creat cheia: {paths.key}")
+    print(f"{BACKUP_WARNING}\nFă un backup acum: norev.cmd export-key E:\\norev-key.bak")
+    return 0
+
+
+def protect_key(paths: AppPaths, ask=input) -> int:
+    from norev.adapters.store.encrypted import StoreKeyError
+    from norev.launcher.keys import protect_existing
+
+    if not paths.windows:
+        print("Protecția DPAPI există doar pe Windows; aici cheia rămâne fișier.")
+        return 1
+    if paths.key.is_file():
+        print(f"Cheia e deja protejată: {paths.key}")
+        return 0
+    if not paths.plain_key.is_file():
+        print(f"Nu am găsit cheia neprotejată în {paths.plain_key}.")
+        return 1
+    if not _confirmed(f"Mut cheia {paths.plain_key} sub protecția contului tău Windows. Datele rămân neschimbate.", ask):
+        print("Nu am schimbat nimic.")
+        return 1
+    try:
+        protect_existing(paths.plain_key, paths.key, paths.store)
+    except StoreKeyError as e:
+        print(f"Nu am protejat cheia: {e}. Nu am schimbat nimic.")
+        return 1
+    print(f"Cheia e protejată: {paths.key}. Datele se deschid cu ea.")
+    print(BACKUP_WARNING)
+    if _confirmed(f"Șterg fișierul neprotejat {paths.plain_key}? Fă întâi backup-ul (export-key).", ask):
+        paths.plain_key.unlink()
+        print("Am șters fișierul neprotejat.")
+    else:
+        print(f"Am păstrat {paths.plain_key}. Șterge-l după ce faci backup-ul.")
+    return 0
+
+
+def export_key(paths: AppPaths, destination: str, ask=input) -> int:
+    from norev.adapters.store.encrypted import StoreKeyError
+    from norev.launcher.keys import export_backup
+
+    key = next((k for k in (paths.key, paths.plain_key) if k.is_file()), None)
+    if key is None:
+        print("Nu există cheie de exportat.")
+        return 1
+    print(f"Backup-ul e cheia NEPROTEJATĂ: oricine îl are poate citi datele. {BACKUP_WARNING}")
+    if not _confirmed(f"Scriu backup-ul în {destination}. Ține-l pe un stick USB, separat de calculator.", ask):
+        print("Nu am exportat nimic.")
+        return 1
+    try:
+        export_backup(key, Path(destination), paths.root)
+    except FileExistsError:
+        print(f"{destination} există deja; nu îl suprascriu.")
+        return 1
+    except (ValueError, StoreKeyError) as e:
+        print(f"Nu am exportat: {e}")
+        return 1
+    print(f"Backup scris: {destination}")
+    return 0
+
+
+def import_key(paths: AppPaths, source: str) -> int:
+    from norev.adapters.store.encrypted import StoreKeyError
+    from norev.launcher.keys import protect_existing
+
+    if not paths.windows:
+        print(f"Pe acest sistem cheia e un fișier: copiaz-o în {paths.key}.")
+        return 1
+    try:
+        protect_existing(Path(source), paths.key, paths.store)
+    except FileExistsError:
+        print(f"Există deja o cheie protejată: {paths.key}. Nu o suprascriu.")
+        return 1
+    except StoreKeyError as e:
+        print(f"Nu am importat: {e}")
+        return 1
+    print(f"Cheia din {source} e protejată de acest cont Windows: {paths.key}")
     return 0
 
 
@@ -125,6 +215,9 @@ def main(argv: list[str]) -> int:
     sub.add_parser("ui")
     sub.add_parser("doctor")
     sub.add_parser("new-key")
+    sub.add_parser("protect-key")
+    sub.add_parser("export-key").add_argument("destination")
+    sub.add_parser("import-key").add_argument("source")
     sub.add_parser("setup-models")
     p = sub.add_parser("process")
     p.add_argument("media")
@@ -137,6 +230,12 @@ def main(argv: list[str]) -> int:
         return doctor(paths)
     if args.command == "new-key":
         return new_key(paths)
+    if args.command == "protect-key":
+        return protect_key(paths)
+    if args.command == "export-key":
+        return export_key(paths, args.destination)
+    if args.command == "import-key":
+        return import_key(paths, args.source)
     if args.command == "setup-models":
         return setup_models(paths)
     if args.command == "process":

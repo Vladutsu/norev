@@ -23,6 +23,7 @@ from typing import Any, Mapping
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from norev.adapters.store import dpapi
 from norev.core.models import (
     ActionsSnapshot,
     ActionStatus,
@@ -94,10 +95,17 @@ def create_key_file(path: Path) -> None:
 
 
 def read_key_file(path: Path) -> bytes:
+    """The raw key, or for a `.dpapi` file the key unsealed by this Windows account (#63)."""
+    path = Path(path)
     try:
-        key = Path(path).read_bytes()
+        key = path.read_bytes()
     except FileNotFoundError:
         raise StoreKeyError(f"key file not found: {path}") from None
+    if path.suffix == ".dpapi":
+        try:
+            key = dpapi.unprotect(key)
+        except dpapi.DpapiError:
+            raise StoreKeyError(f"key file {path} cannot be opened by this Windows account; restore the key backup") from None
     if len(key) != KEY_BYTES:
         raise StoreKeyError(f"key file {path} must hold exactly {KEY_BYTES} bytes, not {len(key)}")
     return key

@@ -42,6 +42,25 @@
             },
             "required": ["id", "action_type", "fields"],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "action_type": {"const": "follow_up_email"},
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "recipients": {"type": "null"},
+                  "subject": {"type": ["string", "null"]},
+                  "body": {"type": ["string", "null"]}
+                },
+                "required": ["recipients", "subject", "body"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "action_type", "fields"],
+            "additionalProperties": false
           }
         ]
       }
