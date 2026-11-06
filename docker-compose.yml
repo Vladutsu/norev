@@ -1,0 +1,41 @@
+# Shared dev container. How to use it: devenv/README.md
+#   docker compose run --rm dev ./check.sh                                    any laptop, no GPU
+#   docker compose --profile gpu run --rm gpu ./norev.sh /data/<clip>.wav ro  laptop 4
+# Host folders: NOREV_HOST_DATA (dev data, default ../norev-data), NOREV_HOST_MODELS (default ../norev-models).
+services:
+  dev:
+    build:
+      context: .
+      target: dev
+    image: norev-dev
+    volumes:
+      - .:/workspace
+      # shortcut: the image's .venv is copied into an anonymous volume on every run (a few seconds); it hides the
+      # host's .venv and is never stale after a rebuild. Move it out of the repo if norev.sh ever reads PYTHON.
+      - /workspace/.venv
+      - ${NOREV_HOST_DATA:-../norev-data}:/data:ro
+    environment:
+      # unset unless the host sets it, e.g. LLAMACPP_URL=http://<laptop 4>:8080 (synthetic data only)
+      - LLAMACPP_URL
+
+  gpu:
+    profiles: [gpu]
+    build:
+      context: .
+      target: gpu
+      args:
+        CUDA_ARCHITECTURES: ${CUDA_ARCHITECTURES:-75;86;89;120}
+    image: norev-gpu
+    volumes:
+      - .:/workspace
+      - /workspace/.venv
+      - ${NOREV_HOST_DATA:-../norev-data}:/data:ro
+      # read-write: faster-whisper downloads its model into /models/huggingface on first use
+      - ${NOREV_HOST_MODELS:-../norev-models}:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
