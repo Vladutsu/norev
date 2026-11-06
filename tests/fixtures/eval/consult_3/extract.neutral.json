@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 16.0,
+ "elapsed_seconds": 13.4,
  "calls": [
   {
    "stage": "extract",
@@ -104,7 +104,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"A medical session discussing Mrs. Georgescu's diabetes management, foot wound, and upcoming tests. The doctor referred her to surgery and outlined care instructions.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Schedule Surgery Appointment\",\n      \"description\": \"Get an appointment at the county hospital outpatient clinic\",\n      \"owner\": \"Doctor\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Prepare Weekly Medication Box\",\n      \"description\": \"Ana to prepare a weekly pill box for Mrs. Georgescu\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Ana, please prepare it for the whole week on Sunday evening.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Buy Medication from Pharmacy\",\n      \"description\": \"Buy the weekly pill box from the pharmacy\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Sure, I'll buy it from the pharmacy today.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Perform Daily Wound Care\",\n      \"description\": \"Daily dressing with physiological serum and betadine\",\n      \"owner\": \"Community Assistant\",\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"The community assistant can come to your home to show you how to do it.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Schedule Blood Tests\",\n      \"description\": \"Schedule hemoglobin A1c and urine test at the lab\",\n      \"owner\": \"Doctor\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.\"\n    },\n    {\n      \"id\": \"A6\",\n      \"title\": \"Schedule Follow-Up Appointment\",\n      \"description\": \"Schedule follow-up on November 20th at 11\",\n      \"owner\": \"Doctor\",\n      \"due_date\": \"2026-11-20\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Come back then on November 20th at 11, with the results and with the medical letter from the surgeon.\"\n    }\n  ],\n  \"decisions\": [\n    \"Referral to surgery for the foot wound\",\n    \"Daily wound care to be performed at home\",\n    \"Blood tests scheduled for Thursday\"\n  ],\n  \"risks\": [\n    \"Risk of fever or foot swelling requiring immediate attention\",\n    \"Risk of non-compliance with medication due to forgetfulness\"\n  ],\n  \"follow_up_questions\": [\n    \"Who will be responsible for the follow-up appointment on November 20th?\",\n    \"Is there a specific time frame for the blood tests?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"A medical session discussing Mrs. Georgescu's diabetes management, foot wound, and upcoming tests. The doctor referred her to surgery and outlined care instructions.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Schedule Surgery Appointment\",\n      \"description\": \"Get an appointment at the county hospital outpatient clinic\",\n      \"owner\": \"Doctor\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Prepare Weekly Medication Box\",\n      \"description\": \"Ana to prepare a weekly medication box for Mrs. Georgescu\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Ana, please prepare it for the whole week on Sunday evening.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Perform Daily Wound Care\",\n      \"description\": \"Daily dressing with physiological serum and betadine\",\n      \"owner\": \"Community Assistant\",\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"The community assistant can come to your home to show you how to do it.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Schedule Lab Tests\",\n      \"description\": \"Schedule hemoglobin A1c and urine test at the lab\",\n      \"owner\": \"Doctor\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Attend Follow-Up Appointment\",\n      \"description\": \"Attend follow-up on November 20th at 11\",\n      \"owner\": \"Mrs. Georgescu\",\n      \"due_date\": \"2026-11-20\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Come back then on November 20th at 11, with the results and with the medical letter from the surgeon.\"\n    }\n  ],\n  \"decisions\": [\n    \"Referral to surgery for the foot wound\",\n    \"Schedule lab tests for hemoglobin A1c and urine test\"\n  ],\n  \"risks\": [\n    \"Risk of fever or foot swelling requiring immediate attention\"\n  ],\n  \"follow_up_questions\": [\n    \"Who will handle the community assistant visit on Monday afternoon?\"\n  ]\n}"
   }
  ],
  "result": {
@@ -126,10 +126,10 @@
    {
     "id": "A2",
     "title": "Prepare Weekly Medication Box",
-    "description": "Ana to prepare a weekly pill box for Mrs. Georgescu",
+    "description": "Ana to prepare a weekly medication box for Mrs. Georgescu",
     "owner": "Ana",
     "due_date": "2026-11-08",
-    "priority": "medium",
+    "priority": "high",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
@@ -138,19 +138,6 @@
    },
    {
     "id": "A3",
-    "title": "Buy Medication from Pharmacy",
-    "description": "Buy the weekly pill box from the pharmacy",
-    "owner": "Ana",
-    "due_date": "2026-11-06",
-    "priority": "medium",
-    "status": "proposed",
-    "dependencies": [],
-    "confidence": 0.0,
-    "transcript_excerpt": "Sure, I'll buy it from the pharmacy today.",
-    "needs_review": false
-   },
-   {
-    "id": "A4",
     "title": "Perform Daily Wound Care",
     "description": "Daily dressing with physiological serum and betadine",
     "owner": "Community Assistant",
@@ -163,8 +150,8 @@
     "needs_review": false
    },
    {
-    "id": "A5",
-    "title": "Schedule Blood Tests",
+    "id": "A4",
+    "title": "Schedule Lab Tests",
     "description": "Schedule hemoglobin A1c and urine test at the lab",
     "owner": "Doctor",
     "due_date": "2026-11-13",
@@ -176,10 +163,10 @@
     "needs_review": false
    },
    {
-    "id": "A6",
-    "title": "Schedule Follow-Up Appointment",
-    "description": "Schedule follow-up on November 20th at 11",
-    "owner": "Doctor",
+    "id": "A5",
+    "title": "Attend Follow-Up Appointment",
+    "description": "Attend follow-up on November 20th at 11",
+    "owner": "Mrs. Georgescu",
     "due_date": "2026-11-20",
     "priority": "high",
     "status": "proposed",
@@ -191,16 +178,13 @@
   ],
   "decisions": [
    "Referral to surgery for the foot wound",
-   "Daily wound care to be performed at home",
-   "Blood tests scheduled for Thursday"
+   "Schedule lab tests for hemoglobin A1c and urine test"
   ],
   "risks": [
-   "Risk of fever or foot swelling requiring immediate attention",
-   "Risk of non-compliance with medication due to forgetfulness"
+   "Risk of fever or foot swelling requiring immediate attention"
   ],
   "follow_up_questions": [
-   "Who will be responsible for the follow-up appointment on November 20th?",
-   "Is there a specific time frame for the blood tests?"
+   "Who will handle the community assistant visit on Monday afternoon?"
   ]
  }
 }
