@@ -22,7 +22,17 @@ from typing import Any, Mapping
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from norev.core.models import ActionStatus, AuditEvent, ProposedAction, Segment, Session, Suggestion, Transcript
+from norev.core.models import (
+    ActionsSnapshot,
+    ActionStatus,
+    AuditEvent,
+    ProposedAction,
+    Segment,
+    Session,
+    StaleRevision,
+    Suggestion,
+    Transcript,
+)
 
 KEY_BYTES = 32
 _NONCE_BYTES = 12
@@ -135,9 +145,19 @@ class EncryptedStore:
     # --- SessionStore
 
     def save_session(self, session: Session) -> None:
+        """Same rules as the port: a change bumps the revision; once review started, inputs are frozen."""
         d = dataclasses.asdict(session)
         d["started_at"] = session.started_at.isoformat()
-        self._put("session", session.id, d)
+        plaintext = _encode(d)
+        with self._transaction():
+            previous = self._get("session", session.id)
+            if previous == d:
+                return
+            if previous is not None and (self._exists("actions", session.id) or self._exists("suggestions", session.id)):
+                raise ValueError("Session inputs cannot change after review has started")
+            revision = 0 if previous is None else self._stored_revision(session.id) + 1
+            self._write("session", session.id, plaintext)
+            self._write("revision", session.id, _encode(revision))
 
     def get_session(self, session_id: str) -> Session | None:
         d = self._get("session", session_id)
@@ -157,14 +177,39 @@ class EncryptedStore:
             raise KeyError(f"no Transcript for ref {transcript_ref!r}")
         return Transcript(segments=tuple(Segment(**s) for s in d["segments"]), language=d["language"])
 
-    def save_actions(self, session_id: str, actions: list[ProposedAction]) -> None:
-        self._put("actions", session_id, [_action_dict(a) for a in actions])
+    def load_actions_snapshot(self, session_id: str) -> ActionsSnapshot:
+        with self._transaction():  # revision and actions from the same moment
+            return ActionsSnapshot(self._revision(session_id), tuple(self.load_actions(session_id)))
+
+    def save_actions(
+        self, session_id: str, actions: list[ProposedAction], *, expected_revision: int,
+        suggestions: list[Suggestion] | None = None,
+    ) -> int:
+        """Compare-and-set on the Session revision; StaleRevision or any error means nothing was saved."""
+        actions_plaintext = _encode([_action_dict(a) for a in actions])  # TypeError before any write
+        suggestions_plaintext = None if suggestions is None else _encode([dataclasses.asdict(s) for s in suggestions])
+        with self._transaction():
+            revision = self._check_revision(session_id, expected_revision)
+            if len({a.id for a in actions}) != len(actions):
+                raise ValueError("Duplicate Proposed Action ids")
+            self._write("actions", session_id, actions_plaintext)
+            if suggestions_plaintext is not None:
+                self._write("suggestions", session_id, suggestions_plaintext)
+            self._write("revision", session_id, _encode(revision + 1))
+        return revision + 1
 
     def load_actions(self, session_id: str) -> list[ProposedAction]:
         return [_action(d) for d in self._get("actions", session_id) or []]
 
-    def save_suggestions(self, session_id: str, suggestions: list[Suggestion]) -> None:
-        self._put("suggestions", session_id, [dataclasses.asdict(s) for s in suggestions])
+    def save_suggestions(
+        self, session_id: str, suggestions: list[Suggestion], *, expected_revision: int,
+    ) -> int:
+        plaintext = _encode([dataclasses.asdict(s) for s in suggestions])
+        with self._transaction():
+            revision = self._check_revision(session_id, expected_revision)
+            self._write("suggestions", session_id, plaintext)
+            self._write("revision", session_id, _encode(revision + 1))
+        return revision + 1
 
     def load_suggestions(self, session_id: str) -> list[Suggestion]:
         return [Suggestion(**d) for d in self._get("suggestions", session_id) or []]
@@ -188,13 +233,38 @@ class EncryptedStore:
             events.append(AuditEvent(**d))
         return events
 
+    # --- revisions (the review revision of a Session, as in norev.core.ports.SessionStore)
+
+    def _stored_revision(self, session_id: str) -> int:
+        return self._get("revision", session_id) or 0  # stores written before #18 have no revision record
+
+    def _revision(self, session_id: str) -> int:
+        if not self._exists("session", session_id):
+            raise LookupError("Session does not exist")
+        return self._stored_revision(session_id)
+
+    def _check_revision(self, session_id: str, expected_revision: int) -> int:
+        revision = self._revision(session_id)
+        if type(expected_revision) is not int or expected_revision < 0:
+            raise ValueError("Invalid expected revision")
+        if revision != expected_revision:
+            raise StaleRevision("Session actions changed; reload before deciding")
+        return revision
+
     # --- records
 
     def _put(self, kind: str, record_id: str, value: Any) -> None:
-        plaintext = json.dumps(value, ensure_ascii=False).encode()  # TypeError on non-JSON values, before any write
-        blob = self._seal(plaintext, _aad(kind, record_id))
+        plaintext = _encode(value)  # TypeError on non-JSON values, before any write
         with self._transaction():
-            self._db.execute("INSERT OR REPLACE INTO records VALUES (?, ?, ?)", (kind, record_id, blob))
+            self._write(kind, record_id, plaintext)
+
+    def _write(self, kind: str, record_id: str, plaintext: bytes) -> None:
+        """Inside a transaction."""
+        blob = self._seal(plaintext, _aad(kind, record_id))
+        self._db.execute("INSERT OR REPLACE INTO records VALUES (?, ?, ?)", (kind, record_id, blob))
+
+    def _exists(self, kind: str, record_id: str) -> bool:
+        return self._db.execute("SELECT 1 FROM records WHERE kind = ? AND id = ?", (kind, record_id)).fetchone() is not None
 
     def _get(self, kind: str, record_id: str) -> Any:
         row = self._db.execute("SELECT blob FROM records WHERE kind = ? AND id = ?", (kind, record_id)).fetchone()
@@ -231,6 +301,10 @@ class _Transaction:
 
     def __exit__(self, exc_type, exc, tb) -> None:
         self._db.execute("ROLLBACK" if exc_type else "COMMIT")
+
+
+def _encode(value: Any) -> bytes:
+    return json.dumps(value, ensure_ascii=False).encode()
 
 
 def _aad(kind: str, record_id: str) -> bytes:
