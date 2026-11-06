@@ -1,0 +1,394 @@
+import json
+from pathlib import Path
+from queue import Queue
+from threading import Thread
+from typing import Any
+
+from LLM.AI_Model.client import LLMClient, OllamaTimeoutError, build_llm_client
+from LLM.AI_Model.prompt import DeepSeekPromptBuilder
+from LLM.AI_Model.settings import DeepSeekSettings
+
+
+class RealtimeTaskExtractor:
+    def __init__(
+        self,
+        output_path: Path,
+        settings: DeepSeekSettings | None = None,
+        client: LLMClient | None = None,
+        prompt_builder: DeepSeekPromptBuilder | None = None,
+        llm_provider: str | None = None,
+        llm_model: str | None = None,
+        assignee_candidates: list[dict[str, Any]] | None = None,
+    ) -> None:
+        self.output_path = output_path
+        base_settings = settings or DeepSeekSettings.from_environment()
+        self._settings = base_settings.with_overrides(
+            provider=llm_provider,
+            model=llm_model,
+        )
+        self._client = client or build_llm_client(self._settings)
+        self._prompt_builder = prompt_builder or DeepSeekPromptBuilder(
+            assignee_candidates=assignee_candidates,
+        )
+
+        self._queue: Queue[str | None] = Queue()
+        self._thread = Thread(target=self._worker, daemon=True)
+        self._latest_json = ""
+        self._error: Exception | None = None
+        self._closed = False
+        self._thread.start()
+
+    @property
+    def llm_provider(self) -> str:
+        return self._settings.provider
+
+    @property
+    def llm_model(self) -> str:
+        return self._settings.model
+
+    def push_segment(self, text: str) -> None:
+        if self._closed:
+            raise RuntimeError("Cannot push segment: extractor is already closed.")
+        clean = text.strip()
+        if clean:
+            self._queue.put(clean)
+
+    def close(self) -> str:
+        if not self._closed:
+            self._queue.put(None)
+            self._thread.join()
+            self._closed = True
+
+        if self._error is not None:
+            raise RuntimeError(f"Realtime task extraction failed: {self._error}") from self._error
+
+        if self._latest_json.strip():
+            self._persist(self._latest_json)
+        return self._latest_json
+
+    def _persist(self, content: str) -> None:
+        self.output_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.output_path.open("w", encoding="utf-8") as handle:
+            handle.write(content.strip() + "\n")
+
+    def _flush_buffer(self, buffer: list[str]) -> None:
+        chunk_text = " ".join(buffer).strip()
+        if not chunk_text:
+            return
+
+        self._process_chunk(chunk_text)
+
+    def _process_chunk(self, chunk_text: str) -> None:
+        prompt = self._prompt_builder.build(self._latest_json, chunk_text)
+        try:
+            generated_json = self._client.generate_json(prompt, model=self._settings.model)
+            self._latest_json = self._merge_results(self._latest_json, generated_json)
+            self._persist(self._latest_json)
+        except Exception as exc:
+            if self._should_split_chunk(chunk_text, exc):
+                left, right = self._split_chunk(chunk_text)
+                if left and right:
+                    self._process_chunk(left)
+                    self._process_chunk(right)
+                    return
+            raise
+
+    def _should_split_chunk(self, chunk_text: str, exc: Exception) -> bool:
+        if len(chunk_text) < self._settings.min_chunk_char_threshold * 2:
+            return False
+        if isinstance(exc, OllamaTimeoutError):
+            return True
+        message = str(exc).lower()
+        retryable_markers = (
+            "timed out",
+            "timeout",
+            "valid json",
+            "context length",
+            "context window",
+            "non-empty 'response'",
+        )
+        return any(marker in message for marker in retryable_markers)
+
+    def _split_chunk(self, chunk_text: str) -> tuple[str, str]:
+        words = chunk_text.split()
+        if len(words) < 2:
+            return chunk_text, ""
+
+        midpoint = len(words) // 2
+        window = min(80, max(10, midpoint))
+        split_index = midpoint
+        for offset in range(window):
+            for candidate in (midpoint + offset, midpoint - offset):
+                if candidate <= 1 or candidate >= len(words) - 1:
+                    continue
+                if words[candidate - 1][-1:] in {".", "!", "?", ";"}:
+                    split_index = candidate
+                    left = " ".join(words[:split_index]).strip()
+                    right = " ".join(words[split_index:]).strip()
+                    if left and right:
+                        return left, right
+
+        left = " ".join(words[:midpoint]).strip()
+        right = " ".join(words[midpoint:]).strip()
+        return left, right
+
+    def _merge_results(self, previous_json: str, current_json: str) -> str:
+        previous_obj = self._parse_json_object(previous_json)
+        current_obj = self._parse_json_object(current_json)
+
+        if not previous_obj:
+            merged = self._normalize_result_shape(current_obj)
+            return json.dumps(merged, ensure_ascii=False, indent=2)
+
+        merged = self._normalize_result_shape(previous_obj)
+        current_normalized = self._normalize_result_shape(current_obj)
+
+        current_summary = current_normalized.get("meeting_summary")
+        if isinstance(current_summary, str) and current_summary.strip():
+            merged["meeting_summary"] = current_summary.strip()
+
+        merged["tasks"] = self._merge_tasks(
+            merged.get("tasks", []),
+            current_normalized.get("tasks", []),
+        )
+        merged["decisions"] = self._merge_text_lists(
+            merged.get("decisions", []),
+            current_normalized.get("decisions", []),
+        )
+        merged["risks"] = self._merge_text_lists(
+            merged.get("risks", []),
+            current_normalized.get("risks", []),
+        )
+        merged["follow_up_questions"] = self._merge_text_lists(
+            merged.get("follow_up_questions", []),
+            current_normalized.get("follow_up_questions", []),
+        )
+
+        return json.dumps(merged, ensure_ascii=False, indent=2)
+
+    def _parse_json_object(self, raw_json: str) -> dict[str, Any]:
+        text = raw_json.strip()
+        if not text:
+            return {}
+        parsed = json.loads(text)
+        if not isinstance(parsed, dict):
+            raise RuntimeError("DeepSeek response must be a JSON object.")
+        return parsed
+
+    def _normalize_result_shape(self, payload: dict[str, Any]) -> dict[str, Any]:
+        summary = payload.get("meeting_summary")
+        meeting_summary = summary.strip() if isinstance(summary, str) else ""
+
+        tasks_raw = payload.get("tasks", [])
+        tasks: list[dict[str, Any]] = []
+        if isinstance(tasks_raw, list):
+            for item in tasks_raw:
+                normalized = self._normalize_task(item)
+                if normalized is not None:
+                    tasks.append(normalized)
+
+        return {
+            "meeting_summary": meeting_summary,
+            "tasks": self._assign_task_ids(tasks),
+            "decisions": self._normalize_text_list(payload.get("decisions", [])),
+            "risks": self._normalize_text_list(payload.get("risks", [])),
+            "follow_up_questions": self._normalize_text_list(
+                payload.get("follow_up_questions", []),
+            ),
+        }
+
+    def _normalize_task(self, item: Any) -> dict[str, Any] | None:
+        if not isinstance(item, dict):
+            return None
+
+        title = self._normalize_text(item.get("title"))
+        description = self._normalize_text(item.get("description"))
+        if not title and not description:
+            return None
+
+        owner = self._normalize_nullable_text(item.get("owner"))
+        due_date = self._normalize_nullable_text(item.get("due_date"))
+        priority = self._normalize_text(item.get("priority")).lower() or "medium"
+        if priority not in {"high", "medium", "low"}:
+            priority = "medium"
+
+        status = self._normalize_text(item.get("status")).lower() or "open"
+
+        dependencies_raw = item.get("dependencies", [])
+        dependencies: list[str] = []
+        if isinstance(dependencies_raw, list):
+            dependencies = self._normalize_text_list(dependencies_raw)
+
+        confidence = item.get("confidence")
+        confidence_value: float | None = None
+        if isinstance(confidence, (float, int)):
+            confidence_value = float(confidence)
+        elif isinstance(confidence, str):
+            try:
+                confidence_value = float(confidence.strip())
+            except ValueError:
+                confidence_value = None
+        if confidence_value is None:
+            confidence_value = 0.0
+        confidence_value = max(0.0, min(1.0, confidence_value))
+
+        return {
+            "id": self._normalize_text(item.get("id")),
+            "title": title,
+            "description": description,
+            "owner": owner,
+            "due_date": due_date,
+            "priority": priority,
+            "status": status,
+            "dependencies": dependencies,
+            "confidence": confidence_value,
+            "evidence_quote": self._normalize_text(item.get("evidence_quote")),
+        }
+
+    def _normalize_text(self, value: Any) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            value = str(value)
+        return value.strip()
+
+    def _normalize_nullable_text(self, value: Any) -> str | None:
+        text = self._normalize_text(value)
+        if not text:
+            return None
+        if text.lower() in {"null", "none", "n/a", "na", "unknown"}:
+            return None
+        return text
+
+    def _normalize_text_list(self, value: Any) -> list[str]:
+        if not isinstance(value, list):
+            return []
+
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            text = self._normalize_text(item)
+            if not text:
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(text)
+        return deduped
+
+    def _merge_text_lists(self, left: Any, right: Any) -> list[str]:
+        return self._normalize_text_list(
+            self._normalize_text_list(left) + self._normalize_text_list(right),
+        )
+
+    def _merge_tasks(self, previous_tasks_raw: Any, current_tasks_raw: Any) -> list[dict[str, Any]]:
+        previous_tasks = self._normalize_tasks_for_merge(previous_tasks_raw)
+        current_tasks = self._normalize_tasks_for_merge(current_tasks_raw)
+
+        merged = previous_tasks.copy()
+        key_to_index = {
+            self._task_key(task): index
+            for index, task in enumerate(merged)
+            if self._task_key(task)
+        }
+
+        for current_task in current_tasks:
+            key = self._task_key(current_task)
+            if key and key in key_to_index:
+                idx = key_to_index[key]
+                merged[idx] = self._merge_single_task(merged[idx], current_task)
+            else:
+                merged.append(current_task)
+                if key:
+                    key_to_index[key] = len(merged) - 1
+
+        return self._assign_task_ids(merged)
+
+    def _normalize_tasks_for_merge(self, value: Any) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        normalized: list[dict[str, Any]] = []
+        for item in value:
+            task = self._normalize_task(item)
+            if task is not None:
+                normalized.append(task)
+        return normalized
+
+    def _merge_single_task(self, previous: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
+        merged = previous.copy()
+        for field in [
+            "title",
+            "description",
+            "owner",
+            "due_date",
+            "priority",
+            "status",
+            "confidence",
+            "evidence_quote",
+        ]:
+            value = current.get(field)
+            if value in ("", None):
+                continue
+            merged[field] = value
+
+        merged["dependencies"] = self._merge_text_lists(
+            previous.get("dependencies", []),
+            current.get("dependencies", []),
+        )
+        if not merged.get("id"):
+            merged["id"] = current.get("id", "")
+        return merged
+
+    def _task_key(self, task: dict[str, Any]) -> str:
+        title = self._normalize_text(task.get("title")).lower()
+        description = self._normalize_text(task.get("description")).lower()
+        owner = self._normalize_text(task.get("owner")).lower()
+        due_date = self._normalize_text(task.get("due_date")).lower()
+        if not title and not description:
+            return ""
+        return "|".join([title, description, owner, due_date])
+
+    def _assign_task_ids(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        assigned: list[dict[str, Any]] = []
+        used_ids: set[str] = set()
+        numeric_ids = [
+            int(task_id[1:])
+            for task_id in (self._normalize_text(task.get("id")) for task in tasks)
+            if task_id.startswith("T") and task_id[1:].isdigit()
+        ]
+        next_id = (max(numeric_ids) if numeric_ids else 0) + 1
+
+        for task in tasks:
+            normalized_task = task.copy()
+            task_id = self._normalize_text(normalized_task.get("id"))
+            if not task_id or task_id in used_ids:
+                task_id = f"T{next_id}"
+                next_id += 1
+            normalized_task["id"] = task_id
+            used_ids.add(task_id)
+            assigned.append(normalized_task)
+
+        return assigned
+
+    def _worker(self) -> None:
+        try:
+            buffer: list[str] = []
+            char_count = 0
+
+            while True:
+                item = self._queue.get()
+                if item is None:
+                    break
+
+                buffer.append(item)
+                char_count += len(item)
+                if char_count >= self._settings.chunk_char_threshold:
+                    self._flush_buffer(buffer)
+                    buffer.clear()
+                    char_count = 0
+
+            if buffer:
+                self._flush_buffer(buffer)
+        except Exception as exc:
+            self._error = exc
