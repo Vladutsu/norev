@@ -1,0 +1,3 @@
+# Desktop UI (#27): python -m norev.ui
+# Not needed by CI or the tests; the UI tests use the bridge directly.
+pywebview==6.2.1
