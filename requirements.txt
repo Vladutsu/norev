@@ -8,3 +8,6 @@ numpy==2.4.4
 # CUDA runtime libs for Whisper on NVIDIA GPUs (skip on CPU-only machines)
 nvidia-cublas-cu12
 nvidia-cudnn-cu12==9.*
+
+# store (encrypted SessionStore, #26)
+cryptography==50.0.2
