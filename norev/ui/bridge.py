@@ -41,6 +41,9 @@ class Bridge:
     def execute(self, session_id, action_id): return self._call(self._executing("execute"), session_id, action_id)
     def retry(self, session_id, action_id): return self._call(self._executing("retry"), session_id, action_id)
     def reconcile(self, session_id, action_id, step, happened): return self._call(self._executing("reconcile"), session_id, action_id, step, happened)
+    def google_status(self): return self._call(self._backend.google_status)
+    def google_connect(self): return self._call(self._backend.google_connect)
+    def google_disconnect(self): return self._call(self._backend.google_disconnect)
 
     def _executing(self, name: str) -> Callable[..., Any]:
         if self._backend.can_execute:

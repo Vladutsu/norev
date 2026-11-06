@@ -20,6 +20,16 @@ const ERRORS = {
   llm_unavailable: "Modelul local (llama-server) nu a pornit. Verifică LLAMA_SERVER și LLAMACPP_MODEL.",
   no_microphone: "Microfonul nu a putut fi deschis.",
 };
+// Why connecting Google Calendar did not work (GoogleAccount.connect, #45)
+const GOOGLE_FAILED = {
+  access_denied: "Ai refuzat accesul în Google. Nimic nu s-a salvat.",
+  timeout: "Conectarea a expirat. Încearcă din nou și termină în browser.",
+  no_browser: "Browserul nu a putut fi deschis.",
+  scope_not_granted: "Google nu a dat acces la evenimentele din calendar.",
+  already_connecting: "Conectarea e deja în curs, în browser.",
+  not_configured: "Google Calendar nu e configurat pe acest calculator.",
+  unreachable: "Google nu poate fi contactat. Verifică conexiunea la internet.",
+};
 const STAGES = {
   transcribing: "Se face transcrierea finală",
   starting_llm: "Se pornește modelul local",
@@ -387,15 +397,20 @@ function actionCard(a) {
 
   const plan = a.plan.map((step) => h("div", { class: "payload inset" },
     h("span", { class: "payload-head" }, icon("arrow", 16), `Ce se trimite · ${step.connector_label}`),
-    h("pre", {}, Object.entries(step.payload).map(([k, v]) => `${k}: ${v === null || v === "" ? "—" : v}`).join("\n"))));
+    // nested values (the calendar event) are shown in full, not as [object Object]
+    h("pre", {}, Object.entries(step.payload).map(([k, v]) => `${k}: ${v === null || v === "" ? "—"
+      : typeof v === "object" ? JSON.stringify(v, null, 2) : v}`).join("\n"))));
 
   let buttons = null;
   const runnable = state.review.can_execute;
   if (runnable && a.status === "approved" && a.uncertain_step) {
+    const uncertain = a.plan.find((s) => s.step === a.uncertain_step);
+    const calendar = uncertain && uncertain.connector === "google_calendar";
     buttons = h("div", { class: "actions" },
-      h("span", { class: "hint" }, "Execuția a fost întreruptă. S-a salvat documentul?"),
-      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, false) }, "Nu s-a salvat"),
-      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, true) }, "S-a salvat"));
+      h("span", { class: "hint" }, calendar ? "Execuția a fost întreruptă. Evenimentul apare în Google Calendar?"
+        : "Execuția a fost întreruptă. S-a salvat documentul?"),
+      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, false) }, calendar ? "Nu apare" : "Nu s-a salvat"),
+      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, true) }, calendar ? "Apare" : "S-a salvat"));
   } else if (runnable && a.status === "approved") {
     buttons = h("div", { class: "actions" },
       h("span", { class: "hint" }, "Se trimite exact ce ai aprobat."),
@@ -456,6 +471,39 @@ async function showList(kind) {
   show("list");
 }
 
+// ---------- Google Calendar (#45): shown only when it is set up on this machine
+
+function renderGoogle(status) {
+  $("google").hidden = !status.available;
+  $("google-status").textContent = status.connected ? "Conectat. Evenimentele aprobate pot fi trimise."
+    : "Neconectat. Conectează contul ca să trimiți evenimente aprobate.";
+  $("google-button").textContent = status.connected ? "Deconectează" : "Conectează";
+  $("google-button").dataset.connected = String(status.connected);
+}
+
+async function googleButton(button) {
+  // not through `guarded`: signing in can take minutes in the browser and must not hold the other actions
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  try {
+    if (button.dataset.connected === "true") {
+      const status = await api("google_disconnect");
+      renderGoogle(status);
+      toast(status.revoked ? "Contul Google a fost deconectat." : "Contul a fost deconectat aici; Google nu a confirmat revocarea.");
+    } else {
+      $("google-status").textContent = "Termină conectarea în browser…";
+      const status = await api("google_connect");
+      renderGoogle(status);
+      toast(status.failed ? (GOOGLE_FAILED[status.failed] || "Conectarea la Google nu a reușit.") : "Google Calendar e conectat.");
+    }
+  } catch (err) {
+    fail(err);
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
 function initNav() {
   for (const b of document.querySelectorAll(".navbtn")) {
     b.addEventListener("click", () => {
@@ -477,6 +525,8 @@ async function init() {
     state.mode = first ? first.id : null;
     renderModes();
     refreshPending();
+    $("google-button").addEventListener("click", (e) => googleButton(e.currentTarget));
+    renderGoogle(await api("google_status"));
   } catch (err) {
     fail(err);
   }

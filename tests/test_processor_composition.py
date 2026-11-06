@@ -67,8 +67,8 @@ class CompositionTest(unittest.TestCase):
         from norev.adapters.connectors.google_calendar import GoogleCalendarSettings
         from test_connectors_google_auth import MemorySecrets
 
-        auth, connector = build_google_calendar(MemorySecrets(), GoogleCalendarSettings("id", "secret"))
-        self.assertFalse(auth.connected())  # built, nothing contacted
+        account, connector = build_google_calendar(MemorySecrets(), GoogleCalendarSettings("id", "secret"))
+        self.assertEqual(account.status(), {"available": True, "connected": False})  # built, nothing contacted
         with patch.dict(os.environ, {"LLM_PROVIDER": "llamacpp", "LLAMACPP_URL": "http://127.0.0.1:9"}):
             processor = build_central_processor(audit=None, identity=LocalUser("u"), connectors=[connector])
         self.assertTrue(processor.has_connector("google_calendar"))
