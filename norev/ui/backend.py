@@ -36,6 +36,10 @@ class ModeUnavailable(ValueError):
     """The mode's Domain is not in domains/ yet (Corporate: #20) or its analysis is not built (Others: #21)."""
 
 
+class ExecutionPending(ValueError):
+    """An approved Proposed Action still waits to execute: the Session is not deleted."""
+
+
 class PromptNotConfirmed(ValueError):
     """Others needs the exact context and prompt the User confirmed."""
 
@@ -75,6 +79,7 @@ def _value(action: ProposedAction, name: str) -> Any:
 
 class DemoBackend:
     can_execute = False  # the demo reviews only; SessionBackend executes through the Central Processor (#43)
+    google = None  # SessionBackend: the GoogleAccount from the composition root (#45); none in the demo
 
     def __init__(self, store: SessionStore, *, approved_by: str, clock: Clock | None = None,
                  domains_dir: Path = ROOT / "domains", monotonic=time.monotonic) -> None:
@@ -120,6 +125,21 @@ class DemoBackend:
         digest = prompt_digest(_required_text(context, "context"), _required_text(prompt, "prompt"))
         self._confirmed.add(digest)
         return {"digest": digest}
+
+    # --- Google account (#45): connect and disconnect from the app
+
+    def google_status(self) -> dict[str, Any]:
+        return self.google.status() if self.google is not None else {"available": False, "connected": False}
+
+    def google_connect(self) -> dict[str, Any]:
+        if self.google is None:
+            raise ModeUnavailable("google_calendar")
+        return self.google.connect()
+
+    def google_disconnect(self) -> dict[str, Any]:
+        if self.google is None:
+            raise ModeUnavailable("google_calendar")
+        return self.google.disconnect()
 
     # --- recording
 
@@ -202,7 +222,7 @@ class DemoBackend:
             listed.append({
                 "session_id": session_id, "contact": session.contact_id or "", "domain": session.domain,
                 "started_at": session.started_at.isoformat(),
-                "pending": sum(a.status is ActionStatus.PROPOSED for a in actions),
+                "pending": sum(a.status is ActionStatus.PROPOSED for a in actions), "ready": True,
             })
         return sorted(listed, key=lambda s: s["started_at"], reverse=True)
 
@@ -263,6 +283,15 @@ class DemoBackend:
                       "payload": s["payload"]} for s in (plan or {}).get("steps", [])],
             "prepared": action.prepared_payload is not None,
         }
+
+    def delete(self, session_id: str) -> dict[str, Any]:
+        """The User's confirmed deletion (#59); the audit log of executed actions is kept."""
+        try:
+            self.store.delete_session(session_id)
+        except ValueError:  # an approved action waits to execute; LookupError (unknown Session) passes through
+            raise ExecutionPending("session") from None
+        self._sessions.pop(session_id, None)
+        return {"deleted": session_id}
 
     def set_role(self, session_id: str, speaker_id: str, role: str) -> dict[str, Any]:
         state = self._state(session_id)

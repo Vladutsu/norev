@@ -25,6 +25,7 @@ from test_usecases_session_flow import ANSWERS, GENERIC, SPOKEN, TRANSLATION, TU
 
 NOW = datetime(2026, 11, 6, 10, 24, tzinfo=timezone.utc)
 USER = "local:test"
+EXTRACTED = {**GENERIC, "session_summary": "  Ședință despre raportul de vineri. "}
 PCM = [b"\x01\x00" * 8000] * 3  # 1.5 s of 16 kHz mono s16
 
 
@@ -99,7 +100,7 @@ class Case(unittest.TestCase):
 
         return SessionBackend(self.store, approved_by=USER, processor=processor, export_dir=self.export_dir,
                               llm_session=llm_session, record_source=lambda: self.mic(), pick_file=lambda: self.picked,
-                              make_extractor=lambda llm, workers: FakeActionExtractor(GENERIC),
+                              make_extractor=lambda llm, workers: FakeActionExtractor(EXTRACTED),
                               clock=FixedClock(NOW), run_in_background=lambda work: work())
 
     def ok(self, result):
@@ -135,6 +136,41 @@ class RecordAndAnalyseTest(Case):
         # llama-server only for the LLM stages, after Whisper and diarization released the GPU
         self.assertEqual(self.llm_runs, ["start", "stop"])
         self.assertGreaterEqual(self.audio.closed, 1)
+
+    def test_summary_is_kept_and_shown(self):
+        session_id = self.recorded()
+        self.assertEqual(self.store.load_summary(session_id), "Ședință despre raportul de vineri.")
+        self.assertEqual(self.ok(self.bridge.review(session_id))["summary"], "Ședință despre raportul de vineri.")
+
+    def test_a_session_whose_analysis_failed_stays_in_the_list_after_a_restart(self):
+        self.llm_error = LlamaError("llama-server nu există")
+        session_id = self.recorded()
+        self.bridge = Bridge(self.backend())  # a new app on the same store
+        [listed] = self.ok(self.bridge.sessions())
+        self.assertEqual((listed["session_id"], listed["ready"], listed["pending"]), (session_id, False, 0))
+        self.assertEqual(self.ok(self.bridge.progress(session_id))["failed"], "interrupted")
+        self.llm_error = None
+        self.ok(self.bridge.stop(session_id))  # the User's "Try again"
+        self.assertTrue(self.ok(self.bridge.sessions())[0]["ready"])
+
+    def test_delete_after_confirmation_and_never_while_an_action_waits(self):
+        session_id = self.recorded()
+        action = self.approved(session_id)["actions"][0]
+        self.assertEqual(self.error(self.bridge.delete(session_id)), "execution_pending")
+        self.ok(self.bridge.execute(session_id, action["id"]))
+
+        self.ok(self.bridge.delete(session_id))
+
+        self.assertEqual(self.ok(self.bridge.sessions()), [])
+        self.assertEqual(self.error(self.bridge.review(session_id)), "not_found")
+        self.assertEqual(len(self.store.load_events()), 1)  # what was sent stays in the audit
+        self.assertEqual(len(list(self.export_dir.iterdir())), 1)  # and the exported document is the User's
+        self.assertEqual(self.error(self.bridge.delete(session_id)), "not_found")
+
+    def test_delete_is_refused_while_recording(self):
+        session_id = self.ok(self.bridge.start("corporate", "ro", ""))["session_id"]
+        self.assertEqual(self.error(self.bridge.delete(session_id)), "session_busy")
+        self.ok(self.bridge.stop(session_id))
 
     def test_audio_is_sealed_in_the_store_never_written_to_a_file(self):
         session_id = self.recorded()

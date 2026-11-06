@@ -24,7 +24,7 @@ from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.recorder.recorder import Recorder
 from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction, Session, StepState
-from norev.core.ports import Clock, SessionStore
+from norev.core.ports import Clock, PayloadBuilder, SessionStore
 from norev.processor.payloads import LocalDocumentPayloadBuilder
 from norev.processor.workflow import WorkflowExecutor
 from norev.ui.backend import MODES, ROOT, DemoBackend, ModeUnavailable, PromptNotConfirmed, prompt_digest
@@ -39,6 +39,10 @@ log = logging.getLogger(__name__)
 STAGES = ("recording", "transcribing", "starting_llm", "analysing", "ready")
 
 
+class SessionBusy(ValueError):
+    """The Session is recording or being analysed; it cannot be deleted now."""
+
+
 class MicrophoneUnavailable(ValueError):
     """No input device could be opened. Nothing was recorded or saved."""
 
@@ -51,6 +55,8 @@ class SessionBackend(DemoBackend):
     """`processor` is the Central Processor (transcriber, diarizer, LLM and Connectors, #22).
     `llm_session()` keeps llama-server running for one block and yields the model alias (#43).
     `record_source()` gives the microphone's PCM blocks; `pick_file()` the audio file the User chose.
+    `builder` makes the previews (default: local documents only); `google` is the User's GoogleAccount
+    for connect/disconnect (#45), None when Google Calendar is not set up.
     """
 
     can_execute = True
@@ -60,10 +66,12 @@ class SessionBackend(DemoBackend):
                  record_source: Callable[[], Iterable[bytes]],
                  pick_file: Callable[[], str | None] = lambda: None,
                  workers: int = 1, make_extractor=LegacyActionExtractor, clock: Clock | None = None, domains_dir: Path = ROOT / "domains",
-                 monotonic=time.monotonic, run_in_background: Callable[[Callable[[], None]], None] = _thread) -> None:
+                 monotonic=time.monotonic, run_in_background: Callable[[Callable[[], None]], None] = _thread,
+                 builder: PayloadBuilder | None = None, google=None) -> None:
         super().__init__(store, approved_by=approved_by, clock=clock, domains_dir=domains_dir, monotonic=monotonic)
         self.processor = processor
-        self.builder = LocalDocumentPayloadBuilder(export_dir)
+        self.builder = builder or LocalDocumentPayloadBuilder(export_dir)
+        self.google = google
         self.llm_session = llm_session
         self.record_source = record_source
         self.pick_file = pick_file
@@ -253,13 +261,30 @@ class SessionBackend(DemoBackend):
     # --- review
 
     def sessions(self) -> list[dict[str, Any]]:
-        return [{
-            "session_id": s.id, "contact": s.contact_id or "", "domain": s.domain, "started_at": s.started_at.isoformat(),
-            "pending": sum(a.status is ActionStatus.PROPOSED for a in self.store.load_actions(s.id)),
-        } for s in self.store.list_sessions() if s.transcript_ref]
+        """Every saved Session (#59), also the ones whose analysis failed or never finished."""
+        listed = []
+        for s in self.store.list_sessions():
+            ready = bool(s.source_transcript_ref)
+            listed.append({
+                "session_id": s.id, "contact": s.contact_id or "", "domain": s.domain, "started_at": s.started_at.isoformat(),
+                "pending": sum(a.status is ActionStatus.PROPOSED for a in self.store.load_actions(s.id)) if ready else 0,
+                "ready": ready,
+            })
+        return listed
 
     def _summary(self, session_id: str) -> str:
-        return ""  # the analysis keeps no Session summary yet
+        return self.store.load_summary(session_id)
+
+    def delete(self, session_id: str) -> dict[str, Any]:
+        """Only while nothing runs on the Session (recording or analysis)."""
+        with self._lock:
+            progress = self._progress.get(session_id)
+            if session_id in self._recordings or (progress and progress["stage"] != "ready" and not progress["failed"]):
+                raise SessionBusy("session")
+        super().delete(session_id)
+        with self._lock:
+            self._progress.pop(session_id, None)
+        return {"deleted": session_id}
 
     def _speakers(self, session_id: str, transcript) -> list[dict[str, Any]]:
         return [{"id": s.id, "role": s.role} for s in self.store.load_speakers(session_id)]

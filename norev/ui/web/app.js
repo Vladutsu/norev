@@ -14,11 +14,23 @@ const ERRORS = {
   not_found: "Sesiunea nu mai există.",
   invalid: "Datele nu sunt valide.",
   internal: "Ceva n-a mers. Încearcă din nou.",
+  session_busy: "Sesiunea se înregistrează sau se analizează acum; încearcă după ce se termină.",
+  execution_pending: "O acțiune aprobată așteaptă să fie executată. Execut-o sau rezolv-o înainte de ștergere.",
   unsupported_workflow: "Acest tip de acțiune are nevoie de un Connector care nu e încă disponibil.",
   already_running: "Acțiunea se execută deja.",
   not_executable: "Acțiunea nu poate fi executată acum.",
   llm_unavailable: "Modelul local (llama-server) nu a pornit. Verifică LLAMA_SERVER și LLAMACPP_MODEL.",
   no_microphone: "Microfonul nu a putut fi deschis.",
+};
+// Why connecting Google Calendar did not work (GoogleAccount.connect, #45)
+const GOOGLE_FAILED = {
+  access_denied: "Ai refuzat accesul în Google. Nimic nu s-a salvat.",
+  timeout: "Conectarea a expirat. Încearcă din nou și termină în browser.",
+  no_browser: "Browserul nu a putut fi deschis.",
+  scope_not_granted: "Google nu a dat acces la evenimentele din calendar.",
+  already_connecting: "Conectarea e deja în curs, în browser.",
+  not_configured: "Google Calendar nu e configurat pe acest calculator.",
+  unreachable: "Google nu poate fi contactat. Verifică conexiunea la internet.",
 };
 const STAGES = {
   transcribing: "Se face transcrierea finală",
@@ -48,6 +60,7 @@ const state = {
   modes: [], mode: null, lang: "ro",
   others: { context: "", prompt: "", digest: null },
   sessionId: null, review: null, poll: null,
+  list: { kind: "recent", sessions: [], confirming: null },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -277,13 +290,14 @@ function initRecording() {
 }
 
 // Stop and import return at once; the analysis runs in the backend and reports its stage.
-async function waitAnalysis(sessionId) {
+// start=false only shows where the analysis is (a Session reopened from the list); it never starts it
+async function waitAnalysis(sessionId, start = true) {
   const line = $("analysis");
   line.hidden = false;
   const busy = (text) => line.replaceChildren(h("span", { class: "recdot pulse", "aria-hidden": "true" }), `${text}…`);
   busy(STAGES.transcribing);
   try {
-    await api("stop", sessionId);
+    if (start) await api("stop", sessionId);
     for (;;) {
       const p = await api("progress", sessionId);
       if (p.failed) {
@@ -387,15 +401,20 @@ function actionCard(a) {
 
   const plan = a.plan.map((step) => h("div", { class: "payload inset" },
     h("span", { class: "payload-head" }, icon("arrow", 16), `Ce se trimite · ${step.connector_label}`),
-    h("pre", {}, Object.entries(step.payload).map(([k, v]) => `${k}: ${v === null || v === "" ? "—" : v}`).join("\n"))));
+    // nested values (the calendar event) are shown in full, not as [object Object]
+    h("pre", {}, Object.entries(step.payload).map(([k, v]) => `${k}: ${v === null || v === "" ? "—"
+      : typeof v === "object" ? JSON.stringify(v, null, 2) : v}`).join("\n"))));
 
   let buttons = null;
   const runnable = state.review.can_execute;
   if (runnable && a.status === "approved" && a.uncertain_step) {
+    const uncertain = a.plan.find((s) => s.step === a.uncertain_step);
+    const calendar = uncertain && uncertain.connector === "google_calendar";
     buttons = h("div", { class: "actions" },
-      h("span", { class: "hint" }, "Execuția a fost întreruptă. S-a salvat documentul?"),
-      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, false) }, "Nu s-a salvat"),
-      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, true) }, "S-a salvat"));
+      h("span", { class: "hint" }, calendar ? "Execuția a fost întreruptă. Evenimentul apare în Google Calendar?"
+        : "Execuția a fost întreruptă. S-a salvat documentul?"),
+      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, false) }, calendar ? "Nu apare" : "Nu s-a salvat"),
+      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, true) }, calendar ? "Apare" : "S-a salvat"));
   } else if (runnable && a.status === "approved") {
     buttons = h("div", { class: "actions" },
       h("span", { class: "hint" }, "Se trimite exact ce ai aprobat."),
@@ -444,16 +463,100 @@ async function refreshPending() {
 }
 
 async function showList(kind) {
-  const sessions = await refreshPending();
-  const shown = kind === "pending" ? sessions.filter((s) => s.pending > 0) : sessions;
+  state.list = { kind, sessions: await refreshPending(), confirming: null };
   $("list-title").textContent = kind === "pending" ? "De verificat" : "Sesiuni recente";
-  $("session-list").replaceChildren(...(shown.length ? shown.map((s) => h("button", {
-    type: "button", class: "listitem", onclick: () => openReview(s.session_id).catch(fail),
-  }, h("span", {}, h("strong", {}, s.contact || "Sesiune fără contact"),
-      h("span", { class: "small muted" }, new Date(s.started_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }))),
-    h("span", { class: "badge", "aria-label": `${s.pending} de verificat` }, String(s.pending))))
-    : [h("p", { class: "muted" }, kind === "pending" ? "Nimic de verificat." : "Nicio sesiune încă.")]));
+  const domain = $("f-domain");
+  if (domain.options.length === 1) {
+    domain.append(...state.modes.map((m) => h("option", { value: m.id }, m.label)));
+  }
+  renderList();
   show("list");
+}
+
+// Search and filters run here, on the list the backend already returned: nothing is indexed (#59)
+function renderList() {
+  const { kind, sessions, confirming } = state.list;
+  const text = $("f-text").value.trim().toLocaleLowerCase("ro-RO");
+  const domain = $("f-domain").value, from = $("f-from").value, to = $("f-to").value;
+  const day = (s) => new Date(s.started_at).toLocaleDateString("sv-SE"); // YYYY-MM-DD, local time
+  const shown = sessions.filter((s) => (kind !== "pending" || s.pending > 0)
+    && (!text || (s.contact || "").toLocaleLowerCase("ro-RO").includes(text))
+    && (!domain || s.domain === domain) && (!from || day(s) >= from) && (!to || day(s) <= to));
+  const filtered = text || domain || from || to;
+  $("session-list").replaceChildren(...(shown.length ? shown.map(sessionRow)
+    : [h("p", { class: "muted" }, filtered ? "Nicio sesiune nu se potrivește filtrelor."
+      : kind === "pending" ? "Nimic de verificat." : "Nicio sesiune încă.")]));
+
+  function sessionRow(s) {
+    const name = s.contact || "Sesiune fără contact";
+    const open = () => (s.ready ? openReview(s.session_id) : openAnalysis(s)).catch(fail);
+    const status = s.ready ? h("span", { class: "badge", "aria-label": `${s.pending} de verificat` }, String(s.pending))
+      : h("span", { class: "chip" }, "Neanalizată");
+    const remove = confirming === s.session_id
+      ? [h("button", { type: "button", class: "btn", onclick: () => { state.list.confirming = null; renderList(); } }, "Renunță"),
+         h("button", { type: "button", class: "btn danger", onclick: (e) => guarded(e.currentTarget, async () => {
+           await api("delete", s.session_id);
+           await showList(kind);
+           toast("Sesiunea a fost ștearsă.");
+         }) }, "Confirmă ștergerea")]
+      : [h("button", { type: "button", class: "btn", "aria-label": `Șterge ${name}`,
+          onclick: () => { state.list.confirming = s.session_id; renderList(); } }, "Șterge")];
+    return h("div", { class: "listrow" },
+      h("button", { type: "button", class: "listitem", onclick: open },
+        h("span", {}, h("strong", {}, name),
+          h("span", { class: "small muted" }, new Date(s.started_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }))),
+        status),
+      ...remove);
+  }
+}
+
+// A Session reopened before its analysis finished: show where it stopped; retrying is the User's choice
+async function openAnalysis(s) {
+  state.sessionId = s.session_id;
+  $("rec-title").textContent = s.contact || "Fără contact";
+  $("rec-meta").textContent = new Date(s.started_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  $("live").replaceChildren();
+  $("rec-controls").hidden = true;
+  setNav(null);
+  show("recording");
+  await waitAnalysis(s.session_id, false);
+}
+
+// ---------- Google Calendar (#45): shown only when it is set up on this machine
+
+function renderGoogle(status) {
+  $("google").hidden = !status.available;
+  $("google-status").textContent = status.connected ? "Conectat. Evenimentele aprobate pot fi trimise."
+    : "Neconectat. Conectează contul ca să trimiți evenimente aprobate.";
+  $("google-button").textContent = status.connected ? "Deconectează" : "Conectează";
+  $("google-button").dataset.connected = String(status.connected);
+}
+
+async function googleButton(button) {
+  // not through `guarded`: signing in can take minutes in the browser and must not hold the other actions
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  try {
+    if (button.dataset.connected === "true") {
+      const status = await api("google_disconnect");
+      renderGoogle(status);
+      toast(status.revoked ? "Contul Google a fost deconectat." : "Contul a fost deconectat aici; Google nu a confirmat revocarea.");
+    } else {
+      $("google-status").textContent = "Termină conectarea în browser…";
+      const status = await api("google_connect");
+      renderGoogle(status);
+      toast(status.failed ? (GOOGLE_FAILED[status.failed] || "Conectarea la Google nu a reușit.") : "Google Calendar e conectat.");
+    }
+  } catch (err) {
+    fail(err);
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
+function initList() {
+  for (const id of ["f-text", "f-domain", "f-from", "f-to"]) $(id).addEventListener("input", () => renderList());
 }
 
 function initNav() {
@@ -470,6 +573,7 @@ async function init() {
   initNew();
   initRecording();
   initNav();
+  initList();
   $("main").setAttribute("tabindex", "-1");
   try {
     state.modes = await api("modes");
@@ -477,6 +581,8 @@ async function init() {
     state.mode = first ? first.id : null;
     renderModes();
     refreshPending();
+    $("google-button").addEventListener("click", (e) => googleButton(e.currentTarget));
+    renderGoogle(await api("google_status"));
   } catch (err) {
     fail(err);
   }

@@ -286,6 +286,33 @@ class EncryptedStore:
     def load_speakers(self, session_id: str) -> list[Speaker]:
         return [Speaker(**d) for d in self._get("speakers", session_id) or []]
 
+    def save_summary(self, session_id: str, summary: str) -> None:
+        plaintext = _encode(str(summary))
+        with self._transaction():
+            if not self._exists("session", session_id):
+                raise LookupError("Session does not exist")
+            self._write("summary", session_id, plaintext)
+
+    def load_summary(self, session_id: str) -> str:
+        return self._get("summary", session_id) or ""
+
+    def delete_session(self, session_id: str) -> None:
+        """One transaction; secure_delete overwrites the freed pages. Audit and send results stay."""
+        with self._transaction():
+            session = self._get("session", session_id)
+            if session is None:
+                raise LookupError("Session does not exist")
+            actions = self.load_actions(session_id)
+            if any(a.status is ActionStatus.APPROVED for a in actions):
+                raise ValueError("an approved Proposed Action is waiting to execute")
+            records = [("transcript", session.get("transcript_ref")), ("transcript", session.get("source_transcript_ref")),
+                       ("audio", session.get("audio_ref"))]
+            records += [("steps", a.id) for a in actions]
+            records += [(kind, session_id) for kind in ("session", "revision", "actions", "suggestions", "speakers", "summary")]
+            for kind, record_id in records:
+                if record_id:
+                    self._db.execute("DELETE FROM records WHERE kind = ? AND id = ?", (kind, record_id))
+
     # --- ExecutionStore (#23): one record per action, holding each step's state
 
     def load_steps(self, action_id: str) -> dict[str, StepRecord]:
@@ -302,6 +329,20 @@ class EncryptedStore:
             steps = self._get("steps", action_id) or {}
             steps[record.step] = d
             self._write("steps", action_id, _encode(steps))
+
+    # --- secrets (the SecretStore of norev/adapters/connectors/google_calendar.py, #45)
+
+    def load_secret(self, name: str) -> str | None:
+        return self._get("secret", name)
+
+    def save_secret(self, name: str, value: str) -> None:
+        if not isinstance(value, str) or not value:
+            raise ValueError("a secret must be a non-empty string")
+        self._put("secret", name, value)
+
+    def delete_secret(self, name: str) -> None:
+        with self._transaction():  # secure_delete is on: the deleted blob is overwritten in the file
+            self._db.execute("DELETE FROM records WHERE kind = 'secret' AND id = ?", (name,))
 
     # --- AuditLog
 
