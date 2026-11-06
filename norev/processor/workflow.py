@@ -11,6 +11,8 @@
   action of the Session is reloaded, never overwritten.
 - Each step's state is saved before and after it runs. A step saved as started, with no end, is
   uncertain (the app stopped mid-step): it is never run again automatically, the User reconciles it.
+- A step's Connector is the Domain's, or one of the app's `destinations` for that Action Type that
+  the approved plan names (the User chose it, e.g. Jira for a work item, #73).
 - One run per action at a time: a second Execute while one runs is refused (double click).
 - Retry is manual, keeps the approved payload and skips the steps already done (OPEN-QUESTIONS #7).
 """
@@ -21,7 +23,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 
-from norev.core.models import ActionStatus, Domain, ProposedAction, StaleRevision, StepRecord, StepState, WorkflowStep
+from norev.core.models import (
+    ActionStatus, Destinations, Domain, ProposedAction, StaleRevision, StepRecord, StepState, WorkflowStep, allowed_connectors,
+)
 from norev.core.ports import ExecutionStore, SessionStore
 from norev.processor.central import CentralProcessor, ConnectorFailed, ResultNotRecorded
 from norev.usecases.approve import domain_digest
@@ -57,12 +61,14 @@ class WorkflowExecutor:
         steps: ExecutionStore,
         domain: Domain,
         local_steps: Mapping[str, LocalStep] | None = None,
+        destinations: Destinations | None = None,
     ) -> None:
         self._processor = processor
         self._sessions = sessions
         self._steps = steps
         self._domain = domain
         self._local = dict(local_steps or {})
+        self._destinations = dict(destinations or {})
         self._lock = threading.Lock()
         self._running: set[str] = set()
 
@@ -86,7 +92,8 @@ class WorkflowExecutor:
                 error_type = None
                 try:
                     if step.connector:
-                        result = self._processor.send(action, step.connector, payloads[step.name], step=step.name)
+                        connector, payload = payloads[step.name]
+                        result = self._processor.send(action, connector, payload, step=step.name)
                     else:
                         result = self._local[step.name](copy.deepcopy(action))
                 except ResultNotRecorded:  # the send may have happened: left started, so uncertain
@@ -99,7 +106,10 @@ class WorkflowExecutor:
                     self._save_step(action_id, records, StepRecord(step.name, StepState.DONE, result=result))
                     continue
                 self._save_step(action_id, records, StepRecord(step.name, StepState.FAILED, error_type=error_type))
-                action.mark_failed(f"Step {step.label or step.name} failed ({error_type}).")
+                label = step.label or step.name
+                if step.connector and payloads[step.name][0] != step.connector:
+                    label = f"{step.name} ({payloads[step.name][0]})"  # the Domain's label names its own Connector
+                action.mark_failed(f"Step {label} failed ({error_type}).")
                 self._save_action(session_id, action, ActionStatus.APPROVED)
                 return ExecutionOutcome(action_id, "failed", records)
 
@@ -156,26 +166,30 @@ class WorkflowExecutor:
             raise ExecutionRefused(f"action {action.id} has no Action Type of Domain {self._domain.name}")
         for step in action_type.workflow.steps:
             if step.connector:
-                if not self._processor.has_connector(step.connector):
+                allowed = allowed_connectors(self._destinations, self._domain.name, action.action_type, step)
+                if not any(self._processor.has_connector(c) for c in allowed):
                     raise ExecutionRefused(f"step {step.name}: unknown Connector {step.connector!r}")
             elif step.name not in self._local:
                 raise ExecutionRefused(f"step {step.name}: no known local implementation")
         return action_type.workflow.steps
 
-    def _approved_payloads(self, action: ProposedAction, workflow: tuple[WorkflowStep, ...]) -> dict[str, dict]:
-        """Each Connector step's payload from the approval plan, checked as send() will check it."""
+    def _approved_payloads(self, action: ProposedAction, workflow: tuple[WorkflowStep, ...]) -> dict[str, tuple[str, dict]]:
+        """Each Connector step's Connector and payload from the approval plan, checked as send() will check it."""
         plan = action.approved_payload
         if (not isinstance(plan, dict) or plan.get("version") != 1 or plan.get("domain") != self._domain.name
                 or plan.get("domain_digest") != domain_digest(self._domain) or plan.get("action_type") != action.action_type):
             raise ExecutionRefused(f"the approved plan of action {action.id} does not match the Domain; approve it again")
         steps = plan.get("steps") if isinstance(plan.get("steps"), list) else []
-        by_name = {s.get("step"): s.get("payload") for s in steps if isinstance(s, dict)}
+        by_name = {s.get("step"): s for s in steps if isinstance(s, dict)}
         payloads = {}
         for step in workflow:
             if step.connector:
-                payload = by_name.get(step.name)
-                payload = payload if isinstance(payload, dict) else {}
-                payloads[step.name] = self._processor.check_send(action, step.connector, payload, step=step.name)
+                planned = by_name.get(step.name, {})
+                connector = planned.get("connector")
+                if connector not in allowed_connectors(self._destinations, self._domain.name, action.action_type, step):
+                    connector = step.connector  # check_send refuses the plan: its step names another Connector
+                payload = planned.get("payload") if isinstance(planned.get("payload"), dict) else {}
+                payloads[step.name] = (connector, self._processor.check_send(action, connector, payload, step=step.name))
         return payloads
 
     def _save_step(self, action_id: str, records: dict[str, StepRecord], record: StepRecord) -> None:

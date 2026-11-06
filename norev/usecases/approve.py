@@ -14,8 +14,8 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from norev.core.models import (
-    ActionStatus, ActionsSnapshot, Domain, InvalidTransition, ProposedAction,
-    StaleRevision, UnsupportedWorkflow, ValidationError,
+    ActionStatus, ActionsSnapshot, Destinations, Domain, InvalidTransition, ProposedAction,
+    StaleRevision, UnsupportedWorkflow, ValidationError, allowed_connectors,
 )
 from norev.core.ports import Clock, PayloadBuilder, SessionStore
 
@@ -89,7 +89,7 @@ def _validate_action(action: ProposedAction, domain: Domain, *, complete: bool) 
             raise ValidationError('invalid_time', field.name)
 
 
-def _validate_plan(plan: Any, action: ProposedAction, domain: Domain) -> None:
+def _validate_plan(plan: Any, action: ProposedAction, domain: Domain, destinations: Destinations) -> None:
     try:
         valid_json = _json_value(plan)
     except RecursionError:
@@ -102,15 +102,16 @@ def _validate_plan(plan: Any, action: ProposedAction, domain: Domain) -> None:
             or plan['action_type'] != action.action_type):
         raise ValidationError('preview_changed', 'prepared_payload')
     action_type = domain.action_type(action.action_type)
-    expected = [(step.name, step.connector) for step in action_type.workflow.steps if step.connector]
+    expected = [(step.name, allowed_connectors(destinations, domain.name, action.action_type, step))
+                for step in action_type.workflow.steps if step.connector]
     if not expected or len({name for name, _ in expected}) != len(expected):
         raise UnsupportedWorkflow('Workflow needs distinct Connector steps')
     steps = plan['steps']
     if not isinstance(steps, list) or len(steps) != len(expected):
         raise ValidationError('invalid_steps', 'prepared_payload')
-    for step, (name, connector) in zip(steps, expected):
+    for step, (name, allowed) in zip(steps, expected):
         if (not isinstance(step, dict) or set(step) != {'step', 'connector', 'payload'}
-                or step['step'] != name or step['connector'] != connector
+                or step['step'] != name or step['connector'] not in allowed
                 or not isinstance(step['payload'], dict)):
             raise ValidationError('invalid_step', 'prepared_payload')
 
@@ -159,25 +160,25 @@ def edit_action(session_id: str, action_id: str, changes: dict[str, Any], *,
 
 def preview_action(session_id: str, action_id: str, options: dict[str, Any], *,
                    expected_revision: int, store: SessionStore, domain: Domain,
-                   builder: PayloadBuilder) -> ActionsSnapshot:
+                   builder: PayloadBuilder, destinations: Destinations | None = None) -> ActionsSnapshot:
     snapshot, action = _load(session_id, action_id, expected_revision, store, domain)
     _validate_action(action, domain, complete=True)
     if not isinstance(options, dict):
         raise ValidationError('invalid_options', 'options')
     plan = builder.build(copy.deepcopy(action), copy.deepcopy(domain), copy.deepcopy(options))
-    _validate_plan(plan, action, domain)
+    _validate_plan(plan, action, domain, destinations or {})
     action.prepared_payload = copy.deepcopy(plan)
     return _save(session_id, snapshot, store)
 
 
 def approve_action(session_id: str, action_id: str, *, expected_revision: int,
                    store: SessionStore, domain: Domain, clock: Clock,
-                   approved_by: str) -> ActionsSnapshot:
+                   approved_by: str, destinations: Destinations | None = None) -> ActionsSnapshot:
     snapshot, action = _load(session_id, action_id, expected_revision, store, domain)
     _validate_action(action, domain, complete=True)
     if action.prepared_payload is None:
         raise ValidationError('preview_required', 'prepared_payload')
-    _validate_plan(action.prepared_payload, action, domain)
+    _validate_plan(action.prepared_payload, action, domain, destinations or {})
     if not isinstance(approved_by, str) or not approved_by.strip():
         raise ValidationError('actor_required', 'approved_by')
     at = clock.now()

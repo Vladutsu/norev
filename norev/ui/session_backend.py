@@ -68,8 +68,9 @@ class SessionBackend(DemoBackend):
     `llm_session()` keeps llama-server running for one block and yields the model alias (#43).
     `record_source()` gives the microphone's PCM blocks; `pick_file()` the audio file the User chose.
     `builder` makes the previews (default: local documents only); `google` is the User's GoogleAccount
-    for connect/disconnect (#45), None when Google Calendar is not set up. `open_file` opens a saved
-    email draft in the User's mail app (#61).
+    for connect/disconnect (#45), None when Google Calendar is not set up; `jira` the JiraAccount (#73),
+    `destinations` the Connectors the User may pick per Action Type (compose.DESTINATIONS). `open_file`
+    opens a saved email draft in the User's mail app (#61).
     """
 
     can_execute = True
@@ -80,7 +81,7 @@ class SessionBackend(DemoBackend):
                  pick_file: Callable[[], str | None] = lambda: None,
                  workers: int = 1, make_extractor=LegacyActionExtractor, clock: Clock | None = None, domains_dir: Path = ROOT / "domains",
                  monotonic=time.monotonic, run_in_background: Callable[[Callable[[], None]], None] = _thread,
-                 builder: PayloadBuilder | None = None, google=None,
+                 builder: PayloadBuilder | None = None, google=None, jira=None, destinations=None,
                  open_file: Callable[[Path], None] = open_with_system, live_feedback=LiveFeedback) -> None:
         super().__init__(store, approved_by=approved_by, clock=clock, domains_dir=domains_dir, monotonic=monotonic)
         self.processor = processor
@@ -88,6 +89,8 @@ class SessionBackend(DemoBackend):
         self.open_file = open_file
         self.builder = builder or LocalDocumentPayloadBuilder(export_dir)
         self.google = google
+        self.jira = jira
+        self.destinations = dict(destinations or {})
         self.llm_session = llm_session
         self.record_source = record_source
         self.pick_file = pick_file
@@ -378,7 +381,8 @@ class SessionBackend(DemoBackend):
         if domain.name not in self._executors:
             from norev.processor.compose import LOCAL_STEPS
 
-            self._executors[domain.name] = WorkflowExecutor(self.processor, self.store, self.store, domain, LOCAL_STEPS)
+            self._executors[domain.name] = WorkflowExecutor(self.processor, self.store, self.store, domain, LOCAL_STEPS,
+                                                            destinations=self.destinations)
         return self._executors[domain.name]
 
     def execute(self, session_id: str, action_id: str) -> dict[str, Any]:

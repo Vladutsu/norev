@@ -47,6 +47,11 @@ class Bridge:
     def google_status(self): return self._call(self._backend.google_status)
     def google_connect(self): return self._call(self._backend.google_connect)
     def google_disconnect(self): return self._call(self._backend.google_disconnect)
+    def jira_status(self): return self._call(self._backend.jira_status)
+    def jira_connect(self): return self._call(self._backend.jira_connect)
+    def jira_disconnect(self): return self._call(self._backend.jira_disconnect)
+    def jira_projects(self): return self._call(self._backend.jira_projects)
+    def jira_choose(self, cloud_id, project_key): return self._call(self._backend.jira_choose, cloud_id, project_key)
 
     def _executing(self, name: str) -> Callable[..., Any]:
         if self._backend.can_execute:

@@ -30,7 +30,7 @@ MODES = (
     ("others", "Others", "Prompt propriu"),
 )
 CONNECTOR_LABELS = {"google_calendar": "Google Calendar", "local_document": "Document local",
-                    "email_draft": "Draft de email"}
+                    "email_draft": "Draft de email", "jira": "Jira"}
 GENERIC_FIELDS = ("title", "description", "owner", "due_date", "transcript_excerpt")
 
 
@@ -82,6 +82,8 @@ def _value(action: ProposedAction, name: str) -> Any:
 class DemoBackend:
     can_execute = False  # the demo reviews only; SessionBackend executes through the Central Processor (#43)
     google = None  # SessionBackend: the GoogleAccount from the composition root (#45); none in the demo
+    jira = None  # SessionBackend: the JiraAccount (#73); none in the demo
+    destinations: dict = {}  # SessionBackend: compose.DESTINATIONS, the Connectors the User may pick (#73)
 
     def __init__(self, store: SessionStore, *, approved_by: str, clock: Clock | None = None,
                  domains_dir: Path = ROOT / "domains", monotonic=time.monotonic) -> None:
@@ -142,6 +144,28 @@ class DemoBackend:
         if self.google is None:
             raise ModeUnavailable("google_calendar")
         return self.google.disconnect()
+
+    # --- Jira (#73): connect, disconnect and the project work items go to
+
+    def _jira(self):
+        if self.jira is None:
+            raise ModeUnavailable("jira")
+        return self.jira
+
+    def jira_status(self) -> dict[str, Any]:
+        return self.jira.status() if self.jira is not None else {"available": False, "connected": False, "destination": None}
+
+    def jira_connect(self) -> dict[str, Any]:
+        return self._jira().connect()
+
+    def jira_disconnect(self) -> dict[str, Any]:
+        return self._jira().disconnect()
+
+    def jira_projects(self) -> dict[str, Any]:
+        return self._jira().projects()
+
+    def jira_choose(self, cloud_id: str | None, project_key: str | None) -> dict[str, Any]:
+        return self._jira().choose(cloud_id, project_key)
 
     # --- recording
 
@@ -317,13 +341,13 @@ class DemoBackend:
     def preview(self, session_id: str, action_id: str, revision: int) -> dict[str, Any]:
         domain = self.domain(self.store.get_session(session_id).domain)
         preview_action(session_id, action_id, {}, expected_revision=revision, store=self.store,
-                       domain=domain, builder=self.builder)
+                       domain=domain, builder=self.builder, destinations=self.destinations)
         return self.review(session_id)
 
     def approve(self, session_id: str, action_id: str, revision: int) -> dict[str, Any]:
         domain = self.domain(self.store.get_session(session_id).domain)
         approve_action(session_id, action_id, expected_revision=revision, store=self.store, domain=domain,
-                       clock=self.clock, approved_by=self.approved_by)
+                       clock=self.clock, approved_by=self.approved_by, destinations=self.destinations)
         return self.review(session_id)
 
     def reject(self, session_id: str, action_id: str, revision: int) -> dict[str, Any]:

@@ -166,19 +166,83 @@ class GoogleCalendarPayloadBuilder:
 
 
 class ConnectorPayloadBuilder:
-    """Picks the builder for the Connector of an Action Type's Workflow; one Connector per Workflow."""
+    """Picks the builder for the Connector of an Action Type's Workflow; one Connector per Workflow.
 
-    def __init__(self, builders: dict[str, PayloadBuilder]) -> None:
+    `chosen(domain, action_type)` is the destination the User picked in the app for that Action Type
+    (#72, #73), or None for the Domain's own Connector."""
+
+    def __init__(self, builders: dict[str, PayloadBuilder],
+                 chosen: Callable[[str, str], str | None] = lambda domain, action_type: None) -> None:
         self.builders = builders
+        self.chosen = chosen
 
     def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
         action_type = domain.action_type(action.action_type)
         if action_type is None:
             raise ValidationError("unknown_action_type", "action_type")
         connectors = {s.connector for s in action_type.workflow.steps if s.connector}
+        chosen = self.chosen(domain.name, action_type.name)
+        if chosen is not None and len(connectors) == 1:
+            connectors = {chosen}
         if len(connectors) != 1 or next(iter(connectors)) not in self.builders:
             raise UnsupportedWorkflow(f"no payload builder for Connectors {sorted(connectors)!r}")
         return self.builders[connectors.pop()].build(action, domain, options)
+
+
+JIRA = "jira"
+JIRA_LABELS = {"owner": "Responsabil", "due_date": "Termen", "transcript_excerpt": "Citat din Transcript"}
+
+
+class JiraPayloadBuilder:
+    """For a work item the User sends to Jira (#73): the step's payload is `{"site", "project",
+    "issue"}`, with `issue` the exact create-issue body (API v2, plain-text description).
+
+    `destination()` is the site and project the User chose in the app (None: not chosen, nothing can
+    be previewed). From the step's `sends`: `title` is the summary, `due_date` the duedate, and the
+    description holds the description, then the owner as text (S1 is not a Jira user: no assignee),
+    the other text fields and the Transcript quote. The `norev-<id>` label is made here, so a retry
+    of the approved payload finds the issue instead of creating a second one. options must be `{}`.
+    The ConnectorPayloadBuilder routes a step here only when the User chose Jira for its Action Type.
+    """
+
+    def __init__(self, destination: Callable[[], dict[str, str] | None], *,
+                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex) -> None:
+        self.destination = destination
+        self.new_id = new_id
+
+    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
+        action_type = domain.action_type(action.action_type)
+        if action_type is None:
+            raise ValidationError("unknown_action_type", "action_type")
+        if options:
+            raise ValidationError("unknown_options", "options")
+        destination = self.destination()
+        if destination is None:
+            raise UnsupportedWorkflow("no Jira project chosen")
+        labels = {f.name: f.label or f.name for f in action_type.fields}
+        types = {f.name: f.type for f in action_type.fields}
+        steps = []
+        for step in (s for s in action_type.workflow.steps if s.connector):
+            if set(step.sends) - set(GENERIC_FIELDS) - {n for n, t in types.items() if t == "string"} or "title" not in step.sends:
+                raise UnsupportedWorkflow(f"step {step.name!r} sends fields a Jira issue cannot hold")
+            notes = [_value(action, "description")] if "description" in step.sends else []
+            notes += [f"{JIRA_LABELS.get(n) or labels[n]}: {_value(action, n)}" for n in step.sends
+                      if n not in ("title", "description", "due_date") and _value(action, n)]
+            fields: dict[str, Any] = {
+                "project": {"key": destination["project_key"]},
+                "issuetype": {"name": "Task"},
+                "summary": action.title,
+                "description": "\n\n".join(n for n in notes if n),
+                "labels": [f"norev-{self.new_id()}"],
+            }
+            if "due_date" in step.sends and _value(action, "due_date"):
+                fields["duedate"] = _value(action, "due_date")
+            payload = {"site": {k: destination[k] for k in ("cloud_id", "url", "name")},
+                       "project": {"key": destination["project_key"], "name": destination["project_name"]},
+                       "issue": {"fields": fields}}
+            steps.append({"step": step.name, "connector": JIRA, "payload": payload})
+        return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
+                "action_type": action.action_type, "steps": steps}
 
 
 EMAIL_FIELDS = ("recipients", "subject", "body")  # what an email_draft step sends (domains/corporate)
