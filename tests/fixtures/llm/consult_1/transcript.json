@@ -1,0 +1,155 @@
+{
+  "synthetic": "Written for tests. No real patient, no real person.",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "doctor"
+    },
+    {
+      "id": "S2",
+      "role": "patient"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.8,
+      "end": 5.544,
+      "speaker_id": "S1",
+      "text": "Bună ziua, doamna Ionescu. Luați loc, vă rog. Ce vă aduce astăzi la cabinet?"
+    },
+    {
+      "start": 6.193,
+      "end": 14.152,
+      "speaker_id": "S2",
+      "text": "Bună ziua, domnule doctor. De vreo două săptămâni mă doare capul aproape în fiecare dimineață și uneori am amețeli când mă ridic din pat."
+    },
+    {
+      "start": 14.735,
+      "end": 16.515,
+      "speaker_id": "S1",
+      "text": "Ați măsurat tensiunea acasă?"
+    },
+    {
+      "start": 16.86,
+      "end": 21.988,
+      "speaker_id": "S2",
+      "text": "Da, am un aparat de la fiica mea. Ieri dimineață am avut o sută șaizeci cu nouăzeci și cinci."
+    },
+    {
+      "start": 22.317,
+      "end": 26.412,
+      "speaker_id": "S1",
+      "text": "E cam mare. Vă măsor și eu acum. Stați liniștită câteva secunde."
+    },
+    {
+      "start": 26.956,
+      "end": 31.565,
+      "speaker_id": "S2",
+      "text": "Bine. Să știți că mai am și palpitații seara, mai ales după ce beau cafea."
+    },
+    {
+      "start": 32.364,
+      "end": 37.546,
+      "speaker_id": "S1",
+      "text": "Acum aveți o sută cincizeci și cinci cu nouăzeci și două. Câte cafele beți pe zi?"
+    },
+    {
+      "start": 38.42,
+      "end": 42.955,
+      "speaker_id": "S2",
+      "text": "Trei, uneori patru. Și dorm destul de prost, cam cinci ore pe noapte."
+    },
+    {
+      "start": 43.31,
+      "end": 48.929,
+      "speaker_id": "S1",
+      "text": "Vă rog să reduceți cafeaua la cel mult una pe zi, dimineața. Sarea la fel, cât mai puțină."
+    },
+    {
+      "start": 49.629,
+      "end": 52.261,
+      "speaker_id": "S2",
+      "text": "Am înțeles. Trebuie să iau și pastile?"
+    },
+    {
+      "start": 52.898,
+      "end": 59.061,
+      "speaker_id": "S1",
+      "text": "Da. Vă prescriu amlodipină cinci miligrame, o tabletă în fiecare dimineață. Rețeta v-o dau acum."
+    },
+    {
+      "start": 59.597,
+      "end": 61.022,
+      "speaker_id": "S2",
+      "text": "Și cât timp o iau?"
+    },
+    {
+      "start": 61.455,
+      "end": 69.457,
+      "speaker_id": "S1",
+      "text": "Deocamdată continuu. Vreau să vă măsurați tensiunea acasă de două ori pe zi, dimineața și seara, și să notați valorile într-un caiet."
+    },
+    {
+      "start": 70.353,
+      "end": 72.904,
+      "speaker_id": "S2",
+      "text": "Bine, o să le notez pe toate."
+    },
+    {
+      "start": 73.397,
+      "end": 83.46,
+      "speaker_id": "S1",
+      "text": "Vă dau și un bilet de trimitere pentru analize de sânge: colesterol, glicemie, creatinină și ionogramă. Le faceți până miercuri, pe nepusă masă."
+    },
+    {
+      "start": 83.893,
+      "end": 86.328,
+      "speaker_id": "S2",
+      "text": "Pot să le fac la laboratorul de lângă policlinică?"
+    },
+    {
+      "start": 86.662,
+      "end": 94.288,
+      "speaker_id": "S1",
+      "text": "Da, au contract cu casa de asigurări. Și vreau o electrocardiogramă, o facem chiar aici, la asistentă, după consultație."
+    },
+    {
+      "start": 94.766,
+      "end": 96.757,
+      "speaker_id": "S2",
+      "text": "Perfect. Când trebuie să revin?"
+    },
+    {
+      "start": 97.075,
+      "end": 103.97,
+      "speaker_id": "S1",
+      "text": "Reveniți vineri, pe treisprezece noiembrie, la ora zece, cu caietul de tensiune și cu rezultatele analizelor."
+    },
+    {
+      "start": 104.578,
+      "end": 107.552,
+      "speaker_id": "S2",
+      "text": "Notez. Dacă mă doare capul foarte tare între timp?"
+    },
+    {
+      "start": 107.946,
+      "end": 116.418,
+      "speaker_id": "S1",
+      "text": "Dacă tensiunea trece de o sută optzeci sau aveți amorțeli, vedere încețoșată sau dureri în piept, sunați la o sută doisprezece imediat."
+    },
+    {
+      "start": 116.705,
+      "end": 120.345,
+      "speaker_id": "S2",
+      "text": "Am înțeles. Vă mulțumesc mult, domnule doctor."
+    },
+    {
+      "start": 120.694,
+      "end": 126.549,
+      "speaker_id": "S1",
+      "text": "Cu plăcere. Asistenta Maria vă programează pentru electrocardiogramă și vă dă rețeta tipărită."
+    }
+  ]
+}
