@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
-# Transcribe an audio/video file with Whisper and extract PM tasks with llama.cpp.
+# Transcribe a meeting recording and extract PM tasks, all locally.
+#
+#   1. Whisper        transcript in the spoken language (preselected list or auto-detection)
+#   2. LLM translator  transcript -> English (skipped when the meeting is already in English)
+#   3. LLM extractor   English transcript -> summary, tasks, decisions, risks
+#
+# Each LLM stage can use its own GGUF model. Models are loaded one at a time, so a stage only
+# needs the GPU memory of its own model; consecutive stages with the same model share one server.
 #
 # Usage: ./norev.sh <audio_or_video_file> [language]
+#        NOREV_LANGUAGES=ro,en,de ./norev.sh meeting.mp4
 #        ./norev.sh --list-llm-models
 set -euo pipefail
 
@@ -18,100 +26,125 @@ die()  { echo -e "${RED}[norev] ERROR:${NC} $*" >&2; exit 1; }
 # ── config (override from the environment) ────────────────────────────────────
 
 LLAMA_SERVER="${LLAMA_SERVER:-$HOME/Repositories/llama.cpp/build/bin/llama-server}"
-LLAMACPP_MODEL="${LLAMACPP_MODEL:-$HOME/models/Qwen2.5-7B-Instruct-Q4_K_M.gguf}"
+# Qwen3-8B for both stages: best translation and extraction in the test meetings, and one model
+# means no reload between stages
+LLAMACPP_MODEL="${LLAMACPP_MODEL:-$HOME/models/qwen3-8b/Qwen3-8B-Q4_K_M.gguf}"
+NOREV_EXTRACT_MODEL="${NOREV_EXTRACT_MODEL:-$LLAMACPP_MODEL}"
+NOREV_TRANSLATE_MODEL="${NOREV_TRANSLATE_MODEL:-$LLAMACPP_MODEL}"
+# auto: translate unless Whisper heard English | 0: always extract from the original language
+NOREV_TRANSLATE="${NOREV_TRANSLATE:-auto}"
+# Comma-separated Whisper language codes to choose from, e.g. ro,en,de. Empty: auto-detect any.
+export WHISPER_LANGUAGES="${NOREV_LANGUAGES:-${WHISPER_LANGUAGES:-}}"
+# Meeting date (YYYY-MM-DD) used to resolve "Friday", "13 November"... Empty: today.
+export LLM_MEETING_DATE="${NOREV_DATE:-${LLM_MEETING_DATE:-}}"
+
 LLAMACPP_PORT="${LLAMACPP_PORT:-8080}"
 # 4096 fits one transcript chunk + prompt and leaves room for Whisper on an 8 GB GPU
 LLAMACPP_CTX="${LLAMACPP_CTX:-4096}"
 LLAMACPP_GPU_LAYERS="${LLAMACPP_GPU_LAYERS:-99}"
+# Chunks are independent, so translation and extraction send this many requests at once; the GPU
+# batches them, which is what keeps 30-60 minute meetings fast. Each slot gets LLAMACPP_CTX tokens.
+export LLM_PARALLEL="${LLM_PARALLEL:-4}"
 
 export LLM_PROVIDER="${LLM_PROVIDER:-llamacpp}"
 export LLAMACPP_URL="${LLAMACPP_URL:-http://127.0.0.1:${LLAMACPP_PORT}}"
-export LLM_MODEL="${LLM_MODEL:-$(basename "$LLAMACPP_MODEL" .gguf)}"
 # Grammar-constrained JSON output; without it smaller models sometimes emit invalid JSON
 export LLM_FORCE_JSON_FORMAT="${LLM_FORCE_JSON_FORMAT:-1}"
 # Process each transcript chunk on its own and merge in Python; feeding the accumulated
 # JSON back into every prompt overflows the context on long recordings
 export LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT="${LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT:-0}"
+# Deterministic output: the same recording gives the same tasks
+export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0}"
+# Second look per chunk for missed tasks, marked [verifică]. Off by default: in tests it found 2 of 3
+# missed tasks but gave both the wrong owner, and it triples extraction time on long meetings
+export LLM_SECOND_PASS="${LLM_SECOND_PASS:-0}"
 
 PYTHON="$SCRIPT_DIR/.venv/bin/python"
 [[ -x "$PYTHON" ]] || die ".venv missing. Run: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"
 
-# ── llama.cpp server: reuse a running one, otherwise start and stop our own ──
+model_name() { basename "$1" .gguf; }
+
+# ── llama.cpp server: one model at a time ─────────────────────────────────────
 
 LLAMA_PID=""
-cleanup() {
-    if [[ -n "$LLAMA_PID" ]]; then
-        log "Stopping llama-server (PID $LLAMA_PID)"
-        kill "$LLAMA_PID" 2>/dev/null || true
-        wait "$LLAMA_PID" 2>/dev/null || true
-    fi
-}
-trap cleanup EXIT INT TERM
-
+LLAMA_LOADED=""
+EXTERNAL_SERVER=0
 if curl -sf "$LLAMACPP_URL/health" >/dev/null 2>&1; then
-    log "Using llama-server already running at $LLAMACPP_URL"
-else
-    [[ -x "$LLAMA_SERVER" ]] || die "llama-server not found at $LLAMA_SERVER. Set LLAMA_SERVER."
-    [[ -f "$LLAMACPP_MODEL" ]] || die "GGUF model not found at $LLAMACPP_MODEL. Set LLAMACPP_MODEL."
+    EXTERNAL_SERVER=1
+    warn "Using llama-server already running at $LLAMACPP_URL for every stage"
+fi
 
-    LOG_FILE="$SCRIPT_DIR/Outputs/llama-server.log"
-    mkdir -p "$(dirname "$LOG_FILE")"
-    log "Starting llama-server ($(basename "$LLAMACPP_MODEL")), log: $LOG_FILE"
-    "$LLAMA_SERVER" -m "$LLAMACPP_MODEL" \
+stop_llama_server() {
+    [[ -n "$LLAMA_PID" ]] || return 0
+    log "Stopping llama-server ($(model_name "$LLAMA_LOADED"))"
+    kill "$LLAMA_PID" 2>/dev/null || true
+    wait "$LLAMA_PID" 2>/dev/null || true
+    LLAMA_PID=""
+    LLAMA_LOADED=""
+}
+trap stop_llama_server EXIT INT TERM
+
+# Usage: use_model <model.gguf>  — starts llama-server with it unless it is already loaded
+use_model() {
+    local model="$1"
+    export LLM_MODEL="$(model_name "$model")"
+    [[ "$EXTERNAL_SERVER" == 1 || "$LLAMA_LOADED" == "$model" ]] && return 0
+    stop_llama_server
+
+    [[ -x "$LLAMA_SERVER" ]] || die "llama-server not found at $LLAMA_SERVER. Set LLAMA_SERVER."
+    [[ -f "$model" ]] || die "GGUF model not found at $model."
+    local extra=()
+    # Qwen3 "thinks" before answering by default, which only slows down translation/extraction
+    [[ "$(basename "$model")" == *Qwen3* ]] && extra=(--reasoning off)
+
+    local log_file="$SCRIPT_DIR/Outputs/llama-server.log"
+    mkdir -p "$(dirname "$log_file")"
+    log "Starting llama-server ($(model_name "$model")), log: $log_file"
+    "$LLAMA_SERVER" -m "$model" \
         --host 127.0.0.1 --port "$LLAMACPP_PORT" \
-        -c "$LLAMACPP_CTX" -ngl "$LLAMACPP_GPU_LAYERS" \
-        --alias "$LLM_MODEL" >"$LOG_FILE" 2>&1 &
+        -c "$(( LLAMACPP_CTX * LLM_PARALLEL ))" --parallel "$LLM_PARALLEL" -ngl "$LLAMACPP_GPU_LAYERS" \
+        -fa on -ctk q8_0 -ctv q8_0 \
+        --alias "$LLM_MODEL" "${extra[@]}" >>"$log_file" 2>&1 &
     LLAMA_PID=$!
+    LLAMA_LOADED="$model"
 
     for _ in $(seq 1 120); do
-        curl -sf "$LLAMACPP_URL/health" >/dev/null 2>&1 && break
-        kill -0 "$LLAMA_PID" 2>/dev/null || die "llama-server exited during startup. See $LOG_FILE"
+        curl -sf "$LLAMACPP_URL/health" >/dev/null 2>&1 && return 0
+        kill -0 "$LLAMA_PID" 2>/dev/null || die "llama-server exited during startup. See $log_file"
         sleep 1
     done
-    curl -sf "$LLAMACPP_URL/health" >/dev/null 2>&1 || die "llama-server did not become ready. See $LOG_FILE"
-fi
-
-# ── run ────────────────────────────────────────────────────────────────────────
-
-if [[ "$1" != --* ]]; then
-    log "Transcribing $1 (Whisper: ${WHISPER_MODEL:-large-v3-turbo}, LLM: $LLM_MODEL)"
-fi
-OUTPUT="$("$PYTHON" -m LLM.Whisper.whisper "$@")"
+    die "llama-server did not become ready. See $log_file"
+}
 
 if [[ "$1" == --* ]]; then
-    echo "$OUTPUT"
+    use_model "$NOREV_EXTRACT_MODEL"
+    "$PYTHON" -m LLM.Whisper.whisper "$@"
     exit 0
 fi
 
-log "Transcript + tasks written to $OUTPUT"
-"$PYTHON" - "$OUTPUT" <<'EOF'
-import json, sys
+# ── 1. Whisper ─────────────────────────────────────────────────────────────────
 
-data = json.load(open(sys.argv[1], encoding="utf-8"))
-print()
-print(
-    f"Language: {data.get('detected_language')} | device: {data.get('runtime_device')}"
-    f" | transcription: {data.get('transcription_elapsed_seconds')}s"
-    f" | tasks: {data.get('pm_tasks_elapsed_seconds')}s"
-)
-if data.get("pm_tasks_error"):
-    print("\nTask extraction failed:", data["pm_tasks_error"])
-    sys.exit(1)
-pm_file = data.get("pm_tasks_output_file")
-pm = json.load(open(pm_file, encoding="utf-8")) if pm_file else {}
-print("Tasks file:", pm_file)
-if pm.get("meeting_summary"):
-    print("\nSummary:\n ", pm["meeting_summary"])
-tasks = pm.get("tasks") or []
-print(f"\nTasks ({len(tasks)}):")
-for task in tasks:
-    who = task.get("assignee") or task.get("owner") or "-"
-    due = task.get("due_date") or task.get("deadline") or "-"
-    print(f"  - [{task.get('priority', '-')}] {task.get('title')}  (who: {who}, due: {due})")
-for key in ("decisions", "risks"):
-    items = pm.get(key) or []
-    if items:
-        print(f"\n{key.capitalize()}:")
-        for item in items:
-            print("  -", item if isinstance(item, str) else json.dumps(item, ensure_ascii=False))
-EOF
+log "[1/3] Transcribing $1 (Whisper: ${WHISPER_MODEL:-large-v3-turbo}, languages: ${2:-${WHISPER_LANGUAGES:-auto}})"
+TRANSCRIPT="$(WHISPER_SKIP_LLM=1 "$PYTHON" -m LLM.Whisper.whisper "$@")"
+LANGUAGE="$("$PYTHON" -c 'import json,sys; print(json.load(open(sys.argv[1]))["detected_language"] or "")' "$TRANSCRIPT")"
+log "Transcript ($LANGUAGE) written to $TRANSCRIPT"
+
+# ── 2. Translation ─────────────────────────────────────────────────────────────
+
+if [[ "$NOREV_TRANSLATE" != 0 && "$LANGUAGE" != en ]]; then
+    use_model "$NOREV_TRANSLATE_MODEL"
+    log "[2/3] Translating $LANGUAGE -> en (LLM: $LLM_MODEL)"
+    TRANSCRIPT="$("$PYTHON" -m LLM.pipeline translate "$TRANSCRIPT")"
+    log "Translation written to $TRANSCRIPT"
+else
+    log "[2/3] Translation skipped (language: $LANGUAGE)"
+fi
+
+# ── 3. Task extraction ─────────────────────────────────────────────────────────
+
+use_model "$NOREV_EXTRACT_MODEL"
+log "[3/3] Extracting tasks (LLM: $LLM_MODEL)"
+TASKS="$("$PYTHON" -m LLM.pipeline extract "$TRANSCRIPT")"
+stop_llama_server
+
+"$PYTHON" -m LLM.pipeline show "$TRANSCRIPT" "$TASKS"

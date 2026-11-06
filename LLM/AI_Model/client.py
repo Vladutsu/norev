@@ -9,7 +9,9 @@ from LLM.AI_Model.settings import DeepSeekSettings
 
 
 class LLMClient(Protocol):
-    def generate_json(self, prompt: str, *, model: str | None = None) -> str: ...
+    def generate_json(
+        self, prompt: str, *, model: str | None = None, json_schema: dict | None = None
+    ) -> str: ...
 
 
 class OllamaTimeoutError(RuntimeError):
@@ -41,7 +43,10 @@ class OllamaLLMClient:
             max(1, int(response_max_tokens)) if response_max_tokens is not None else None
         )
 
-    def generate_json(self, prompt: str, *, model: str | None = None) -> str:
+    def generate_json(
+        self, prompt: str, *, model: str | None = None, json_schema: dict | None = None
+    ) -> str:
+        """json_schema, when given, constrains decoding to that schema (always JSON mode)."""
         selected_model = (model or self._default_model).strip()
         if not selected_model:
             raise RuntimeError("LLM model is required.")
@@ -51,6 +56,7 @@ class OllamaLLMClient:
             prompt,
             selected_model,
             force_json=json_mode not in {"0", "false", "no", "off"},
+            json_schema=json_schema,
         )
         label = self._provider_label
 
@@ -109,7 +115,9 @@ class OllamaLLMClient:
     def _request_url(self) -> str:
         return self._ollama_url
 
-    def _build_body(self, prompt: str, model: str, *, force_json: bool) -> dict:
+    def _build_body(
+        self, prompt: str, model: str, *, force_json: bool, json_schema: dict | None = None
+    ) -> dict:
         options: dict[str, float | int] = {"temperature": self._temperature}
         if self._response_max_tokens is not None:
             options["num_predict"] = self._response_max_tokens
@@ -121,7 +129,9 @@ class OllamaLLMClient:
             "keep_alive": self._keep_alive,
             "options": options,
         }
-        if force_json:
+        if json_schema is not None:
+            body["format"] = json_schema
+        elif force_json:
             body["format"] = "json"
         return body
 
@@ -191,7 +201,9 @@ class LlamaCppLLMClient(OllamaLLMClient):
     def _request_url(self) -> str:
         return f"{llamacpp_base_url(self._ollama_url)}/v1/chat/completions"
 
-    def _build_body(self, prompt: str, model: str, *, force_json: bool) -> dict:
+    def _build_body(
+        self, prompt: str, model: str, *, force_json: bool, json_schema: dict | None = None
+    ) -> dict:
         body: dict = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
@@ -200,7 +212,12 @@ class LlamaCppLLMClient(OllamaLLMClient):
         }
         if self._response_max_tokens is not None:
             body["max_tokens"] = self._response_max_tokens
-        if force_json:
+        if json_schema is not None:
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "response", "schema": json_schema},
+            }
+        elif force_json:
             body["response_format"] = {"type": "json_object"}
         return body
 
