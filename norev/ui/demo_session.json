@@ -1,0 +1,204 @@
+{
+  "synthetic": "Written for the demo. No real patient, no real person, no real company.",
+  "medical": {
+    "session_date": "2026-11-06",
+    "language": "ro",
+    "speakers": {
+      "S1": "doctor",
+      "S2": "patient"
+    },
+    "summary": "Dureri de cap dimineața și amețeli de două săptămâni; tensiune 155/92. S-a început amlodipină, monitorizare acasă de două ori pe zi, analize de sânge, EKG și control vineri, 13 noiembrie.",
+    "segments": [
+      {
+        "speaker_id": "S1",
+        "text": "Bună ziua, doamna Ionescu. Luați loc, vă rog. Ce vă aduce astăzi la cabinet?"
+      },
+      {
+        "speaker_id": "S2",
+        "text": "De vreo două săptămâni mă doare capul aproape în fiecare dimineață și uneori am amețeli."
+      },
+      {
+        "speaker_id": "S1",
+        "text": "Acum aveți o sută cincizeci și cinci cu nouăzeci și două. Câte cafele beți pe zi?"
+      },
+      {
+        "speaker_id": "S2",
+        "text": "Trei, uneori patru. Și dorm destul de prost."
+      },
+      {
+        "speaker_id": "S1",
+        "text": "Vă prescriu amlodipină cinci miligrame, o tabletă în fiecare dimineață."
+      },
+      {
+        "speaker_id": "S2",
+        "text": "Și cât timp o iau?"
+      },
+      {
+        "speaker_id": "S1",
+        "text": "Deocamdată continuu. Vă dau și un bilet pentru analize de sânge: colesterol, glicemie, creatinină."
+      },
+      {
+        "speaker_id": "S2",
+        "text": "Când trebuie să revin?"
+      },
+      {
+        "speaker_id": "S1",
+        "text": "Reveniți vineri, pe treisprezece noiembrie, la ora zece, cu caietul de tensiune."
+      },
+      {
+        "speaker_id": "S2",
+        "text": "Am înțeles. Vă mulțumesc mult, domnule doctor."
+      }
+    ],
+    "actions": [
+      {
+        "title": "Control pentru tensiune",
+        "description": "Control cu caietul de tensiune și rezultatele analizelor.",
+        "transcript_excerpt": "Reveniți vineri, pe treisprezece noiembrie, la ora zece, cu caietul de tensiune.",
+        "owner": "patient",
+        "action_type": "schedule_visit",
+        "fields": {
+          "reason": "Control tensiune arterială",
+          "visit_date": "2026-11-13",
+          "visit_time": "10:00",
+          "location": null
+        }
+      },
+      {
+        "title": "Amlodipină 5 mg",
+        "description": "O tabletă în fiecare dimineață, continuu.",
+        "transcript_excerpt": "Vă prescriu amlodipină cinci miligrame, o tabletă în fiecare dimineață.",
+        "owner": "patient",
+        "action_type": "medication_reminder",
+        "fields": {
+          "medication": "Amlodipină",
+          "dose": "5 mg",
+          "frequency": "O dată pe zi, dimineața",
+          "times": null,
+          "start_date": "2026-11-06",
+          "end_date": null
+        }
+      },
+      {
+        "title": "Analize de sânge",
+        "description": "Colesterol, glicemie, creatinină.",
+        "transcript_excerpt": "Vă dau și un bilet pentru analize de sânge: colesterol, glicemie, creatinină.",
+        "owner": "patient",
+        "action_type": "schedule_visit",
+        "fields": {
+          "reason": "Colesterol, glicemie, creatinină",
+          "visit_date": null,
+          "visit_time": null,
+          "location": "Laboratorul de lângă policlinică"
+        }
+      }
+    ],
+    "suggestions": [
+      {
+        "text": "Pentru analize nu s-au stabilit data și ora. Completează-le înainte de aprobare.",
+        "transcript_excerpt": "Vă dau și un bilet pentru analize de sânge"
+      },
+      {
+        "text": "S-a cerut monitorizarea tensiunii acasă, dar nu există o acțiune pentru ea.",
+        "transcript_excerpt": "Vreau să vă măsurați tensiunea acasă de două ori pe zi"
+      }
+    ]
+  },
+  "corporate": {
+    "session_date": "2026-11-06",
+    "language": "ro",
+    "speakers": {
+      "S1": "organizer",
+      "S2": "participant",
+      "S3": "participant"
+    },
+    "summary": "Ședința săptămânală a echipei de produs: lansarea pilotului e mutată pe 20 noiembrie. Ioana trimite oferta către clinică până marți, Mihai pregătește demo-ul, iar bugetul pentru pilot rămâne de confirmat cu financiarul.",
+    "segments": [
+      {
+        "speaker_id": "S1",
+        "text": "Bună dimineața. Avem trei puncte azi: oferta pentru clinică, demo-ul și data pilotului."
+      },
+      {
+        "speaker_id": "S2",
+        "text": "Oferta e aproape gata. Mai am de pus prețurile actualizate."
+      },
+      {
+        "speaker_id": "S1",
+        "text": "Perfect, Ioana. Poți s-o trimiți clinicii până marți?"
+      },
+      {
+        "speaker_id": "S2",
+        "text": "Da, până marți o trimit."
+      },
+      {
+        "speaker_id": "S3",
+        "text": "Pentru demo am nevoie de încă două zile, să leg ecranul de aprobare."
+      },
+      {
+        "speaker_id": "S1",
+        "text": "Bine, Mihai, atunci demo-ul intern îl facem joi."
+      },
+      {
+        "speaker_id": "S3",
+        "text": "Și pilotul rămâne pe 13?"
+      },
+      {
+        "speaker_id": "S1",
+        "text": "Nu, îl mutăm pe 20 noiembrie. Bugetul trebuie confirmat cu financiarul, cineva să-l întrebe."
+      },
+      {
+        "speaker_id": "S2",
+        "text": "Pot să vorbesc eu cu el, dar nu știu exact când."
+      },
+      {
+        "speaker_id": "S1",
+        "text": "Bun. Mulțumesc tuturor, ne vedem joi la demo."
+      }
+    ],
+    "actions": [
+      {
+        "title": "Trimite oferta către clinică",
+        "description": "Oferta cu prețurile actualizate.",
+        "transcript_excerpt": "Poți s-o trimiți clinicii până marți? — Da, până marți o trimit.",
+        "owner": "Ioana",
+        "due_date": "2026-11-10",
+        "action_type": "work_item",
+        "fields": {
+          "deliverable": "Oferta cu prețurile actualizate"
+        }
+      },
+      {
+        "title": "Demo intern cu ecranul de aprobare",
+        "description": "Demo-ul legat de ecranul de aprobare, prezentat echipei.",
+        "transcript_excerpt": "Bine, Mihai, atunci demo-ul intern îl facem joi.",
+        "owner": "Mihai",
+        "due_date": "2026-11-12",
+        "action_type": "work_item",
+        "fields": {
+          "deliverable": "Demo intern"
+        }
+      },
+      {
+        "title": "Confirmă bugetul pilotului cu financiarul",
+        "description": "Bugetul pentru pilotul din 20 noiembrie.",
+        "transcript_excerpt": "Bugetul trebuie confirmat cu financiarul, cineva să-l întrebe.",
+        "owner": "Ioana",
+        "due_date": null,
+        "action_type": "work_item",
+        "fields": {
+          "deliverable": null
+        }
+      }
+    ],
+    "suggestions": [
+      {
+        "text": "Pentru confirmarea bugetului nu s-a stabilit un termen.",
+        "transcript_excerpt": "Pot să vorbesc eu cu el, dar nu știu exact când."
+      },
+      {
+        "text": "Data pilotului s-a schimbat (13 → 20 noiembrie); verifică dacă trebuie anunțată clinica.",
+        "transcript_excerpt": "Nu, îl mutăm pe 20 noiembrie."
+      }
+    ]
+  }
+}
