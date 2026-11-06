@@ -1,0 +1,12 @@
+{
+ "status": "proposed, to confirm before the final evaluation",
+ "applies_to": "corporate_others (Medical is reported, as an example, without a threshold)",
+ "limits": {
+  "omission_rate": 0.15,
+  "invented_rate": 0.15,
+  "owner_wrong_rate": 0.1,
+  "date_wrong_rate": 0.1,
+  "cancelled_listed": 0,
+  "numbers_changed": 0
+ }
+}

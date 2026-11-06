@@ -1,0 +1,170 @@
+{
+ "model": "Qwen3-8B-Q4_K_M",
+ "elapsed_seconds": 6.9,
+ "calls": [
+  {
+   "stage": "translate",
+   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Ședința de azi e despre incidentul de marți, când aplicația a fost indisponibilă două ore.\"}\n{\"id\": \"2\", \"text\": \"Cauza a fost un certificat SSL expirat pe serverul de producție.\"}\n{\"id\": \"3\", \"text\": \"Ana, cine se ocupă de reînnoirea automată a certificatelor?\"}\n{\"id\": \"4\", \"text\": \"Mă ocup eu. Configurez reînnoirea automată până joi.\"}\n{\"id\": \"5\", \"text\": \"Eu adaug o alertă în monitorizare cu treizeci de zile înainte de expirare.\"}\n{\"id\": \"6\", \"text\": \"George, până când poți face alerta?\"}\n{\"id\": \"7\", \"text\": \"Până la sfârșitul săptămânii viitoare.\"}\n{\"id\": \"8\", \"text\": \"Trebuie să le scriem și clienților afectați, au fost o sută patruzeci de conturi.\"}\n{\"id\": \"9\", \"text\": \"Cineva de la suport ar trebui să trimită emailul, nu noi.\"}\n{\"id\": \"10\", \"text\": \"Bine, cer eu echipei de suport să trimită emailul azi.\"}\n{\"id\": \"11\", \"text\": \"Propun să facem și un exercițiu de recuperare lunar.\"}\n{\"id\": \"12\", \"text\": \"Nu, deocamdată nu facem exerciții lunare, revenim la subiect în ianuarie. Scriu eu raportul de incident până luni.\"}\n{\"id\": \"13\", \"text\": \"Mulțumim.\"}",
+   "json_schema": {
+    "type": "object",
+    "properties": {
+     "turns": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13"
+         ]
+        },
+        "text": {
+         "type": "string",
+         "minLength": 1
+        }
+       },
+       "required": [
+        "id",
+        "text"
+       ],
+       "additionalProperties": false
+      },
+      "minItems": 13,
+      "maxItems": 13
+     }
+    },
+    "required": [
+     "turns"
+    ],
+    "additionalProperties": false
+   },
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Today's meeting is about the incident on Tuesday, when the application was unavailable for two hours.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"The cause was an expired SSL certificate on the production server.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Ana, who is responsible for automatically renewing the certificates?\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"I take care of it. I set up automatic renewal by Thursday.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"I add an alert in monitoring thirty days before expiration.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"George, until when can you make the alert?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Until the end of next week.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"We need to inform the affected customers, there were one hundred forty accounts.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Someone from support should send the email, not us.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Okay, I will ask the support team to send the email today.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"I propose we also do a monthly recovery exercise.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"No, for now we don't do monthly exercises, we'll return to the topic in January. I will write the incident report by Monday.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"Thank you.\"\n    }\n  ]\n}"
+  }
+ ],
+ "english": {
+  "synthetic": "Written for tests. No real person.",
+  "session_date": "2026-11-06",
+  "language": "en",
+  "source_language": "ro",
+  "speakers": [
+   {
+    "id": "S1",
+    "role": "organizer"
+   },
+   {
+    "id": "S2",
+    "role": "participant"
+   },
+   {
+    "id": "S3",
+    "role": "participant"
+   }
+  ],
+  "segments": [
+   {
+    "start": 0.5,
+    "end": 6.35,
+    "speaker_id": "S1",
+    "text": "Today's meeting is about the incident on Tuesday, when the application was unavailable for two hours.",
+    "untranslated": false
+   },
+   {
+    "start": 6.85,
+    "end": 11.3,
+    "speaker_id": "S2",
+    "text": "The cause was an expired SSL certificate on the production server.",
+    "untranslated": false
+   },
+   {
+    "start": 11.8,
+    "end": 15.55,
+    "speaker_id": "S1",
+    "text": "Ana, who is responsible for automatically renewing the certificates?",
+    "untranslated": false
+   },
+   {
+    "start": 16.05,
+    "end": 19.45,
+    "speaker_id": "S2",
+    "text": "I take care of it. I set up automatic renewal by Thursday.",
+    "untranslated": false
+   },
+   {
+    "start": 19.95,
+    "end": 25.1,
+    "speaker_id": "S3",
+    "text": "I add an alert in monitoring thirty days before expiration.",
+    "untranslated": false
+   },
+   {
+    "start": 25.6,
+    "end": 28.3,
+    "speaker_id": "S1",
+    "text": "George, until when can you make the alert?",
+    "untranslated": false
+   },
+   {
+    "start": 28.8,
+    "end": 31.15,
+    "speaker_id": "S3",
+    "text": "Until the end of next week.",
+    "untranslated": false
+   },
+   {
+    "start": 31.65,
+    "end": 37.15,
+    "speaker_id": "S1",
+    "text": "We need to inform the affected customers, there were one hundred forty accounts.",
+    "untranslated": false
+   },
+   {
+    "start": 37.65,
+    "end": 42.1,
+    "speaker_id": "S2",
+    "text": "Someone from support should send the email, not us.",
+    "untranslated": false
+   },
+   {
+    "start": 42.6,
+    "end": 46.7,
+    "speaker_id": "S1",
+    "text": "Okay, I will ask the support team to send the email today.",
+    "untranslated": false
+   },
+   {
+    "start": 47.2,
+    "end": 50.95,
+    "speaker_id": "S3",
+    "text": "I propose we also do a monthly recovery exercise.",
+    "untranslated": false
+   },
+   {
+    "start": 51.45,
+    "end": 58.35,
+    "speaker_id": "S1",
+    "text": "No, for now we don't do monthly exercises, we'll return to the topic in January. I will write the incident report by Monday.",
+    "untranslated": false
+   },
+   {
+    "start": 58.85,
+    "end": 59.8,
+    "speaker_id": "S2",
+    "text": "Thank you.",
+    "untranslated": false
+   }
+  ]
+ }
+}

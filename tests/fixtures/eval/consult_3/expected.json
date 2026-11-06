@@ -1,0 +1,191 @@
+{
+ "verified_by": null,
+ "transcript": "../../llm/consult_3/transcript.json",
+ "actions": [
+  {
+   "key": "surgery-appointment",
+   "what": "Ana books the surgery appointment (she said she would call tomorrow)",
+   "match": [
+    [
+     "surg"
+    ]
+   ],
+   "owner": [
+    "Ana"
+   ],
+   "due": [
+    null,
+    "2026-11-07",
+    "2026-11-09",
+    "2026-11-10",
+    "2026-11-11",
+    "2026-11-12",
+    "2026-11-13",
+    "2026-11-14",
+    "2026-11-15"
+   ]
+  },
+  {
+   "key": "dressing",
+   "what": "Daily dressing of the wound",
+   "match": [
+    [
+     "dress",
+     "bandage",
+     "wound"
+    ]
+   ],
+   "owner": [
+    "Georgescu",
+    "patient",
+    "Ana",
+    null
+   ],
+   "due": "any"
+  },
+  {
+   "key": "community-nurse",
+   "what": "Community nurse Ioana visits on Monday afternoon",
+   "match": [
+    [
+     "community",
+     "nurse",
+     "ioana"
+    ]
+   ],
+   "owner": [
+    "Ioana",
+    "nurse",
+    "assistant",
+    "doctor",
+    null
+   ],
+   "due": [
+    "2026-11-09"
+   ]
+  },
+  {
+   "key": "pill-box-buy",
+   "what": "Ana buys the pill box today",
+   "match": [
+    [
+     "buy",
+     "purchase",
+     "pharmac"
+    ]
+   ],
+   "owner": [
+    "Ana"
+   ],
+   "due": [
+    "2026-11-06"
+   ]
+  },
+  {
+   "key": "pill-box-prepare",
+   "what": "Ana prepares the weekly pill box on Sunday evening",
+   "match": [
+    [
+     "prepar",
+     "fill"
+    ],
+    [
+     "box",
+     "pill",
+     "medication"
+    ]
+   ],
+   "owner": [
+    "Ana"
+   ],
+   "due": [
+    "2026-11-08"
+   ]
+  },
+  {
+   "key": "lab-tests",
+   "what": "HbA1c and urine test by Friday (they go on Thursday)",
+   "match": [
+    [
+     "hemoglobin",
+     "a1c",
+     "urine",
+     "lab"
+    ]
+   ],
+   "owner": [
+    "Georgescu",
+    "patient",
+    "Ana",
+    null
+   ],
+   "due": [
+    "2026-11-12",
+    "2026-11-13"
+   ]
+  },
+  {
+   "key": "follow-up",
+   "what": "Follow-up on 20 November at 11",
+   "match": [
+    [
+     "follow",
+     "come back",
+     "return"
+    ]
+   ],
+   "owner": [
+    "Georgescu",
+    "patient",
+    null
+   ],
+   "due": [
+    "2026-11-20"
+   ]
+  }
+ ],
+ "not_actions": [],
+ "numbers": [
+  {
+   "key": "glucose-210",
+   "said": "două sute zece",
+   "english": [
+    "210"
+   ]
+  },
+  {
+   "key": "glucose-180",
+   "said": "o sută optzeci",
+   "english": [
+    "180"
+   ]
+  },
+  {
+   "key": "metformin-1000",
+   "said": "de o mie",
+   "english": [
+    "1000",
+    "1,000",
+    "one thousand"
+   ]
+  },
+  {
+   "key": "date-20",
+   "said": "douăzeci noiembrie",
+   "english": [
+    "20",
+    "twentieth"
+   ]
+  }
+ ],
+ "known_cases": [
+  {
+   "id": "surgery-appointment-owner",
+   "what": "The surgery appointment Ana said she would book must have Ana as owner",
+   "action": "surgery-appointment"
+  }
+ ],
+ "notes": [
+  "'Next week' accepts any day of the week of 9-15 November, weekend included (it was Monday-Friday only)."
+ ]
+}

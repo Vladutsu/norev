@@ -1,0 +1,182 @@
+{
+ "verified_by": null,
+ "transcript": "../../llm/consult_2/transcript.json",
+ "actions": [
+  {
+   "key": "xray",
+   "what": "Chest X-ray today or tomorrow",
+   "match": [
+    [
+     "x-ray",
+     "xray",
+     "radiograph"
+    ]
+   ],
+   "owner": [
+    "Popa",
+    "patient",
+    null
+   ],
+   "due": [
+    "2026-11-06",
+    "2026-11-07"
+   ]
+  },
+  {
+   "key": "antibiotic",
+   "what": "Amoxicillin with clavulanic acid, 1000 mg twice a day, 7 days",
+   "match": [
+    [
+     "amoxicillin",
+     "antibiotic"
+    ]
+   ],
+   "owner": [
+    "Popa",
+    "patient",
+    null
+   ],
+   "due": "any"
+  },
+  {
+   "key": "blood-tests",
+   "what": "Blood count and CRP tomorrow morning",
+   "match": [
+    [
+     "hemat",
+     "blood count",
+     "c-reactive",
+     "crp",
+     "blood test"
+    ]
+   ],
+   "owner": [
+    "Popa",
+    "patient",
+    null
+   ],
+   "due": [
+    "2026-11-07"
+   ]
+  },
+  {
+   "key": "sick-leave",
+   "what": "Sick leave until Tuesday, certificate for HR",
+   "match": [
+    [
+     "leave",
+     "certificate"
+    ]
+   ],
+   "owner": [
+    "doctor",
+    null,
+    "Popa",
+    "patient",
+    null
+   ],
+   "due": [
+    null,
+    "2026-11-06",
+    "2026-11-10"
+   ]
+  },
+  {
+   "key": "follow-up",
+   "what": "Follow-up on Tuesday 10 November at 8:30",
+   "match": [
+    [
+     "follow",
+     "come back",
+     "return",
+     "waiting for you"
+    ]
+   ],
+   "owner": [
+    "Popa",
+    "patient",
+    null
+   ],
+   "due": [
+    "2026-11-10"
+   ]
+  },
+  {
+   "key": "smoking-program",
+   "what": "Smoking cessation program, nurse Elena calls next week",
+   "match": [
+    [
+     "smok"
+    ]
+   ],
+   "owner": [
+    "Elena",
+    "nurse",
+    "assistant",
+    "Popa",
+    "patient",
+    null
+   ],
+   "due": [
+    null,
+    "2026-11-09",
+    "2026-11-10",
+    "2026-11-11",
+    "2026-11-12",
+    "2026-11-13",
+    "2026-11-14",
+    "2026-11-15"
+   ]
+  },
+  {
+   "key": "paracetamol",
+   "what": "Paracetamol for the fever",
+   "match": [
+    [
+     "paracetamol",
+     "fever"
+    ]
+   ],
+   "owner": "any",
+   "due": "any",
+   "optional": true
+  }
+ ],
+ "not_actions": [],
+ "numbers": [
+  {
+   "key": "fever-38",
+   "said": "treizeci și opt",
+   "english": [
+    "38"
+   ]
+  },
+  {
+   "key": "dose-1000",
+   "said": "o mie de miligrame",
+   "english": [
+    "1000",
+    "1,000",
+    "one thousand"
+   ]
+  },
+  {
+   "key": "days-7",
+   "said": "șapte zile",
+   "english": [
+    "7",
+    "seven"
+   ]
+  },
+  {
+   "key": "fever-39",
+   "said": "treizeci și nouă",
+   "english": [
+    "39"
+   ]
+  }
+ ],
+ "notes": [
+  "'Next week' accepts any day of the week of 9-15 November, weekend included (it was Monday-Friday only)."
+ ]
+}

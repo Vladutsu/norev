@@ -1,0 +1,101 @@
+{
+  "synthetic": "Written for tests. No real person.",
+  "about": "Analiza unui incident: angajamente la persoana întâi, o propunere respinsă, cifre.",
+  "domain": "corporate",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "organizer"
+    },
+    {
+      "id": "S2",
+      "role": "participant"
+    },
+    {
+      "id": "S3",
+      "role": "participant"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.5,
+      "end": 6.35,
+      "speaker_id": "S1",
+      "text": "Ședința de azi e despre incidentul de marți, când aplicația a fost indisponibilă două ore."
+    },
+    {
+      "start": 6.85,
+      "end": 11.3,
+      "speaker_id": "S2",
+      "text": "Cauza a fost un certificat SSL expirat pe serverul de producție."
+    },
+    {
+      "start": 11.8,
+      "end": 15.55,
+      "speaker_id": "S1",
+      "text": "Ana, cine se ocupă de reînnoirea automată a certificatelor?"
+    },
+    {
+      "start": 16.05,
+      "end": 19.45,
+      "speaker_id": "S2",
+      "text": "Mă ocup eu. Configurez reînnoirea automată până joi."
+    },
+    {
+      "start": 19.95,
+      "end": 25.1,
+      "speaker_id": "S3",
+      "text": "Eu adaug o alertă în monitorizare cu treizeci de zile înainte de expirare."
+    },
+    {
+      "start": 25.6,
+      "end": 28.3,
+      "speaker_id": "S1",
+      "text": "George, până când poți face alerta?"
+    },
+    {
+      "start": 28.8,
+      "end": 31.15,
+      "speaker_id": "S3",
+      "text": "Până la sfârșitul săptămânii viitoare."
+    },
+    {
+      "start": 31.65,
+      "end": 37.15,
+      "speaker_id": "S1",
+      "text": "Trebuie să le scriem și clienților afectați, au fost o sută patruzeci de conturi."
+    },
+    {
+      "start": 37.65,
+      "end": 42.1,
+      "speaker_id": "S2",
+      "text": "Cineva de la suport ar trebui să trimită emailul, nu noi."
+    },
+    {
+      "start": 42.6,
+      "end": 46.7,
+      "speaker_id": "S1",
+      "text": "Bine, cer eu echipei de suport să trimită emailul azi."
+    },
+    {
+      "start": 47.2,
+      "end": 50.95,
+      "speaker_id": "S3",
+      "text": "Propun să facem și un exercițiu de recuperare lunar."
+    },
+    {
+      "start": 51.45,
+      "end": 58.35,
+      "speaker_id": "S1",
+      "text": "Nu, deocamdată nu facem exerciții lunare, revenim la subiect în ianuarie. Scriu eu raportul de incident până luni."
+    },
+    {
+      "start": 58.85,
+      "end": 59.8,
+      "speaker_id": "S2",
+      "text": "Mulțumim."
+    }
+  ]
+}

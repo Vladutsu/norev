@@ -1,0 +1,170 @@
+{
+ "verified_by": null,
+ "transcript": "../../llm/consult_1/transcript.json",
+ "actions": [
+  {
+   "key": "amlodipine",
+   "what": "The patient takes amlodipine 5 mg every morning",
+   "match": [
+    [
+     "amlodipin"
+    ]
+   ],
+   "owner": [
+    "Ionescu",
+    "patient",
+    null
+   ],
+   "due": "any"
+  },
+  {
+   "key": "home-bp",
+   "what": "The patient measures blood pressure at home twice a day",
+   "match": [
+    [
+     "blood pressure",
+     "tension"
+    ],
+    [
+     "measur",
+     "monitor",
+     "record",
+     "note"
+    ]
+   ],
+   "owner": [
+    "Ionescu",
+    "patient",
+    null
+   ],
+   "due": "any"
+  },
+  {
+   "key": "blood-tests",
+   "what": "Blood tests by Wednesday",
+   "match": [
+    [
+     "blood test",
+     "cholesterol",
+     "analys"
+    ]
+   ],
+   "owner": [
+    "Ionescu",
+    "patient",
+    null
+   ],
+   "due": [
+    "2026-11-11"
+   ]
+  },
+  {
+   "key": "ecg",
+   "what": "ECG today, after the consultation",
+   "match": [
+    [
+     "electrocardiogram",
+     "ecg",
+     "ekg"
+    ]
+   ],
+   "owner": [
+    "Maria",
+    "assistant",
+    "nurse",
+    null,
+    "Ionescu",
+    "patient",
+    null
+   ],
+   "due": [
+    "2026-11-06"
+   ]
+  },
+  {
+   "key": "follow-up",
+   "what": "Follow-up visit on Friday 13 November at 10",
+   "match": [
+    [
+     "follow",
+     "come back",
+     "return"
+    ]
+   ],
+   "owner": [
+    "Ionescu",
+    "patient",
+    null
+   ],
+   "due": [
+    "2026-11-13"
+   ]
+  },
+  {
+   "key": "lifestyle",
+   "what": "Less coffee and salt",
+   "match": [
+    [
+     "coffee",
+     "salt"
+    ]
+   ],
+   "owner": "any",
+   "due": "any",
+   "optional": true
+  }
+ ],
+ "not_actions": [],
+ "numbers": [
+  {
+   "key": "bp-160",
+   "said": "o sută șaizeci cu nouăzeci și cinci",
+   "english": [
+    "160"
+   ]
+  },
+  {
+   "key": "bp-155",
+   "said": "o sută cincizeci și cinci",
+   "english": [
+    "155"
+   ]
+  },
+  {
+   "key": "dose-5",
+   "said": "cinci miligrame",
+   "english": [
+    "5",
+    "five"
+   ]
+  },
+  {
+   "key": "bp-180",
+   "said": "o sută optzeci",
+   "english": [
+    "180"
+   ]
+  },
+  {
+   "key": "emergency-112",
+   "said": "o sută doisprezece",
+   "english": [
+    "112",
+    "one hundred twelve",
+    "one hundred and twelve"
+   ]
+  }
+ ],
+ "known_cases": [
+  {
+   "id": "112-becomes-122",
+   "what": "The translation must keep the emergency number 112",
+   "number": "emergency-112"
+  },
+  {
+   "id": "follow-up-missed",
+   "what": "The follow-up visit on 13 November must be found",
+   "action": "follow-up"
+  }
+ ]
+}

@@ -1,0 +1,124 @@
+{
+ "verified_by": null,
+ "actions": [
+  {
+   "key": "recovery-lessons",
+   "what": "The teacher holds catch-up lessons on Tuesdays",
+   "match": [
+    [
+     "recovery",
+     "remedial",
+     "catch-up",
+     "extra",
+     "make-up"
+    ],
+    [
+     "lesson",
+     "class",
+     "session"
+    ]
+   ],
+   "owner": [
+    null,
+    "teacher"
+   ],
+   "due": [
+    null,
+    "2026-11-10"
+   ]
+  },
+  {
+   "key": "attendance",
+   "what": "The parent (Dumitrescu) makes sure Vlad attends",
+   "match": [
+    [
+     "attend",
+     "make sure",
+     "ensure"
+    ]
+   ],
+   "owner": [
+    "Dumitrescu"
+   ],
+   "due": [
+    null
+   ]
+  },
+  {
+   "key": "worksheet",
+   "what": "The teacher prepares a fractions worksheet by Monday",
+   "match": [
+    [
+     "worksheet",
+     "exercise",
+     "sheet"
+    ]
+   ],
+   "owner": [
+    null,
+    "teacher"
+   ],
+   "due": [
+    "2026-11-09"
+   ]
+  },
+  {
+   "key": "sign-gradebook",
+   "what": "The parent signs the grade book",
+   "match": [
+    [
+     "sign"
+    ]
+   ],
+   "owner": [
+    "Dumitrescu"
+   ],
+   "due": [
+    "2026-11-07",
+    "2026-11-13"
+   ]
+  },
+  {
+   "key": "recovery-test",
+   "what": "Recovery test on 25 November",
+   "match": [
+    [
+     "test"
+    ]
+   ],
+   "owner": "any",
+   "due": [
+    "2026-11-25"
+   ],
+   "optional": true
+  }
+ ],
+ "not_actions": [],
+ "numbers": [
+  {
+   "key": "grade-4",
+   "said": "un patru",
+   "english": [
+    "4",
+    "four"
+   ]
+  },
+  {
+   "key": "absences-3",
+   "said": "de trei ori",
+   "english": [
+    "3",
+    "three"
+   ]
+  },
+  {
+   "key": "date-25",
+   "said": "douăzeci și cinci noiembrie",
+   "english": [
+    "25",
+    "twenty-fifth",
+    "twenty-five"
+   ]
+  }
+ ]
+}

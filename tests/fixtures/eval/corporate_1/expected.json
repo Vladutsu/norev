@@ -1,0 +1,153 @@
+{
+ "verified_by": null,
+ "actions": [
+  {
+   "key": "db-migration",
+   "what": "Andrei finishes the database migration",
+   "match": [
+    [
+     "migrat"
+    ]
+   ],
+   "owner": [
+    "Andrei"
+   ],
+   "due": [
+    "2026-11-11"
+   ]
+  },
+  {
+   "key": "payment-design",
+   "what": "Maria sends the payment screen design for review",
+   "match": [
+    [
+     "design"
+    ]
+   ],
+   "owner": [
+    "Maria"
+   ],
+   "due": [
+    "2026-11-13"
+   ]
+  },
+  {
+   "key": "payment-tests",
+   "what": "Radu takes over the automated payment tests",
+   "match": [
+    [
+     "test"
+    ],
+    [
+     "payment"
+    ]
+   ],
+   "owner": [
+    "Radu"
+   ],
+   "due": [
+    "2026-11-18"
+   ]
+  },
+  {
+   "key": "api-docs",
+   "what": "Maria updates the API documentation (asked by name after 'someone should')",
+   "match": [
+    [
+     "document"
+    ]
+   ],
+   "owner": [
+    "Maria"
+   ],
+   "due": [
+    "2026-11-20"
+   ]
+  },
+  {
+   "key": "progress-report",
+   "what": "The organizer (the User) sends the client the progress report",
+   "match": [
+    [
+     "report"
+    ]
+   ],
+   "owner": [
+    null,
+    "organizer"
+   ],
+   "due": [
+    "2026-11-09"
+   ]
+  },
+  {
+   "key": "retrospective",
+   "what": "Retrospective on Thursday",
+   "match": [
+    [
+     "retro"
+    ]
+   ],
+   "owner": "any",
+   "due": [
+    null,
+    "2026-11-12"
+   ],
+   "optional": true
+  }
+ ],
+ "not_actions": [
+  {
+   "key": "paypal",
+   "what": "PayPal integration, cancelled by the client",
+   "match": [
+    [
+     "paypal"
+    ]
+   ]
+  }
+ ],
+ "numbers": [
+  {
+   "key": "migration-80",
+   "said": "optzeci la sută",
+   "english": [
+    "80"
+   ]
+  },
+  {
+   "key": "budget-4500",
+   "said": "patru mii cinci sute de euro",
+   "english": [
+    "4,500",
+    "4500",
+    "4.500",
+    "four thousand five hundred"
+   ]
+  },
+  {
+   "key": "date-11",
+   "said": "unsprezece noiembrie",
+   "english": [
+    "11",
+    "eleventh"
+   ]
+  },
+  {
+   "key": "date-18",
+   "said": "optsprezece noiembrie",
+   "english": [
+    "18",
+    "eighteenth"
+   ]
+  },
+  {
+   "key": "date-20",
+   "said": "douăzeci noiembrie",
+   "english": [
+    "20",
+    "twentieth"
+   ]
+  }
+ ]
+}

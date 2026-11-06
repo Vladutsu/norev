@@ -1,0 +1,136 @@
+{
+ "verified_by": null,
+ "actions": [
+  {
+   "key": "call-owner",
+   "what": "The agent calls the owner about a discount",
+   "match": [
+    [
+     "owner",
+     "landlord",
+     "proprietor",
+     "seller"
+    ]
+   ],
+   "owner": [
+    null,
+    "agent"
+   ],
+   "due": [
+    "2026-11-07"
+   ]
+  },
+  {
+   "key": "viewing",
+   "what": "The agent schedules the viewing in Militari on Saturday at 11",
+   "match": [
+    [
+     "view",
+     "visit"
+    ]
+   ],
+   "owner": [
+    null,
+    "agent"
+   ],
+   "due": [
+    "2026-11-07"
+   ]
+  },
+  {
+   "key": "documents-list",
+   "what": "The agent emails the list of documents tonight",
+   "match": [
+    [
+     "document",
+     "papers",
+     "list"
+    ]
+   ],
+   "owner": [
+    null,
+    "agent"
+   ],
+   "due": [
+    "2026-11-06"
+   ]
+  },
+  {
+   "key": "bank",
+   "what": "The client (Ionescu) talks to the bank for pre-approval",
+   "match": [
+    [
+     "bank",
+     "approv"
+    ]
+   ],
+   "owner": [
+    "Ionescu"
+   ],
+   "due": [
+    null,
+    "2026-11-09",
+    "2026-11-10",
+    "2026-11-11",
+    "2026-11-12",
+    "2026-11-13",
+    "2026-11-14",
+    "2026-11-15"
+   ]
+  },
+  {
+   "key": "pre-contract",
+   "what": "Pre-contract if the owner accepts 88,000",
+   "match": [
+    [
+     "contract"
+    ]
+   ],
+   "owner": "any",
+   "due": "any",
+   "optional": true
+  }
+ ],
+ "not_actions": [],
+ "numbers": [
+  {
+   "key": "price-95000",
+   "said": "nouăzeci și cinci de mii de euro",
+   "english": [
+    "95,000",
+    "95000",
+    "95.000",
+    "ninety-five thousand"
+   ]
+  },
+  {
+   "key": "price-88000",
+   "said": "optzeci și opt de mii",
+   "english": [
+    "88,000",
+    "88000",
+    "88.000",
+    "eighty-eight thousand"
+   ]
+  },
+  {
+   "key": "hour-11",
+   "said": "ora unsprezece",
+   "english": [
+    "11",
+    "eleven"
+   ]
+  },
+  {
+   "key": "rooms-3",
+   "said": "trei camere",
+   "english": [
+    "3",
+    "three"
+   ]
+  }
+ ],
+ "notes": [
+  "'Next week' accepts any day of the week of 9-15 November, weekend included (it was Monday-Friday only)."
+ ]
+}

@@ -1,0 +1,80 @@
+{
+  "synthetic": "Written for tests. No real person.",
+  "about": "Profesoară cu un părinte.",
+  "domain": "others",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": null
+    },
+    {
+      "id": "S2",
+      "role": null
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.5,
+      "end": 6.0,
+      "speaker_id": "S1",
+      "text": "Bună ziua, doamna Dumitrescu. V-am chemat să discutăm despre notele lui Vlad la matematică."
+    },
+    {
+      "start": 6.5,
+      "end": 10.95,
+      "speaker_id": "S2",
+      "text": "Bună ziua. Știu că a luat un patru la ultimul test."
+    },
+    {
+      "start": 11.45,
+      "end": 18.0,
+      "speaker_id": "S1",
+      "text": "Da, și a lipsit de trei ori luna aceasta. Îi propun ore de recuperare marțea, după ore."
+    },
+    {
+      "start": 18.5,
+      "end": 22.95,
+      "speaker_id": "S2",
+      "text": "E în regulă. Eu am grijă să vină la toate orele."
+    },
+    {
+      "start": 23.45,
+      "end": 27.55,
+      "speaker_id": "S1",
+      "text": "Îi pregătesc o fișă de exerciții pentru fracții până luni."
+    },
+    {
+      "start": 28.05,
+      "end": 31.8,
+      "speaker_id": "S2",
+      "text": "Pot să vă scriu pe email dacă are întrebări?"
+    },
+    {
+      "start": 32.3,
+      "end": 36.75,
+      "speaker_id": "S1",
+      "text": "Sigur. Și vă rog să semnați carnetul de note până vineri."
+    },
+    {
+      "start": 37.25,
+      "end": 38.9,
+      "speaker_id": "S2",
+      "text": "Îl semnez mâine."
+    },
+    {
+      "start": 39.4,
+      "end": 43.5,
+      "speaker_id": "S1",
+      "text": "Testul de recuperare va fi pe douăzeci și cinci noiembrie."
+    },
+    {
+      "start": 44.0,
+      "end": 45.65,
+      "speaker_id": "S2",
+      "text": "Mulțumesc, doamna profesoară."
+    }
+  ],
+  "user_context": "Sunt profesoară de matematică la gimnaziu. Am ședințe cu părinții elevilor despre note, absențe și ore de recuperare."
+}

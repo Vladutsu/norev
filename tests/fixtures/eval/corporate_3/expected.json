@@ -1,0 +1,113 @@
+{
+ "verified_by": null,
+ "actions": [
+  {
+   "key": "auto-renewal",
+   "what": "Ana configures automatic certificate renewal",
+   "match": [
+    [
+     "renew"
+    ]
+   ],
+   "owner": [
+    "Ana"
+   ],
+   "due": [
+    "2026-11-12"
+   ]
+  },
+  {
+   "key": "monitoring-alert",
+   "what": "George adds a monitoring alert 30 days before expiry",
+   "match": [
+    [
+     "alert"
+    ]
+   ],
+   "owner": [
+    "George"
+   ],
+   "due": [
+    "2026-11-13",
+    "2026-11-15"
+   ]
+  },
+  {
+   "key": "support-email",
+   "what": "The organizer asks support to email the affected customers",
+   "match": [
+    [
+     "support",
+     "customer",
+     "client"
+    ]
+   ],
+   "owner": [
+    null,
+    "organizer",
+    "support"
+   ],
+   "due": [
+    "2026-11-06"
+   ]
+  },
+  {
+   "key": "incident-report",
+   "what": "The organizer writes the incident report",
+   "match": [
+    [
+     "report"
+    ]
+   ],
+   "owner": [
+    null,
+    "organizer"
+   ],
+   "due": [
+    "2026-11-09"
+   ]
+  }
+ ],
+ "not_actions": [
+  {
+   "key": "monthly-drill",
+   "what": "Monthly recovery exercise, rejected",
+   "match": [
+    [
+     "exercise",
+     "drill"
+    ]
+   ]
+  }
+ ],
+ "numbers": [
+  {
+   "key": "hours-2",
+   "said": "două ore",
+   "english": [
+    "2",
+    "two"
+   ]
+  },
+  {
+   "key": "days-30",
+   "said": "treizeci de zile",
+   "english": [
+    "30",
+    "thirty"
+   ]
+  },
+  {
+   "key": "accounts-140",
+   "said": "o sută patruzeci de conturi",
+   "english": [
+    "140",
+    "one hundred forty",
+    "one hundred and forty"
+   ]
+  }
+ ],
+ "notes": [
+  "support-email: the support team sends the email at the organizer's request, so 'support' is accepted as owner too."
+ ]
+}
