@@ -2,7 +2,7 @@
 
 Everyone runs the same image, the same commands and the same dev data (`docs/ARCHITECTURE.md`,
 Development environment). You need Docker with Compose v2; on laptop 4 you also need the NVIDIA
-Container Toolkit.
+Container Toolkit (with podman, see "Laptop 4 with podman").
 
 | Service | Where | What |
 |---|---|---|
@@ -31,7 +31,7 @@ Rebuild after `requirements.txt` or the `Dockerfile` changes.
 ## Run
 
 ```bash
-docker compose run --rm dev ./check.sh
+docker compose run --rm dev bash check.sh
 ```
 
 ```bash
@@ -55,6 +55,25 @@ Laptop 4, serve llama-server to the other laptops (this opens port 8080 on the l
 ```bash
 docker compose --profile gpu run --rm -p 8080:8080 gpu /opt/llama.cpp/llama-server -m /models/qwen3-8b/Qwen3-8B-Q4_K_M.gguf --host 0.0.0.0 --port 8080 -c 16384 --parallel 4 -ngl 99 -fa on -ctk q8_0 -ctv q8_0 --alias Qwen3-8B-Q4_K_M --reasoning off
 ```
+
+### Laptop 4 with podman
+
+With podman (and docker-compose 1.29), Compose builds the images, but `gpu` starts without the GPU:
+podman ignores the GPU reservation in `docker-compose.yml`. Run the same image with the GPU passed
+explicitly:
+
+```bash
+podman run --rm --device nvidia.com/gpu=all -v .:/workspace -v /workspace/.venv -v ../norev-data:/data:ro -v ../norev-models:/models localhost/norev-gpu ./norev.sh /data/<clip>.wav ro
+```
+
+`--device nvidia.com/gpu=all` reads `/etc/cdi/nvidia.yaml`. Regenerate it after every NVIDIA driver update:
+
+```bash
+sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+```
+
+Podman 4.9 cannot read the CDI 0.7.0 spec that current `nvidia-ctk` writes (`unknown field "additionalGids"`):
+delete every `additionalGids` field (with its values) from that file.
 
 Environment variables (`README.md`, Configuration) are passed with `-e`, for example
 `docker compose run --rm -e NOREV_LANGUAGES=ro,en dev ...`.

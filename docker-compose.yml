@@ -1,5 +1,5 @@
 # Shared dev container. How to use it: devenv/README.md
-#   docker compose run --rm dev ./check.sh                                    any laptop, no GPU
+#   docker compose run --rm dev bash check.sh                                 any laptop, no GPU
 #   docker compose --profile gpu run --rm gpu ./norev.sh /data/<clip>.wav ro  laptop 4
 # Host folders: NOREV_HOST_DATA (dev data, default ../norev-data), NOREV_HOST_MODELS (default ../norev-models).
 services:

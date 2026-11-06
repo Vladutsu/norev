@@ -1,11 +1,11 @@
 # Shared dev container (docs/ARCHITECTURE.md, Development environment). How to use it: devenv/README.md
-#   target dev  CPU only, no models: ./check.sh and the tests, on every laptop
+#   target dev  CPU only, no models: bash check.sh and the tests, on every laptop
 #   target gpu  CUDA runtime + llama.cpp at a fixed commit, models mounted at /models (laptop 4 only)
 # The repo is not copied in: docker-compose.yml mounts it at /workspace.
 ARG CUDA_VERSION=12.8.1
 
 # ── dev ───────────────────────────────────────────────────────────────────────
-FROM python:3.12-slim-bookworm AS dev
+FROM docker.io/library/python:3.12-slim-bookworm AS dev
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
@@ -18,10 +18,11 @@ ENV PATH=/workspace/.venv/bin:$PATH \
     NOREV_DATA_DIR=/data \
     WHISPER_DEVICE=cpu
 ENTRYPOINT ["bash", "/workspace/devenv/entrypoint.sh"]
-CMD ["./check.sh"]
+# bash: check.sh is not executable in git (100644), and Linux hosts keep that mode in the mount
+CMD ["bash", "check.sh"]
 
 # ── llama.cpp build ───────────────────────────────────────────────────────────
-FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu24.04 AS llamacpp
+FROM docker.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu24.04 AS llamacpp
 # v0.9.0; norev.sh needs a recent server (--reasoning off, -fa on)
 ARG LLAMACPP_COMMIT=cd959bae99ff4bed22bef2604f45241c09bbb8c8
 # Turing, Ampere, Ada, Blackwell. Set only laptop 4's to build faster (devenv/README.md)
@@ -40,7 +41,7 @@ RUN cmake -S /src -B /build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build /build --config Release --target llama-server -j"$(nproc)"
 
 # ── gpu ───────────────────────────────────────────────────────────────────────
-FROM nvidia/cuda:${CUDA_VERSION}-runtime-ubuntu24.04 AS gpu
+FROM docker.io/nvidia/cuda:${CUDA_VERSION}-runtime-ubuntu24.04 AS gpu
 RUN apt-get update && apt-get install -y --no-install-recommends python3.12 python3.12-venv curl libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
@@ -54,4 +55,5 @@ ENV PATH=/workspace/.venv/bin:$PATH \
     LLAMACPP_MODEL=/models/qwen3-8b/Qwen3-8B-Q4_K_M.gguf \
     HF_HOME=/models/huggingface
 ENTRYPOINT ["bash", "/workspace/devenv/entrypoint.sh"]
-CMD ["./check.sh"]
+# bash: check.sh is not executable in git (100644), and Linux hosts keep that mode in the mount
+CMD ["bash", "check.sh"]
