@@ -18,6 +18,7 @@ For each generic Proposed Action:
 Fill a field only with what the Transcript says. Never guess, estimate or complete a value: if a value was not said, set the field to null. The doctor fills the empty fields before approving.
 - Dates are YYYY-MM-DD. Resolve relative dates ("next Monday", "in two weeks", "starting today") against the Session date; if no day can be worked out, use null.
 - Times are HH:MM, 24-hour, only for a clock time that was said ("at 9", "at half past eight"). "In the morning" is not a time: keep it in a text field such as `frequency` and leave the time null.
+- `visit_end_time` may follow from a duration that was said ("at 9 for half an hour" is 09:30); otherwise null.
 - Copy medicine names and doses as they were said. Do not correct, translate to another brand or convert units.
 
 ## Suggestions

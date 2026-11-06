@@ -16,9 +16,10 @@
                   "reason": {"type": ["string", "null"]},
                   "visit_date": {"anyOf": [{"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}, {"type": "null"}]},
                   "visit_time": {"anyOf": [{"type": "string", "pattern": "^[0-9]{2}:[0-9]{2}$"}, {"type": "null"}]},
+                  "visit_end_time": {"anyOf": [{"type": "string", "pattern": "^[0-9]{2}:[0-9]{2}$"}, {"type": "null"}]},
                   "location": {"type": ["string", "null"]}
                 },
-                "required": ["reason", "visit_date", "visit_time", "location"],
+                "required": ["reason", "visit_date", "visit_time", "visit_end_time", "location"],
                 "additionalProperties": false
               }
             },

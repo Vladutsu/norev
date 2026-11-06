@@ -50,3 +50,58 @@ sends = ["title", "description", "owner", "due_date", "deliverable", "transcript
 [[action_types.workflow]]
 name = "save_result"
 label = "Salvează în Sesiune"
+
+[[action_types]]
+name = "calendar_event"
+label = "Eveniment în calendar"
+description = "A meeting or call that was agreed on, with a day and a clock time, to put in the User's calendar."
+
+[[action_types.fields]]
+name = "event_date"
+label = "Data"
+type = "date"
+required = true
+description = "Day of the meeting, only if it was said or follows from a relative date."
+
+[[action_types.fields]]
+name = "start_time"
+label = "Ora de început"
+type = "time"
+required = true
+description = "Clock time the meeting starts, only if it was said."
+
+[[action_types.fields]]
+name = "end_time"
+label = "Ora de sfârșit"
+type = "time"
+required = true
+description = "Clock time the meeting ends, only if it was said or follows from a duration that was said."
+
+[[action_types.fields]]
+name = "location"
+label = "Locație"
+type = "string"
+required = false
+description = "Where the meeting takes place (a room, an address, a video call), only if it was said."
+
+# Filled only by the User: a Speaker label (S1) is not a Contact, so the model always answers null.
+[[action_types.fields]]
+name = "attendees"
+label = "Participanți (emailuri)"
+type = "string"
+required = false
+description = "Always null: the User adds attendee emails, separated by commas."
+
+[[action_types.workflow]]
+name = "build_event"
+label = "Pregătește evenimentul"
+
+[[action_types.workflow]]
+name = "send_event"
+label = "Trimite în Google Calendar"
+connector = "google_calendar"
+sends = ["title", "description", "event_date", "start_time", "end_time", "location", "attendees"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"

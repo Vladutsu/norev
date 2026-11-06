@@ -43,7 +43,7 @@
       },
       {
         "speaker_id": "S1",
-        "text": "Reveniți vineri, pe treisprezece noiembrie, la ora zece, cu caietul de tensiune."
+        "text": "Reveniți vineri, pe treisprezece noiembrie, la ora zece, pentru o jumătate de oră, cu caietul de tensiune."
       },
       {
         "speaker_id": "S2",
@@ -54,13 +54,14 @@
       {
         "title": "Control pentru tensiune",
         "description": "Control cu caietul de tensiune și rezultatele analizelor.",
-        "transcript_excerpt": "Reveniți vineri, pe treisprezece noiembrie, la ora zece, cu caietul de tensiune.",
+        "transcript_excerpt": "Reveniți vineri, pe treisprezece noiembrie, la ora zece, pentru o jumătate de oră, cu caietul de tensiune.",
         "owner": "patient",
         "action_type": "schedule_visit",
         "fields": {
           "reason": "Control tensiune arterială",
           "visit_date": "2026-11-13",
           "visit_time": "10:00",
+          "visit_end_time": "10:30",
           "location": null
         }
       },
@@ -89,6 +90,7 @@
           "reason": "Colesterol, glicemie, creatinină",
           "visit_date": null,
           "visit_time": null,
+          "visit_end_time": null,
           "location": "Laboratorul de lângă policlinică"
         }
       }

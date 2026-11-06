@@ -21,6 +21,27 @@
             },
             "required": ["id", "action_type", "fields"],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "action_type": {"const": "calendar_event"},
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "event_date": {"anyOf": [{"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}, {"type": "null"}]},
+                  "start_time": {"anyOf": [{"type": "string", "pattern": "^[0-9]{2}:[0-9]{2}$"}, {"type": "null"}]},
+                  "end_time": {"anyOf": [{"type": "string", "pattern": "^[0-9]{2}:[0-9]{2}$"}, {"type": "null"}]},
+                  "location": {"type": ["string", "null"]},
+                  "attendees": {"type": "null"}
+                },
+                "required": ["event_date", "start_time", "end_time", "location", "attendees"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "action_type", "fields"],
+            "additionalProperties": false
           }
         ]
       }
