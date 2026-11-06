@@ -190,6 +190,7 @@ def score(expected: dict, actions: list[dict], english_text: str) -> dict:
         {
             "id": case["id"],
             "what": case["what"],
+            "follow_up": case.get("follow_up"),
             "solved": (case["number"] not in result["numbers_changed"]) if "number" in case
             else (case["action"] in found and found[case["action"]]["owner"] is True and found[case["action"]]["due"] is True),
         }
@@ -348,7 +349,8 @@ def print_report() -> int:
         print(f"  thresholds ({report['thresholds']['status']}): {'all met' if not failing else 'not met: ' + ', '.join(failing)}")
         for name, r in data["sessions"].items():
             for case in r["known_cases"]:
-                print(f"  known case {case['id']}: {'solved' if case['solved'] else 'OUTSTANDING'}")
+                link = f" ({case['follow_up']})" if case.get("follow_up") and not case["solved"] else ""
+                print(f"  known case {case['id']}: {'solved' if case['solved'] else 'OUTSTANDING'}{link}")
         seen = report.get("variance", {}).get("values_seen", {}).get(variant, {})
         if report.get("variance"):
             runs = report["variance"]["runs"]

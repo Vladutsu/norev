@@ -1,5 +1,5 @@
 {
- "verified_by": null,
+ "verified_by": "David-Eti23, 2026-11-06",
  "transcript": "../../llm/consult_1/transcript.json",
  "actions": [
   {
@@ -159,7 +159,8 @@
   {
    "id": "112-becomes-122",
    "what": "The translation must keep the emergency number 112",
-   "number": "emergency-112"
+   "number": "emergency-112",
+   "follow_up": "#39"
   },
   {
    "id": "follow-up-missed",

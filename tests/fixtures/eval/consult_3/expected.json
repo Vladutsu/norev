@@ -1,5 +1,5 @@
 {
- "verified_by": null,
+ "verified_by": "David-Eti23, 2026-11-06",
  "transcript": "../../llm/consult_3/transcript.json",
  "actions": [
   {
@@ -182,7 +182,8 @@
   {
    "id": "surgery-appointment-owner",
    "what": "The surgery appointment Ana said she would book must have Ana as owner",
-   "action": "surgery-appointment"
+   "action": "surgery-appointment",
+   "follow_up": "#40"
   }
  ],
  "notes": [

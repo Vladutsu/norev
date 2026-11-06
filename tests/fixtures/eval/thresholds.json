@@ -1,5 +1,5 @@
 {
- "status": "proposed, to confirm before the final evaluation",
+ "status": "confirmed by David-Eti23, 2026-11-06, before the final evaluation",
  "applies_to": "corporate_others (Medical is reported, as an example, without a threshold)",
  "limits": {
   "omission_rate": 0.15,
@@ -8,5 +8,10 @@
   "date_wrong_rate": 0.1,
   "cancelled_listed": 0,
   "numbers_changed": 0
+ },
+ "follow_ups": {
+  "owner_wrong_rate": "#40",
+  "date_wrong_rate": "#41",
+  "numbers_changed (medical)": "#39"
  }
 }
