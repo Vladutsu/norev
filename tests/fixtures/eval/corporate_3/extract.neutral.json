@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 10.3,
+ "elapsed_seconds": 10.7,
  "calls": [
   {
    "stage": "extract",
@@ -104,7 +104,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed an incident where the application was unavailable for 2 hours due to an expired SSL certificate. Actions were proposed to prevent future occurrences and address customer communication.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Renew SSL certificate\",\n      \"description\": \"Configure automatic renewal of SSL certificate by Thursday\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Ana, who is responsible for the automatic renewal of certificates? I take care of it. I configure the automatic renewal until Thursday.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Add SSL certificate alert\",\n      \"description\": \"Add an alert in monitoring 30 days before SSL certificate expiration\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I add an alert in monitoring 30 days before expiration.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Send customer notification\",\n      \"description\": \"Send email to affected customers about the incident\",\n      \"owner\": \"Support team\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Someone from support should send the email, not us. Okay, I will ask the support team to send the email today.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Write incident report\",\n      \"description\": \"Write the incident report by Monday\",\n      \"owner\": \"null\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I will write the incident report until Monday.\"\n    }\n  ],\n  \"decisions\": [\n    \"We will not do monthly recovery exercises for now, and the topic will be revisited in January.\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Who is responsible for writing the incident report?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed an incident where the application was unavailable for 2 hours due to an expired SSL certificate. Actions were proposed to prevent future occurrences and address customer communication.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Configure automatic renewal\",\n      \"description\": \"Set up automatic renewal of SSL certificates by Thursday\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Ana, who is responsible for the automatic renewal of certificates? I take care of it. I configure the automatic renewal until Thursday.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Add alert for certificate expiration\",\n      \"description\": \"Add an alert in monitoring 30 days before SSL certificate expiration\",\n      \"owner\": \"Ana\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I add an alert in monitoring 30 days before expiration.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Send customer notification\",\n      \"description\": \"Send email to affected customers about the incident\",\n      \"owner\": \"Support team\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Someone from support should send the email, not us. Okay, I will ask the support team to send the email today.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Write incident report\",\n      \"description\": \"Prepare the incident report by Monday\",\n      \"owner\": \"null\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I will write the incident report until Monday.\"\n    }\n  ],\n  \"decisions\": [\n    \"We will not conduct monthly recovery exercises for now, and the topic will be revisited in January.\"\n  ],\n  \"risks\": [\n    \"No specific risks were identified in the session.\"\n  ],\n  \"follow_up_questions\": [\n    \"Who is responsible for the incident report if the owner is not specified?\"\n  ]\n}"
   }
  ],
  "result": {
@@ -112,8 +112,8 @@
   "proposed_actions": [
    {
     "id": "A1",
-    "title": "Renew SSL certificate",
-    "description": "Configure automatic renewal of SSL certificate by Thursday",
+    "title": "Configure automatic renewal",
+    "description": "Set up automatic renewal of SSL certificates by Thursday",
     "owner": "Ana",
     "due_date": "2026-11-12",
     "priority": "high",
@@ -125,7 +125,7 @@
    },
    {
     "id": "A2",
-    "title": "Add SSL certificate alert",
+    "title": "Add alert for certificate expiration",
     "description": "Add an alert in monitoring 30 days before SSL certificate expiration",
     "owner": null,
     "due_date": "2026-11-06",
@@ -152,7 +152,7 @@
    {
     "id": "A4",
     "title": "Write incident report",
-    "description": "Write the incident report by Monday",
+    "description": "Prepare the incident report by Monday",
     "owner": null,
     "due_date": "2026-11-09",
     "priority": "medium",
@@ -164,11 +164,13 @@
    }
   ],
   "decisions": [
-   "We will not do monthly recovery exercises for now, and the topic will be revisited in January."
+   "We will not conduct monthly recovery exercises for now, and the topic will be revisited in January."
   ],
-  "risks": [],
+  "risks": [
+   "No specific risks were identified in the session."
+  ],
   "follow_up_questions": [
-   "Who is responsible for writing the incident report?"
+   "Who is responsible for the incident report if the owner is not specified?"
   ]
  }
 }

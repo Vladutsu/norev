@@ -104,11 +104,11 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed a licensing offer, invoice delivery, user list submission, training organization, and contract signing. Key actions were assigned to specific individuals with deadlines.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Issue invoice\",\n      \"description\": \"Issue invoice by November 30th and send it by email\",\n      \"owner\": \"Mihai\",\n      \"due_date\": \"2026-11-30\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I will issue the invoice by November 30th and send it by email.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Send list of users\",\n      \"description\": \"Send the list of users by Tuesday\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-09\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Mrs. Popescu, can you send us the list of users?\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Organize training\",\n      \"description\": \"Organize training for the team\",\n      \"owner\": \"Mihai\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I can organize the training, but we need to set a date.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Set training date\",\n      \"description\": \"Set the training date after receiving the list of users\",\n      \"owner\": null,\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"We will set the training date after we receive the list of users.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Send signed contract\",\n      \"description\": \"Send the signed contract\",\n      \"owner\": \"S1\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll send it to you tomorrow.\"\n    }\n  ],\n  \"decisions\": [\n    \"Training date will be set after receiving the list of users\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"When is the training date expected to be set?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed a licensing agreement, invoice delivery, user list submission, training organization, and contract signing. Key actions were assigned with deadlines.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Issue invoice\",\n      \"description\": \"Issue invoice by November 30th and send it by email\",\n      \"owner\": \"Mihai\",\n      \"due_date\": \"2026-11-30\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I will issue the invoice by November 30th and send it by email.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Send list of users\",\n      \"description\": \"Send the list of users by Tuesday\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-09\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Mrs. Popescu, can you send us the list of users?\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Organize training\",\n      \"description\": \"Organize training for the team\",\n      \"owner\": \"Mihai\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I can organize the training, but we need to set a date.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Set training date\",\n      \"description\": \"Set training date after receiving the list of users\",\n      \"owner\": null,\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"We will set the training date after we receive the list of users.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Send signed contract\",\n      \"description\": \"Send the signed contract\",\n      \"owner\": \"S1\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll send it to you tomorrow.\"\n    }\n  ],\n  \"decisions\": [\n    \"Training date will be set after receiving the list of users\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Who will be responsible for organizing the training?\"\n  ]\n}"
   }
  ],
  "result": {
-  "session_summary": "The session discussed a licensing offer, invoice delivery, user list submission, training organization, and contract signing. Key actions were assigned to specific individuals with deadlines.",
+  "session_summary": "The session discussed a licensing agreement, invoice delivery, user list submission, training organization, and contract signing. Key actions were assigned with deadlines.",
   "proposed_actions": [
    {
     "id": "A1",
@@ -152,7 +152,7 @@
    {
     "id": "A4",
     "title": "Set training date",
-    "description": "Set the training date after receiving the list of users",
+    "description": "Set training date after receiving the list of users",
     "owner": null,
     "due_date": null,
     "priority": "medium",
@@ -181,7 +181,7 @@
   ],
   "risks": [],
   "follow_up_questions": [
-   "When is the training date expected to be set?"
+   "Who will be responsible for organizing the training?"
   ]
  }
 }

@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 11.5,
+ "elapsed_seconds": 11.3,
  "calls": [
   {
    "stage": "extract",
@@ -104,16 +104,16 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed an offer for 25 licenses, invoice delivery by November 30th, user list submission, installation schedule, training for the team, and contract signing.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Issue invoice\",\n      \"description\": \"Issue invoice by November 30th and send it by email\",\n      \"owner\": \"Mihai\",\n      \"due_date\": \"2026-11-30\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I will issue the invoice by November 30th and send it by email.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Send user list\",\n      \"description\": \"Send the list of users by Tuesday\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Mrs. Popescu, can you send us the list of users? Yes, I'll send it by Tuesday.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Organize training\",\n      \"description\": \"Organize training for the team\",\n      \"owner\": \"Mihai\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I can organize the training, but we need to set a date.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Set training date\",\n      \"description\": \"Set training date after receiving the list of users\",\n      \"owner\": null,\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"We will set the training date after we receive the list of users.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Send signed contract\",\n      \"description\": \"Send the signed contract\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"And please send us the signed contract. I'll send it to you tomorrow.\"\n    }\n  ],\n  \"decisions\": [\n    \"Installation will take place in the first week of December.\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Who will be responsible for organizing the training?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed the licensing offer, invoice delivery, user list, installation schedule, training, and contract signing.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Issue invoice\",\n      \"description\": \"Issue the invoice by November 30th and send it by email.\",\n      \"owner\": \"Mihai\",\n      \"due_date\": \"2026-11-30\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I will issue the invoice by November 30th and send it by email.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Send user list\",\n      \"description\": \"Send the list of users by Tuesday.\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-09\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Mrs. Popescu, can you send us the list of users? Yes, I'll send it by Tuesday.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Organize training\",\n      \"description\": \"Organize the training for the team.\",\n      \"owner\": \"Mihai\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I can organize the training, but we need to set a date.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Set training date\",\n      \"description\": \"Set the training date after receiving the list of users.\",\n      \"owner\": null,\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"We will set the training date after we receive the list of users.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Send signed contract\",\n      \"description\": \"Send the signed contract to the other party.\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"And please send us the signed contract. I'll send it to you tomorrow.\"\n    }\n  ],\n  \"decisions\": [\n    \"Installation will take place in the first week of December.\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Who will be responsible for organizing the training?\"\n  ]\n}"
   }
  ],
  "result": {
-  "session_summary": "The session discussed an offer for 25 licenses, invoice delivery by November 30th, user list submission, installation schedule, training for the team, and contract signing.",
+  "session_summary": "The session discussed the licensing offer, invoice delivery, user list, installation schedule, training, and contract signing.",
   "proposed_actions": [
    {
     "id": "A1",
     "title": "Issue invoice",
-    "description": "Issue invoice by November 30th and send it by email",
+    "description": "Issue the invoice by November 30th and send it by email.",
     "owner": "Mihai",
     "due_date": "2026-11-30",
     "priority": "high",
@@ -126,7 +126,7 @@
    {
     "id": "A2",
     "title": "Send user list",
-    "description": "Send the list of users by Tuesday",
+    "description": "Send the list of users by Tuesday.",
     "owner": "Mrs. Popescu",
     "due_date": "2026-11-10",
     "priority": "medium",
@@ -139,7 +139,7 @@
    {
     "id": "A3",
     "title": "Organize training",
-    "description": "Organize training for the team",
+    "description": "Organize the training for the team.",
     "owner": "Mihai",
     "due_date": null,
     "priority": "medium",
@@ -152,7 +152,7 @@
    {
     "id": "A4",
     "title": "Set training date",
-    "description": "Set training date after receiving the list of users",
+    "description": "Set the training date after receiving the list of users.",
     "owner": null,
     "due_date": null,
     "priority": "medium",
@@ -165,7 +165,7 @@
    {
     "id": "A5",
     "title": "Send signed contract",
-    "description": "Send the signed contract",
+    "description": "Send the signed contract to the other party.",
     "owner": null,
     "due_date": "2026-11-07",
     "priority": "high",
