@@ -24,6 +24,7 @@ from norev.core.models import (
     ProposedAction,
     Segment,
     Session,
+    Speaker,
     StaleRevision,
     Suggestion,
     Transcript,
@@ -183,6 +184,36 @@ class StoreContract:
             self.store.save_session(changed)
         self.assertEqual(self.store.get_session("s1").transcript_ref, "t-1")
 
+    # Audio and Speakers (#24)
+
+    def test_audio_round_trip_and_unknown_ref(self):
+        audio = b"RIFF" + SENTINEL.encode() + bytes(range(256))
+        ref = self.store.save_audio("s1", audio)
+        self.assertEqual(self.store.load_audio(ref), audio)
+        self.assertNotEqual(ref, self.store.save_audio("s1", audio))
+        with self.assertRaises(KeyError):
+            self.store.load_audio("unknown")
+
+    def test_speakers_round_trip_and_unknown_session(self):
+        with self.assertRaises(LookupError):
+            self.store.save_speakers("s1", [Speaker("S1")])
+        self.store.save_session(a_session())
+        self.assertEqual(self.store.load_speakers("s1"), [])
+        speakers = [Speaker("S1", "doctor"), Speaker("S2", "patient", role_confirmed=True), Speaker("S3")]
+        self.store.save_speakers("s1", speakers)
+        self.assertEqual(self.store.load_speakers("s1"), speakers)
+
+    def test_a_confirmed_role_is_not_overwritten_by_an_unconfirmed_one(self):
+        self.store.save_session(a_session())
+        self.store.save_speakers("s1", [Speaker("S1", "doctor", role_confirmed=True), Speaker("S2", None, role_confirmed=True)])
+        self.store.save_speakers("s1", [Speaker("S1", "patient"), Speaker("S2", "patient"), Speaker("S3", "caregiver")])
+        self.assertEqual(
+            self.store.load_speakers("s1"),
+            [Speaker("S1", "doctor", True), Speaker("S2", None, True), Speaker("S3", "caregiver")],
+        )
+        self.store.save_speakers("s1", [Speaker("S1", "caregiver", role_confirmed=True)])  # a new User correction wins
+        self.assertEqual(self.store.load_speakers("s1"), [Speaker("S1", "caregiver", True)])
+
     def test_audit_keeps_events_in_order(self):
         first, second = an_event(), AuditEvent(AT, "s1-2", "local_document", {"n": 2}, "user")
         self.audit.record(first)
@@ -234,6 +265,8 @@ class EncryptedStoreTest(TempStoreCase):
         self.store.save_actions("s1", [approved_action()], expected_revision=0)
         self.store.save_suggestions("s1", [Suggestion(f"Verifică {SENTINEL}", SENTINEL)], expected_revision=1)
         self.store.record(an_event())
+        self.audio_ref = self.store.save_audio("s1", f"audio {SENTINEL}".encode())
+        self.store.save_speakers("s1", [Speaker("S1", "doctor", role_confirmed=True)])
         return ref
 
     def test_reopening_restores_everything(self):
@@ -245,6 +278,8 @@ class EncryptedStoreTest(TempStoreCase):
         self.assertEqual(again.load_actions("s1")[0].approved_payload, approved_action().approved_payload)
         self.assertEqual(again.load_events(), [an_event()])
         self.assertEqual(again.load_actions_snapshot("s1").revision, 2)
+        self.assertEqual(again.load_audio(self.audio_ref), f"audio {SENTINEL}".encode())
+        self.assertEqual(again.load_speakers("s1"), [Speaker("S1", "doctor", role_confirmed=True)])
         with self.assertRaises(StaleRevision):  # the revision survives reopening
             again.save_actions("s1", [], expected_revision=0)
 

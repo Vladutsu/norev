@@ -29,10 +29,12 @@ from norev.core.models import (
     ProposedAction,
     Segment,
     Session,
+    Speaker,
     StaleRevision,
     Suggestion,
     Transcript,
 )
+from norev.core.speakers import merge_speakers
 
 KEY_BYTES = 32
 _NONCE_BYTES = 12
@@ -213,6 +215,30 @@ class EncryptedStore:
 
     def load_suggestions(self, session_id: str) -> list[Suggestion]:
         return [Suggestion(**d) for d in self._get("suggestions", session_id) or []]
+
+    def save_audio(self, session_id: str, audio: bytes) -> str:
+        """Sealed as raw bytes, like every record: the audio is never on disk in the clear."""
+        ref = f"a-{uuid.uuid4().hex}"
+        with self._transaction():
+            self._write("audio", ref, bytes(audio))
+        return ref
+
+    def load_audio(self, audio_ref: str) -> bytes:
+        row = self._db.execute("SELECT blob FROM records WHERE kind = 'audio' AND id = ?", (audio_ref,)).fetchone()
+        if row is None:
+            raise KeyError("audio does not exist")
+        return self._open(row[0], _aad("audio", audio_ref), f"audio {audio_ref!r}")
+
+    def save_speakers(self, session_id: str, speakers: list[Speaker]) -> None:
+        with self._transaction():  # read and write together, so a User correction cannot slip in between
+            if not self._exists("session", session_id):
+                raise LookupError("Session does not exist")
+            stored = [Speaker(**d) for d in self._get("speakers", session_id) or []]
+            merged = merge_speakers(stored, speakers)
+            self._write("speakers", session_id, _encode([dataclasses.asdict(s) for s in merged]))
+
+    def load_speakers(self, session_id: str) -> list[Speaker]:
+        return [Speaker(**d) for d in self._get("speakers", session_id) or []]
 
     # --- AuditLog
 
