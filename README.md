@@ -54,6 +54,16 @@ Output:
 The transcript has no speaker labels, so "I'll do it" cannot be tied to a person: such tasks get
 no owner rather than a guessed one.
 
+## Before pushing
+
+```bash
+./check.sh
+```
+
+Same checks as CI (`.github/workflows/ci.yml`, runs on every push to `main`): shell syntax,
+Python compiles, every module imports, unit tests in `tests/` if any. No GPU or models needed.
+To run CI on a branch: GitHub, Actions, CI, Run workflow.
+
 ## Configuration (environment variables)
 
 | Variable | Default | |

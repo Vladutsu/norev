@@ -60,6 +60,8 @@ depends on one, stop and ask; don't silently pick the recommendation.
   `Settings.from_environment()` frozen dataclasses. Follow that pattern.
 - Setup: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`
 - Run: `./norev.sh <audio_or_video> [lang]` (starts/reuses `llama-server`)
+- Before every push to `main`: `./check.sh` (same checks as CI in `.github/workflows/ci.yml`;
+  no GPU or models needed). Push only if it ends with `OK`.
 - Module entry: `.venv/bin/python -m LLM.Whisper.whisper ...` (run from the repo root)
 - Env vars and defaults: see `README.md`.
 - Development runs in the shared container (`docs/ARCHITECTURE.md`, Development environment):
