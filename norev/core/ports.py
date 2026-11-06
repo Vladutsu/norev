@@ -6,7 +6,7 @@ which is the only module that holds real `LlmClient` and `Connector` implementat
 from datetime import date, datetime
 from typing import Any, Protocol, runtime_checkable
 
-from norev.core.models import AuditEvent, ProposedAction, Session, SpeakerTurn, Suggestion, Transcript
+from norev.core.models import ActionsSnapshot, Domain, AuditEvent, ProposedAction, Session, SpeakerTurn, Suggestion, Transcript
 
 
 @runtime_checkable
@@ -53,6 +53,19 @@ class ActionExtractor(Protocol):
 
 
 @runtime_checkable
+class PayloadBuilder(Protocol):
+    """Prepare a version-1 approval plan without I/O effects or model calls.
+
+    Implementations validate Connector options (including destination and edited
+    content), respect Workflow.sends and reject unavailable steps/Connectors with
+    UnsupportedWorkflow. The result contains final payloads, not raw Domain fields.
+    No filesystem export or network send occurs until execution after approval.
+    """
+
+    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]: ...
+
+
+@runtime_checkable
 class Connector(Protocol):
     """Executes one Workflow step with the approved payload; returns what the service answered."""
 
@@ -63,7 +76,11 @@ class Connector(Protocol):
 
 @runtime_checkable
 class SessionStore(Protocol):
-    def save_session(self, session: Session) -> None: ...
+    def save_session(self, session: Session) -> None:
+        """Changes invalidate the review revision; after review starts, input changes
+        are refused until an explicit atomic regeneration contract is implemented.
+        """
+        ...
 
     def get_session(self, session_id: str) -> Session | None: ...
 
@@ -71,11 +88,29 @@ class SessionStore(Protocol):
 
     def load_transcript(self, transcript_ref: str) -> Transcript: ...
 
-    def save_actions(self, session_id: str, actions: list[ProposedAction]) -> None: ...
+    def load_actions_snapshot(self, session_id: str) -> ActionsSnapshot:
+        """Detached snapshot; revision starts at zero. Unknown Session raises LookupError."""
+        ...
+
+    def save_actions(
+        self, session_id: str, actions: list[ProposedAction], *, expected_revision: int,
+        suggestions: list[Suggestion] | None = None,
+    ) -> int:
+        """Atomically compare revision, replace actions and optional Suggestions, increment.
+
+        Return the new revision. StaleRevision means NOTHING was saved. Duplicate
+        action ids are rejected. None preserves Suggestions; [] clears them.
+        Every writer must use this contract; no unchecked overwrite path is allowed.
+        """
+        ...
 
     def load_actions(self, session_id: str) -> list[ProposedAction]: ...
 
-    def save_suggestions(self, session_id: str, suggestions: list[Suggestion]) -> None: ...
+    def save_suggestions(
+        self, session_id: str, suggestions: list[Suggestion], *, expected_revision: int,
+    ) -> int:
+        """CAS on the same revision as actions; no partial write on conflict."""
+        ...
 
     def load_suggestions(self, session_id: str) -> list[Suggestion]: ...
 

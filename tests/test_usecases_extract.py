@@ -130,7 +130,7 @@ class ExtractSessionActionsTest(unittest.TestCase):
     def test_refuses_to_re_extract_once_an_action_is_decided(self):
         actions = extract_session_actions("s1", self.store, FakeActionExtractor({"proposed_actions": [item()]}))
         actions[0].approve({"title": "Control"})
-        self.store.save_actions("s1", actions)
+        self.store.save_actions("s1", actions, expected_revision=self.store.load_actions_snapshot("s1").revision)
         extractor = FakeActionExtractor({"proposed_actions": [item()]})
         with self.assertRaises(ValueError):
             extract_session_actions("s1", self.store, extractor)
@@ -145,7 +145,7 @@ class ExtractSessionActionsTest(unittest.TestCase):
             def extract(self, transcript, session_date):
                 actions = store.load_actions("s1")
                 actions[0].approve({"title": "Control"})
-                store.save_actions("s1", actions)
+                store.save_actions("s1", actions, expected_revision=store.load_actions_snapshot("s1").revision)
                 return {"proposed_actions": [item(), item()]}
 
         with self.assertRaises(ValueError):

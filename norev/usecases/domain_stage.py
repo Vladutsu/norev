@@ -102,6 +102,7 @@ def apply_answer(
         typed[action_id] = dataclasses.replace(
             by_id[action_id],
             action_type=action_type.name,
+            prepared_payload=None,
             fields={f.name: _field_value(f.type, raw_fields.get(f.name)) for f in action_type.fields},
         )
 
@@ -122,10 +123,11 @@ def run_domain_stage(
     the User has decided any action, or a second time: actions it dropped are gone, so a re-run needs
     the generic extraction first. A non-JSON or non-object answer raises ValueError and saves nothing.
     """
+    snapshot = store.load_actions_snapshot(session_id)
     session = store.get_session(session_id)
     if session is None:
         raise LookupError(f"no Session {session_id!r}")
-    actions = store.load_actions(session_id)
+    actions = list(snapshot.actions)
     if any(a.status is not ActionStatus.PROPOSED for a in actions):
         raise ValueError(f"Session {session_id!r} already has decided Proposed Actions")
     if any(a.action_type is not None for a in actions):
@@ -141,9 +143,6 @@ def run_domain_stage(
     if not isinstance(answer, dict):
         raise ValueError("Domain stage answer is not a JSON object")
     typed, suggestions = apply_answer(domain, actions, answer)
-    # The model can take minutes; if the User decided an action meanwhile, do not overwrite it
-    if store.load_actions(session_id) != actions:
-        raise ValueError(f"Proposed Actions of Session {session_id!r} changed while the Domain stage ran")
-    store.save_actions(session_id, typed)
-    store.save_suggestions(session_id, suggestions)
+    # Actions and Suggestions commit together, or neither does if a User decision won.
+    store.save_actions(session_id, typed, expected_revision=snapshot.revision, suggestions=suggestions)
     return typed, suggestions

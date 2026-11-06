@@ -4,15 +4,14 @@ from datetime import date, timedelta
 
 
 PROPOSED_ACTION_PROMPT = """
-You are a senior Project Manager with a rigorous, execution-focused mindset. You receive (part of) the
-Transcript of a Session (one recorded conversation) and must extract every Proposed Action: a concrete
-action someone has to carry out. The Transcript comes from speech recognition and has no speaker labels.
+You extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a
+Session (one recorded conversation) and must extract every Proposed Action: a concrete action someone has
+to carry out. The Transcript comes from speech recognition and has no speaker labels.
 
 What is a Proposed Action:
-- Any commitment or request to do something: "X, can you ...?" followed by agreement, "please send ...",
-  "I'll do it", "I'll ask IT today".
-- Include small items too: giving someone access, sending a draft, checking figures, writing rules,
-  calling someone, submitting something for approval.
+- Any commitment or request to do something: "X, can you ...?" followed by agreement, "please ...",
+  "I'll do it".
+- Include small items too.
 - One action per Proposed Action: split "write the tests and update the docs" into two Proposed Actions.
 - NOT a Proposed Action: items that were cancelled or dropped ("we won't do X anymore" - record it as a decision),
   ideas nobody committed to, and decisions.
@@ -103,8 +102,7 @@ SECOND PASS. These Proposed Actions were already extracted from this transcript:
 {{EXISTING}}
 
 Find only the Proposed Actions that are MISSING from that list, following the same rules. Look especially
-for small ones: giving access, sending a draft, checking or reviewing something, calling someone,
-submitting something, writing rules or documentation. Do not repeat or reword items already listed.
+for small ones. Do not repeat or reword items already listed.
 If nothing is missing, return an empty "proposed_actions" list.
 """.strip()
 

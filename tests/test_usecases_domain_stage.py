@@ -297,7 +297,7 @@ class RunDomainStageTest(unittest.TestCase):
     def setUp(self):
         self.store = InMemorySessionStore()
         self.store.save_session(Session(id="s1", started_at=datetime(2026, 11, 6, 9, 30), domain="test"))
-        self.store.save_actions("s1", generic_actions())
+        self.store.save_actions("s1", generic_actions(), expected_revision=self.store.load_actions_snapshot("s1").revision)
         self.answer = {"proposed_actions": [visit()], "suggestions": [{"text": "Check", "transcript_excerpt": "x"}]}
 
     def test_calls_the_domain_model_with_the_prompt_and_schema(self):
@@ -327,7 +327,7 @@ class RunDomainStageTest(unittest.TestCase):
     def test_refuses_once_an_action_is_decided(self):
         actions = generic_actions()
         actions[1].reject()
-        self.store.save_actions("s1", actions)
+        self.store.save_actions("s1", actions, expected_revision=self.store.load_actions_snapshot("s1").revision)
         llm = FakeLlmClient([json.dumps(self.answer)])
         with self.assertRaises(ValueError):
             run_domain_stage("s1", self.store, DOMAIN, llm, TRANSCRIPT)
@@ -348,7 +348,7 @@ class RunDomainStageTest(unittest.TestCase):
             def generate_json(self, prompt, *, model=None, json_schema=None):
                 actions = store.load_actions("s1")
                 actions[1].reject()
-                store.save_actions("s1", actions)
+                store.save_actions("s1", actions, expected_revision=store.load_actions_snapshot("s1").revision)
                 return answer
 
         with self.assertRaises(ValueError):

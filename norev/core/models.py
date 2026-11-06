@@ -31,6 +31,23 @@ class InvalidTransition(ValueError):
     pass
 
 
+class StaleRevision(ValueError):
+    """The Session changed since the caller read its snapshot; no write occurred."""
+
+
+class ValidationError(ValueError):
+    """Safe machine-readable validation failure: no input values in the message."""
+
+    def __init__(self, code: str, field: str):
+        self.code = code
+        self.field = field
+        super().__init__(f"{code}: {field}")
+
+
+class UnsupportedWorkflow(ValueError):
+    """A Workflow cannot be prepared by the available Connector implementations."""
+
+
 @dataclass(frozen=True)
 class Role:
     """What a Speaker is in the conversation, as defined by the Domain (e.g. Doctor, Patient)."""
@@ -176,6 +193,9 @@ class ProposedAction:
     # re-check the status and send exactly approved_payload at send time.
     approved_payload: dict[str, Any] | None = None
     error: str | None = None
+    prepared_payload: dict[str, Any] | None = None
+    approved_by: str | None = None
+    approved_at: datetime | None = None
 
     def approve(self, payload: dict[str, Any]) -> None:
         """The User's approval of this exact payload. Out of Failed only retry() is allowed."""
@@ -212,6 +232,17 @@ class ProposedAction:
             f"ProposedAction(id={self.id}, status={self.status.value}, action_type={self.action_type}, "
             f"title_len={len(self.title)}, fields={sorted(self.fields)})"
         )
+
+
+@dataclass(frozen=True, repr=False)
+class ActionsSnapshot:
+    """Detached copy of a Session's actions, paired with their store revision."""
+
+    revision: int
+    actions: tuple[ProposedAction, ...]
+
+    def __repr__(self) -> str:
+        return f"ActionsSnapshot(revision={self.revision}, actions={len(self.actions)})"
 
 
 @dataclass(frozen=True)
