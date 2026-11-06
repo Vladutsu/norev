@@ -1,10 +1,10 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 9.7,
+ "elapsed_seconds": 11.3,
  "calls": [
   {
    "stage": "extract",
-   "prompt": "The session took place today, 2026-11-06 (Friday).\nCalendar for resolving dates:\n  Fri 2026-11-06 (today), Sat 2026-11-07 (tomorrow), Sun 2026-11-08, Mon 2026-11-09, Tue 2026-11-10, Wed 2026-11-11, Thu 2026-11-12\n  Fri 2026-11-13, Sat 2026-11-14, Sun 2026-11-15, Mon 2026-11-16, Tue 2026-11-17, Wed 2026-11-18, Thu 2026-11-19\n  Fri 2026-11-20, Sat 2026-11-21, Sun 2026-11-22, Mon 2026-11-23, Tue 2026-11-24, Wed 2026-11-25, Thu 2026-11-26\n  Fri 2026-11-27, Sat 2026-11-28, Sun 2026-11-29, Mon 2026-11-30, Tue 2026-12-01, Wed 2026-12-02, Thu 2026-12-03\n  Fri 2026-12-04, Sat 2026-12-05, Sun 2026-12-06, Mon 2026-12-07, Tue 2026-12-08, Wed 2026-12-09, Thu 2026-12-10\n  Fri 2026-12-11, Sat 2026-12-12, Sun 2026-12-13, Mon 2026-12-14, Tue 2026-12-15, Wed 2026-12-16, Thu 2026-12-17\n\nYou extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a\nSession (one recorded conversation) and must extract every Proposed Action: a concrete action someone has\nto carry out. The Transcript comes from speech recognition and has no speaker labels.\n\nWhat is a Proposed Action:\n- Any commitment or request to do something: \"X, can you ...?\" followed by agreement, \"please ...\",\n  \"I'll do it\".\n- Include small items too.\n- One action per Proposed Action: split \"write the tests and update the docs\" into two Proposed Actions.\n- NOT a Proposed Action: items that were cancelled or dropped (\"we won't do X anymore\" - record it as a decision),\n  ideas nobody committed to, and decisions.\n\nOwner:\n- The person who accepted the action or was asked to do it, written as in the transcript.\n- If a Proposed Action was reassigned (\"Ionuț was supposed to, but Elena takes it over\"), use only the final owner.\n- If the speaker commits themself (\"I'll do it\", \"I'll send it\") and their name is not stated, owner=null.\n  Never pick a person who is only mentioned in the sentence.\n- If assignable team members are provided and the transcript names no owner, choose one only when their\n  skills clearly match the action; use the exact candidate name. Otherwise owner=null.\n\nDue date:\n- Resolve \"today\", \"tomorrow\", weekday names (\"by Monday\", \"on Thursday\") and \"next week\" with the\n  calendar above. \"By Monday\" means that Monday.\n- If no deadline is stated, due_date=null. The date of a later session is not a deadline unless the action\n  has to be finished before it.\n\nRules:\n- Response language: English.\n- Do not invent information that is not present in the transcript.\n- Normalize dates to YYYY-MM-DD.\n- Remove duplicates. Keep actions separate from decisions and risks.\n- transcript_excerpt: the shortest transcript quote (at most 15 words) that shows the action.\n\nReturn ONLY valid JSON, with no extra text, using this schema:\n\n{\n  \"session_summary\": \"maximum 4 sentences\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"infinitive verb + clear objective\",\n      \"description\": \"one short sentence\",\n      \"owner\": \"person name or null\",\n      \"due_date\": \"YYYY-MM-DD or null\",\n      \"priority\": \"high|medium|low\",\n      \"transcript_excerpt\": \"short quote from the transcript\"\n    }\n  ],\n  \"decisions\": [\"decisions made in the session\"],\n  \"risks\": [\"identified blockers or risks\"],\n  \"follow_up_questions\": [\"questions needed for actions with unclear owner/deadline\"]\n}\n\nTranscript:\nGood day, Mrs. Popescu. Thank you for finding time for the call. Good day. I would like to discuss the offer for licenses and the delivery term. Our offer is for twenty-five licenses, at a total price of twelve thousand five hundred lei per year. That's fine, but we need the invoice by the end of the month. I issue the invoice by thirty November and send it by email. Thank you, Mihai. Mrs. Popescu, can you send us the list of users? Yes, I'll send it by Tuesday. We can do the installation in the first week of December. Perfect. We also need a training for our team. I can organize the training, but we need to set a date. We set the training date after we receive the list of users. Agreed. And please send us the signed contract. I'll send it to you tomorrow. Thank you, have a good day.",
+   "prompt": "The session took place today, 2026-11-06 (Friday).\nCalendar for resolving dates:\n  Fri 2026-11-06 (today), Sat 2026-11-07 (tomorrow), Sun 2026-11-08, Mon 2026-11-09, Tue 2026-11-10, Wed 2026-11-11, Thu 2026-11-12\n  Fri 2026-11-13, Sat 2026-11-14, Sun 2026-11-15, Mon 2026-11-16, Tue 2026-11-17, Wed 2026-11-18, Thu 2026-11-19\n  Fri 2026-11-20, Sat 2026-11-21, Sun 2026-11-22, Mon 2026-11-23, Tue 2026-11-24, Wed 2026-11-25, Thu 2026-11-26\n  Fri 2026-11-27, Sat 2026-11-28, Sun 2026-11-29, Mon 2026-11-30, Tue 2026-12-01, Wed 2026-12-02, Thu 2026-12-03\n  Fri 2026-12-04, Sat 2026-12-05, Sun 2026-12-06, Mon 2026-12-07, Tue 2026-12-08, Wed 2026-12-09, Thu 2026-12-10\n  Fri 2026-12-11, Sat 2026-12-12, Sun 2026-12-13, Mon 2026-12-14, Tue 2026-12-15, Wed 2026-12-16, Thu 2026-12-17\n\nYou extract Proposed Actions from the Transcript of a Session. You receive (part of) the Transcript of a\nSession (one recorded conversation) and must extract every Proposed Action: a concrete action someone has\nto carry out. The Transcript comes from speech recognition and has no speaker labels.\n\nWhat is a Proposed Action:\n- Any commitment or request to do something: \"X, can you ...?\" followed by agreement, \"please ...\",\n  \"I'll do it\".\n- Include small items too.\n- One action per Proposed Action: split \"write the tests and update the docs\" into two Proposed Actions.\n- NOT a Proposed Action: items that were cancelled or dropped (\"we won't do X anymore\" - record it as a decision),\n  ideas nobody committed to, and decisions.\n\nOwner:\n- The person who accepted the action or was asked to do it, written as in the transcript.\n- If a Proposed Action was reassigned (\"Ionuț was supposed to, but Elena takes it over\"), use only the final owner.\n- If the speaker commits themself (\"I'll do it\", \"I'll send it\") and their name is not stated, owner=null.\n  Never pick a person who is only mentioned in the sentence.\n- If assignable team members are provided and the transcript names no owner, choose one only when their\n  skills clearly match the action; use the exact candidate name. Otherwise owner=null.\n\nDue date:\n- Resolve \"today\", \"tomorrow\", weekday names (\"by Monday\", \"on Thursday\") and \"next week\" with the\n  calendar above. \"By Monday\" means that Monday.\n- If no deadline is stated, due_date=null. The date of a later session is not a deadline unless the action\n  has to be finished before it.\n\nRules:\n- Response language: English.\n- Do not invent information that is not present in the transcript.\n- Normalize dates to YYYY-MM-DD.\n- Remove duplicates. Keep actions separate from decisions and risks.\n- transcript_excerpt: the shortest transcript quote (at most 15 words) that shows the action.\n\nReturn ONLY valid JSON, with no extra text, using this schema:\n\n{\n  \"session_summary\": \"maximum 4 sentences\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"infinitive verb + clear objective\",\n      \"description\": \"one short sentence\",\n      \"owner\": \"person name or null\",\n      \"due_date\": \"YYYY-MM-DD or null\",\n      \"priority\": \"high|medium|low\",\n      \"transcript_excerpt\": \"short quote from the transcript\"\n    }\n  ],\n  \"decisions\": [\"decisions made in the session\"],\n  \"risks\": [\"identified blockers or risks\"],\n  \"follow_up_questions\": [\"questions needed for actions with unclear owner/deadline\"]\n}\n\nTranscript:\nGood day, Mrs. Popescu. Thank you for finding time for the call. Good day. I would like to discuss the offer for licenses and the delivery term. Our offer is for 25 licenses, at a total price of 12500 lei per year. That's fine, but we need the invoice by the end of the month. I will issue the invoice by November 30th and send it by email. Thank you, Mihai. Mrs. Popescu, can you send us the list of users? Yes, I'll send it by Tuesday. We can do the installation in the first week of December. Perfect. We also need a training for our team. I can organize the training, but we need to set a date. We will set the training date after we receive the list of users. Agreed. And please send us the signed contract. I'll send it to you tomorrow. Thank you, have a good day.",
    "json_schema": {
     "type": "object",
     "properties": {
@@ -104,71 +104,84 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed a licensing offer, invoice delivery, user list submission, installation schedule, training, and contract signing.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Issue invoice\",\n      \"description\": \"Issue the invoice by thirty November and send it by email.\",\n      \"owner\": \"Mihai\",\n      \"due_date\": \"2026-11-30\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I issue the invoice by thirty November and send it by email.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Send user list\",\n      \"description\": \"Send the list of users by Tuesday.\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-09\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Mrs. Popescu, can you send us the list of users? Yes, I'll send it by Tuesday.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Organize training\",\n      \"description\": \"Organize the training for the team.\",\n      \"owner\": \"Mihai\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I can organize the training, but we need to set a date.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Send signed contract\",\n      \"description\": \"Send the signed contract to the other party.\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"And please send us the signed contract. I'll send it to you tomorrow.\"\n    }\n  ],\n  \"decisions\": [\n    \"The training date will be set after receiving the list of users.\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"When is the training date expected to be set?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed the licensing offer, invoice delivery, user list, installation schedule, training, and contract signing. Actions were assigned with deadlines.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Issue invoice\",\n      \"description\": \"Issue the invoice by November 30th and send it by email\",\n      \"owner\": \"Mihai\",\n      \"due_date\": \"2026-11-30\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I will issue the invoice by November 30th and send it by email\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Send user list\",\n      \"description\": \"Send the list of users by Tuesday\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-09\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Mrs. Popescu, can you send us the list of users? Yes, I'll send it by Tuesday\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Organize training\",\n      \"description\": \"Organize the training for the team\",\n      \"owner\": \"Mihai\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I can organize the training, but we need to set a date\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Set training date\",\n      \"description\": \"Set the training date after receiving the list of users\",\n      \"owner\": null,\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"We will set the training date after we receive the list of users\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Send signed contract\",\n      \"description\": \"Send the signed contract\",\n      \"owner\": \"Mrs. Popescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"And please send us the signed contract. I'll send it to you tomorrow\"\n    }\n  ],\n  \"decisions\": [\n    \"Installation will take place in the first week of December\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Who will be responsible for organizing the training?\"\n  ]\n}"
   }
  ],
  "result": {
-  "session_summary": "The session discussed a licensing offer, invoice delivery, user list submission, installation schedule, training, and contract signing.",
+  "session_summary": "The session discussed the licensing offer, invoice delivery, user list, installation schedule, training, and contract signing. Actions were assigned with deadlines.",
   "proposed_actions": [
    {
     "id": "A1",
     "title": "Issue invoice",
-    "description": "Issue the invoice by thirty November and send it by email.",
+    "description": "Issue the invoice by November 30th and send it by email",
     "owner": "Mihai",
     "due_date": "2026-11-30",
-    "priority": "high",
+    "priority": "medium",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
-    "transcript_excerpt": "I issue the invoice by thirty November and send it by email.",
+    "transcript_excerpt": "I will issue the invoice by November 30th and send it by email",
     "needs_review": false
    },
    {
     "id": "A2",
     "title": "Send user list",
-    "description": "Send the list of users by Tuesday.",
+    "description": "Send the list of users by Tuesday",
     "owner": "Mrs. Popescu",
-    "due_date": "2026-11-09",
+    "due_date": "2026-11-10",
     "priority": "medium",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
-    "transcript_excerpt": "Mrs. Popescu, can you send us the list of users? Yes, I'll send it by Tuesday.",
+    "transcript_excerpt": "Mrs. Popescu, can you send us the list of users? Yes, I'll send it by Tuesday",
     "needs_review": false
    },
    {
     "id": "A3",
     "title": "Organize training",
-    "description": "Organize the training for the team.",
+    "description": "Organize the training for the team",
     "owner": "Mihai",
     "due_date": null,
     "priority": "medium",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
-    "transcript_excerpt": "I can organize the training, but we need to set a date.",
+    "transcript_excerpt": "I can organize the training, but we need to set a date",
     "needs_review": false
    },
    {
     "id": "A4",
-    "title": "Send signed contract",
-    "description": "Send the signed contract to the other party.",
-    "owner": "Mrs. Popescu",
-    "due_date": "2026-11-07",
-    "priority": "high",
+    "title": "Set training date",
+    "description": "Set the training date after receiving the list of users",
+    "owner": null,
+    "due_date": null,
+    "priority": "medium",
     "status": "proposed",
     "dependencies": [],
     "confidence": 0.0,
-    "transcript_excerpt": "And please send us the signed contract. I'll send it to you tomorrow.",
+    "transcript_excerpt": "We will set the training date after we receive the list of users",
+    "needs_review": false
+   },
+   {
+    "id": "A5",
+    "title": "Send signed contract",
+    "description": "Send the signed contract",
+    "owner": null,
+    "due_date": "2026-11-07",
+    "priority": "medium",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "And please send us the signed contract. I'll send it to you tomorrow",
     "needs_review": false
    }
   ],
   "decisions": [
-   "The training date will be set after receiving the list of users."
+   "Installation will take place in the first week of December"
   ],
   "risks": [],
   "follow_up_questions": [
-   "When is the training date expected to be set?"
+   "Who will be responsible for organizing the training?"
   ]
  }
 }

@@ -1,5 +1,5 @@
 {
-  "session_summary": "A patient visited a doctor for persistent cough, fever, and fatigue. The doctor prescribed medication, recommended tests, and issued a sick leave. The patient was advised to quit smoking and attend a cessation program.",
+  "session_summary": "A patient visited a doctor for persistent cough, fever, and fatigue. The doctor prescribed medication, recommended tests, and issued a medical leave. The patient was advised to quit smoking and attend a cessation program.",
   "proposed_actions": [
     {
       "id": "A1",
@@ -17,36 +17,36 @@
     {
       "id": "A2",
       "title": "Take Medication",
-      "description": "Take amoxicillin with clavulanic acid, one thousand milligrams, twice a day, for seven days.",
+      "description": "Take amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days.",
       "owner": "Patient",
       "due_date": null,
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "I'll prescribe amoxicillin with clavulanic acid, one thousand milligrams, twice a day, for seven days.",
+      "transcript_excerpt": "I'll prescribe amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days.",
       "needs_review": false
     },
     {
       "id": "A3",
       "title": "Take Paracetamol for Fever",
-      "description": "Take paracetamol for fever, no more than four tablets a day.",
+      "description": "Take paracetamol for fever, no more than 4 tablets a day.",
       "owner": "Patient",
       "due_date": null,
       "priority": "medium",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "For the fever take paracetamol, no more than four tablets a day.",
+      "transcript_excerpt": "For the fever take paracetamol, no more than 4 tablets a day.",
       "needs_review": false
     },
     {
       "id": "A4",
-      "title": "Get Sick Leave Certificate",
-      "description": "Collect the sick leave certificate from the doctor and take it to human resources.",
+      "title": "Get Medical Leave Certificate",
+      "description": "Collect the medical leave certificate from the doctor and take it to human resources.",
       "owner": "Patient",
-      "due_date": "2026-11-10",
-      "priority": "high",
+      "due_date": null,
+      "priority": "medium",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
@@ -55,34 +55,34 @@
     },
     {
       "id": "A5",
-      "title": "Undergo Blood Tests",
-      "description": "Undergo a hematology panel and C-reactive protein test tomorrow morning on an empty stomach.",
+      "title": "Perform Blood Tests",
+      "description": "Do a complete blood count and C-reactive protein test tomorrow morning on an empty stomach.",
       "owner": "Patient",
       "due_date": "2026-11-07",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "You'll also do a hematology panel and C-reactive protein test, tomorrow morning, on an empty stomach.",
+      "transcript_excerpt": "Do a complete blood count and C-reactive protein test, tomorrow morning, on an empty stomach.",
       "needs_review": false
     },
     {
       "id": "A6",
       "title": "Attend Follow-up Appointment",
-      "description": "Attend a follow-up appointment on Tuesday, November 10th, at half past eight, with the X-ray and test results.",
+      "description": "Come back on Tuesday, November 10th, at 8:30, with the X-ray and test results.",
       "owner": "Patient",
       "due_date": "2026-11-10",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "I'll be waiting for you on Tuesday, November 10th, at half past eight, with the X-ray and test results.",
+      "transcript_excerpt": "I'll be waiting on Tuesday, November 10th, at 8:30, with the X-ray and test results.",
       "needs_review": false
     },
     {
       "id": "A7",
       "title": "Attend Smoking Cessation Program",
-      "description": "Attend the smoking cessation program at the clinic.",
+      "description": "Register for the smoking cessation program at the clinic and attend the sessions.",
       "owner": "Patient",
       "due_date": null,
       "priority": "medium",
@@ -94,10 +94,10 @@
     }
   ],
   "decisions": [
-    "The patient will not work for five days, up to Tuesday inclusive."
+    "The patient will be given a medical leave of 5 days, up to Tuesday inclusive."
   ],
   "risks": [
-    "If the fever goes above thirty-nine or the patient has trouble breathing, they should come immediately or call the emergency department."
+    "If the fever goes above 39 or the patient has trouble breathing, they should come immediately or call the emergency department."
   ],
   "follow_up_questions": [
     "When will the smoking cessation program start?"

@@ -37,7 +37,7 @@ EXPECTED_GENERIC = _read_json("proposed_actions.json")["proposed_actions"]
 ENGLISH = _read_json("transcript.en.json")
 
 # Generic ids after re-numbering by extract_session_actions (order of proposed_actions.json):
-MEASURE_BP, BLOOD_TESTS, ECG, MEDICATION, FOLLOW_UP = (f"{SESSION_ID}-{n}" for n in range(1, 6))
+MEASURE_BP, MEDICATION, BLOOD_TESTS, ECG, FOLLOW_UP = (f"{SESSION_ID}-{n}" for n in range(1, 6))
 
 SUGGESTION = {
     "text": "The patient reports evening palpitations after coffee; check whether they need follow-up.",
@@ -62,7 +62,7 @@ DOMAIN_ANSWER = {
             "action_type": "medication_reminder",
             "fields": {
                 "medication": "amlodipine",
-                "dose": "five milligrams, one tablet",
+                "dose": "5 milligrams, one tablet",
                 "frequency": "once a day, in the morning",
                 "times": None,
                 "start_date": None,
@@ -148,7 +148,7 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
         self.assertNotIn("[?]", prompt)
         lines = [line for line in prompt.splitlines() if re.match(r"\[S\d\] ", line)]
         self.assertEqual(lines, [f"[{s.speaker_id}] {s.text}" for s in self.transcript.segments])
-        self.assertIn("[S1] Yes. I'll prescribe you amlodipine five milligrams", prompt)
+        self.assertIn("[S1] Yes. I'll prescribe you amlodipine 5 milligrams", prompt)
 
     def test_domain_stage_uses_the_medical_model_and_schema(self):
         [(_prompt, model, schema)] = self.domain_llm.calls
@@ -174,7 +174,7 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
         self.assertEqual(pill.action_type, "medication_reminder")
         self.assertEqual(pill.fields, {
             "medication": "amlodipine",
-            "dose": "five milligrams, one tablet",
+            "dose": "5 milligrams, one tablet",
             "frequency": "once a day, in the morning",
             "times": None,
             "start_date": None,
