@@ -198,6 +198,22 @@ class WorkflowTest(unittest.TestCase):
             self._executor().execute("s1", "s1-1")
         self._assert_nothing_ran()  # not even the local step before the export
 
+    def test_a_result_that_cannot_be_recorded_leaves_the_step_uncertain(self) -> None:
+        def no_result(result) -> None:
+            raise OSError("disk full")
+
+        self.audit.record_result = no_result
+        executor = self._executor()
+        outcome = executor.execute("s1", "s1-1")
+
+        self.assertEqual((outcome.status, outcome.uncertain_step), ("uncertain", "export"))
+        self.assertEqual(self.steps.load_steps("s1-1")["export"].state, StepState.STARTED)
+        self.assertEqual(self._action().status, ActionStatus.APPROVED)
+        self.assertEqual(len(self._documents()), 1)  # the send did happen
+        self.assertEqual(executor.execute("s1", "s1-1").status, "uncertain")  # and is not sent again
+        self.assertEqual(len(self._documents()), 1)
+        self.assertEqual(self.calls, ["prepare"])
+
     def test_failed_step_marks_failed_without_its_text(self) -> None:
         self.notify_error = RuntimeError(f"could not notify {SECRET}")
         outcome = self._executor().execute("s1", "s1-1")

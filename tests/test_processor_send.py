@@ -8,6 +8,7 @@ from norev.processor.central import (
     CentralProcessor,
     ConnectorFailed,
     ExecutionAuditLog,
+    ResultNotRecorded,
     SendRefused,
     SendResult,
 )
@@ -205,10 +206,23 @@ class SendTest(unittest.TestCase):
                 raise OSError("disk full")
 
         audit = NoResults(self.timeline)
-        with self.assertRaises(OSError) as raised:
+        with self.assertLogs("norev.processor", "ERROR") as logs, self.assertRaises(ResultNotRecorded) as raised:
             self._processor(audit=audit).send(_approved(), "local_document", PAYLOAD)
         self.assertEqual(self.timeline, ["audit", "send"])  # attempt with no result: shown for reconciliation (#23)
-        self.assertIsNone(raised.exception.__context__)
+        self.assertIsNone(raised.exception.__cause__)
+        self.assertNotIn("disk full", str(raised.exception))
+        self._assert_no_secret(raised.exception, logs.output)
+
+    def test_result_not_recorded_after_a_failed_send_logs_the_send_error_type(self) -> None:
+        class NoResults(RecordingAuditLog):
+            def record_result(self, result: SendResult) -> None:
+                raise OSError("disk full")
+
+        connector = FakeConnector(self.timeline, error=RuntimeError(f"rejected {SECRET}"))
+        with self.assertLogs("norev.processor", "ERROR") as logs, self.assertRaises(ResultNotRecorded) as raised:
+            self._processor(audit=NoResults(self.timeline), connector=connector).send(_approved(), "local_document", PAYLOAD)
+        self.assertIn("send_error=RuntimeError", "\n".join(logs.output))
+        self._assert_no_secret(raised.exception, logs.output)
 
     def _assert_no_secret(self, exc: BaseException, log_lines: list[str]) -> None:
         text = "".join(traceback.format_exception(exc)) + "\n".join(log_lines)

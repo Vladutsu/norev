@@ -23,7 +23,7 @@ from typing import Any
 
 from norev.core.models import ActionStatus, Domain, ProposedAction, StaleRevision, StepRecord, StepState, WorkflowStep
 from norev.core.ports import ExecutionStore, SessionStore
-from norev.processor.central import CentralProcessor, ConnectorFailed
+from norev.processor.central import CentralProcessor, ConnectorFailed, ResultNotRecorded
 from norev.usecases.approve import domain_digest
 
 MAX_SAVE_ATTEMPTS = 5  # revision conflicts with other writers of the Session before giving up
@@ -89,6 +89,8 @@ class WorkflowExecutor:
                         result = self._processor.send(action, step.connector, payloads[step.name], step=step.name)
                     else:
                         result = self._local[step.name](copy.deepcopy(action))
+                except ResultNotRecorded:  # the send may have happened: left started, so uncertain
+                    return ExecutionOutcome(action_id, "uncertain", records, step.name)
                 except ConnectorFailed as exc:
                     error_type = type(exc.cause).__name__
                 except Exception as exc:  # any step error fails the step; its message may quote Session data

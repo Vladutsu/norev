@@ -6,8 +6,8 @@ from threading import RLock
 from typing import Any
 
 from norev.core.models import (
-    ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, Session, Speaker, SpeakerTurn, StaleRevision, StepRecord, Suggestion,
-    Transcript,
+    ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, SendResult, Session, Speaker, SpeakerTurn, StaleRevision,
+    StepRecord, Suggestion, Transcript,
 )
 from norev.core.models import check_decisions_kept
 from norev.core.speakers import merge_speakers
@@ -205,11 +205,20 @@ class InMemorySessionStore:
 
 
 class InMemoryAuditLog:
+    """AuditLog and ExecutionAuditLog."""
+
     def __init__(self) -> None:
         self.events: list[AuditEvent] = []
+        self.results: list[SendResult] = []
 
     def record(self, event: AuditEvent) -> None:
         self.events.append(copy.deepcopy(event))
+
+    def record_result(self, result: SendResult) -> None:
+        self.results.append(result)
+
+    def load_results(self) -> list[SendResult]:
+        return list(self.results)
 
 
 class FakeActionExtractor:

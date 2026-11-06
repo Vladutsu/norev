@@ -319,6 +319,17 @@ class AuditEvent:
         )
 
 
+@dataclass(frozen=True)
+class SendResult:
+    """What happened to one attempt; written after the Connector answers or raises."""
+
+    at: datetime
+    action_id: str
+    connector: str
+    ok: bool
+    error_type: str | None = None  # exception class name only, never its message
+
+
 # Workflow execution (#23): the state of each step, persisted by the ExecutionStore port
 class StepState(str, Enum):
     STARTED = "started"
@@ -328,6 +339,8 @@ class StepState(str, Enum):
 
 @dataclass(frozen=True)
 class StepRecord:
+    """The state of one Workflow step of an action (#23)."""
+
     step: str
     state: StepState
     result: dict[str, Any] | None = None  # what the step answered, e.g. the path of the document
