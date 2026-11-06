@@ -6,7 +6,7 @@ from LLM.AI_Model.client import LLMClient, build_llm_client
 from LLM.AI_Model.settings import DeepSeekSettings
 
 TRANSLATE_PROMPT = """
-Translate this part of a meeting transcript from {{SOURCE}} into English.
+Translate this part of a session transcript from {{SOURCE}} into English.
 
 The transcript comes from automatic speech recognition and has no speaker labels.
 - Translate the meaning faithfully, sentence by sentence. Do not summarise, skip, merge or add anything.
