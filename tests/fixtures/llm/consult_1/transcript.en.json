@@ -25,7 +25,7 @@
       "start": 6.193,
       "end": 14.152,
       "speaker_id": "S2",
-      "text": "Good day, Doctor. For about two weeks, I've had a headache almost every morning, and sometimes I feel dizzy when I get up from bed.",
+      "text": "Good day, Doctor. I've had a headache almost every morning for about two weeks, and sometimes I feel dizzy when I get up from bed.",
       "untranslated": false
     },
     {
@@ -53,7 +53,7 @@
       "start": 26.956,
       "end": 31.565,
       "speaker_id": "S2",
-      "text": "Alright. Let me tell you that I also have palpitations in the evening, especially after I drink coffee.",
+      "text": "Alright. Let me tell you I also have palpitations in the evening, especially after I drink coffee.",
       "untranslated": false
     },
     {
@@ -95,14 +95,14 @@
       "start": 59.597,
       "end": 61.022,
       "speaker_id": "S2",
-      "text": "And for how long do I take it?",
+      "text": "And for how long should I take it?",
       "untranslated": false
     },
     {
       "start": 61.455,
       "end": 69.457,
       "speaker_id": "S1",
-      "text": "For now, you'll continue. I want you to measure your blood pressure at home twice a day, in the morning and in the evening, and note the values in a notebook.",
+      "text": "For now, continue. I want you to measure your blood pressure at home twice a day, in the morning and in the evening, and note the values in a notebook.",
       "untranslated": false
     },
     {
