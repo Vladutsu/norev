@@ -1,0 +1,52 @@
+# Corporate Domain: work meetings, Proposed Actions are work items. Format: domains/README.md
+format = 1
+name = "corporate"
+label = "Corporate"
+
+[model]
+# Candidate only: the generic model (norev.sh default), not yet validated for this Domain (#25).
+gguf = "Qwen3-8B-Q4_K_M.gguf"
+context = 8192
+
+[prompts]
+domain_stage = "prompts/domain_stage.md"
+domain_stage_schema = "prompts/domain_stage.schema.json"
+
+[[roles]]
+name = "organizer"
+label = "Organizator"
+description = "The person who records the Session (the User)."
+
+[[roles]]
+name = "participant"
+label = "Participant"
+description = "A colleague, client or partner who takes part in the meeting."
+
+[[action_types]]
+name = "work_item"
+label = "Sarcină de lucru"
+description = "A piece of work someone committed to or was asked to do and accepted."
+
+# title, description, owner, due_date and transcript_excerpt are generic fields of every
+# Proposed Action; only what they do not cover is a Domain field.
+[[action_types.fields]]
+name = "deliverable"
+label = "Livrabil"
+type = "string"
+required = false
+description = "The concrete output of the work (a document, a report, a fix, an email), only if it was said."
+
+[[action_types.workflow]]
+name = "build_document"
+label = "Pregătește documentul"
+
+# shortcut: the local_document payload is the proposal for #18/#23; change it here once agreed.
+[[action_types.workflow]]
+name = "save_document"
+label = "Salvează documentul local"
+connector = "local_document"
+sends = ["title", "description", "owner", "due_date", "deliverable", "transcript_excerpt"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"

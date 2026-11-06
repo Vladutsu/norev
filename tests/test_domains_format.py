@@ -132,8 +132,8 @@ def check_domain(folder: Path) -> None:
 
 
 class DomainsFormatTest(unittest.TestCase):
-    def test_there_is_a_medical_domain(self):
-        self.assertIn("medical", [f.name for f in domain_folders()])
+    def test_there_are_corporate_and_medical_domains(self):
+        self.assertLessEqual({"corporate", "medical"}, {f.name for f in domain_folders()})
 
     def test_every_domain_follows_the_format(self):
         for folder in domain_folders():
