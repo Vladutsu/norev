@@ -1,6 +1,7 @@
 """Handwritten fakes for the ports in norev.core.ports, so tests run without a model or GPU."""
 import copy
-from datetime import datetime
+from datetime import date, datetime
+from typing import Any
 
 from norev.core.models import AuditEvent, ProposedAction, Session, Transcript
 
@@ -74,3 +75,15 @@ class InMemoryAuditLog:
 
     def record(self, event: AuditEvent) -> None:
         self.events.append(copy.deepcopy(event))
+
+
+class FakeActionExtractor:
+    """Returns a fixed raw extraction result and records every call as (transcript, session_date)."""
+
+    def __init__(self, result: dict[str, Any]) -> None:
+        self._result = result
+        self.calls: list[tuple[Transcript, date]] = []
+
+    def extract(self, transcript: Transcript, session_date: date) -> dict[str, Any]:
+        self.calls.append((transcript, session_date))
+        return copy.deepcopy(self._result)
