@@ -1,0 +1,3 @@
+# Dev data mounted at /data. One file per line: <sha256>  <size in bytes>  <path relative to /data>
+# Check: scripts/data.py verify   Fetch: NOREV_DATA_SOURCE=<folder or URL> scripts/data.py fetch
+# Synthetic Sessions only, never real patient audio. How to add a file: devenv/README.md
