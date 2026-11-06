@@ -8,10 +8,11 @@ Central Processor; this module only orders the stages and saves through the Sess
 import dataclasses
 from dataclasses import dataclass
 
-from norev.core.models import ActionStatus, Domain, ProposedAction, Segment, Session, Suggestion
+from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction, Segment, Session, Suggestion
 from norev.core.ports import ActionExtractor, LlmClient, SessionStore, Translator
 from norev.usecases.domain_stage import ask_domain
 from norev.usecases.extract import to_proposed_actions
+from norev.usecases.others_prompt import others_domain
 
 DEFAULT_DOMAIN = "corporate"
 DOMAINS = ("corporate", "medical", "others")
@@ -23,9 +24,6 @@ def select_domain(name: str | None = None) -> str:
         return DEFAULT_DOMAIN
     if name not in DOMAINS:
         raise ValueError(f"unknown Domain {name!r}; choose one of {', '.join(DOMAINS)}")
-    if name == "others":
-        # shortcut: Others needs the User's confirmed prompt; remove this check when #21 lands
-        raise ValueError("Domain 'others' needs a confirmed prompt from the User (#21), not available yet")
     return name
 
 
@@ -54,6 +52,7 @@ def run_session(
     llm: LlmClient,
     translate: bool = True,
     regenerate: bool = False,
+    others_prompt: OthersPrompt | None = None,
 ) -> SessionResult:
     """Analyse a Session transcribed by usecases.transcribe.transcribe_session and save the result for review.
 
@@ -65,6 +64,8 @@ def run_session(
     the Proposed actions are replaced, every decided one is kept unchanged. Changing the Domain is
     refused while an action waits for execution (approved or failed): its plan needs its own Domain.
     Without `regenerate`, another Domain or a decided action raises ValueError and changes nothing.
+    Domain "others" runs with the Session's confirmed prompt (#21), never one made up here; a newly
+    confirmed `others_prompt` replaces it only with `regenerate`, in the same write as the actions.
     A failing stage raises and leaves what was saved before it; nothing is ever executed here.
     """
     session = _session(session_id, store)
@@ -73,6 +74,13 @@ def run_session(
                          "changing it needs an explicit regeneration")
     if not session.transcript_ref:
         raise LookupError(f"Session {session_id!r} is not transcribed yet")
+    if others_prompt is not None and others_prompt != session.others_prompt and not regenerate:
+        raise ValueError(f"Session {session_id!r}: a new Others prompt needs an explicit regeneration")
+    if domain.name == "others":
+        prompt = others_prompt or session.others_prompt
+        if prompt is None:
+            raise ValueError(f"Session {session_id!r}: Domain 'others' needs a prompt confirmed by the User")
+        domain = others_domain(domain, prompt)
 
     transcript = store.load_transcript(session.transcript_ref)
     if not session.source_transcript_ref:  # first analysis: transcript_ref is still the spoken Transcript
@@ -101,7 +109,8 @@ def run_session(
     actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date)
     if regenerate:
         store.regenerate_actions(session_id, decided + actions, domain=domain.name,
-                                 expected_revision=snapshot.revision, suggestions=suggestions)
+                                 expected_revision=snapshot.revision, suggestions=suggestions,
+                                 others_prompt=others_prompt)
     else:
         store.save_actions(session_id, actions, expected_revision=snapshot.revision, suggestions=suggestions)
     return SessionResult(actions, suggestions, tuple(s for s in transcript.segments if s.untranslated))

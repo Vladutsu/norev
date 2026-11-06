@@ -82,7 +82,8 @@ SESSION=$(.venv/bin/python -m norev.session transcribe session.mp4 [--domain cor
 - `show`: the Proposed Actions waiting for review, Suggestions, and any untranslated turns.
 
 The Domain is `corporate` unless `--domain`/`NOREV_DOMAIN` says otherwise; an unknown name is an
-error. `others` needs a prompt confirmed by the User (#21) and is refused until then. Speaker ids
+error. `others` runs only with a prompt the User saw, edited and confirmed (#21); the CLI cannot show
+one, so it refuses `others`. Speaker ids
 (`S1`, `S2`, ...) only tell voices apart, they are not people: Roles and owners are not guessed from them.
 
 Nothing is written to `Outputs/` except `llama-server.log`. The old stages
@@ -104,7 +105,7 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 |---|---|---|
 | `NOREV_STORE_KEY_FILE` | required | key of the encrypted store (see Usage) |
 | `NOREV_STORE_PATH` | `%LOCALAPPDATA%/norev/norev.db` or `~/.local/share/norev/norev.db` | the encrypted store |
-| `NOREV_DOMAIN` | `corporate` | `corporate` or `medical`; `others` after #21 |
+| `NOREV_DOMAIN` | `corporate` | `corporate` or `medical` (`others` needs a confirmed prompt, not from the CLI) |
 | `NOREV_SPEAKERS` | `1` | `0`: skip diarization (one Transcript without Speakers) |
 | `NOREV_LANGUAGES` | empty (auto-detect) | Whisper language codes to choose from, e.g. `ro,en,de` |
 | `NOREV_TRANSLATE` | `auto` | `auto` translates non-English Sessions, `0` extracts from the original language |

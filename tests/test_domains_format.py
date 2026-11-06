@@ -107,6 +107,13 @@ def check_domain(folder: Path) -> None:
     assert schema_path.is_file() and schema_path != folder, "prompts.domain_stage_schema file missing"
 
     used = set(re.findall(r"\{\{(.*?)\}\}", prompt_path.read_text(encoding="utf-8")))  # as norev/usecases/domain_stage.py
+    if folder.name == "others":  # #21: the User's confirmed instructions go in one fixed slot
+        assert "user_instructions" in used, "the others prompt must have {{user_instructions}}"
+        used -= {"user_instructions"}
+        for key in ("instructions", "instructions_schema"):
+            assert (folder / prompts.get(key, "")).is_file() and prompts.get(key), f"prompts.{key} file missing"
+        generation = (folder / prompts["instructions"]).read_text(encoding="utf-8")
+        assert re.findall(r"\{\{(.*?)\}\}", generation) == ["context"], "instructions prompt must use {{context}} once, nothing else"
     assert used <= PLACEHOLDERS, f"unknown placeholders {sorted(used - PLACEHOLDERS)}"
     assert REQUIRED_PLACEHOLDERS <= used, f"prompt must use {sorted(REQUIRED_PLACEHOLDERS - used)}"
 

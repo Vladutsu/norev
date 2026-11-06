@@ -54,3 +54,10 @@ def load_domain(folder: Path) -> Domain:
         prompt_template=_read_inside(folder, prompts["domain_stage"]),
         answer_schema=json.loads(_read_inside(folder, prompts["domain_stage_schema"])),
     )
+
+
+def load_others(folder: Path) -> tuple[Domain, str, dict]:
+    """The Others Domain (#21), plus the prompt and schema that generate its instructions."""
+    domain = load_domain(folder)
+    prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
+    return domain, _read_inside(folder, prompts["instructions"]), json.loads(_read_inside(folder, prompts["instructions_schema"]))
