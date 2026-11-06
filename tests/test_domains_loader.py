@@ -39,6 +39,7 @@ class LoadMedicalDomainTest(unittest.TestCase):
         self.assertEqual(
             [(f.name, f.type, f.required) for f in visit.fields],
             [("reason", "string", True), ("visit_date", "date", True), ("visit_time", "time", True),
+             ("visit_end_time", "time", True),
              ("location", "string", False)],
         )
         self.assertEqual(visit.fields[0].label, "Motiv")
@@ -55,7 +56,8 @@ class LoadMedicalDomainTest(unittest.TestCase):
             [(s.name, s.connector, s.sends) for s in steps],
             [
                 ("build_invite", None, ()),
-                ("send_invite", "google_calendar", ("reason", "visit_date", "visit_time", "location")),
+                ("send_invite", "google_calendar",
+                 ("title", "reason", "visit_date", "visit_time", "visit_end_time", "location")),
                 ("save_result", None, ()),
             ],
         )

@@ -76,7 +76,8 @@ class SessionToLocalDocumentTest(unittest.TestCase):
 
     def test_medical_stops_at_review_until_google_calendar(self):
         complete = {"proposed_actions": [{"id": "s1-1", "action_type": "schedule_visit", "fields": {
-            "reason": "Report", "visit_date": "2026-11-13", "visit_time": "09:00", "location": "Clinic"}}]}
+            "reason": "Report", "visit_date": "2026-11-13", "visit_time": "09:00", "visit_end_time": "09:30",
+            "location": "Clinic"}}]}
         flow = Flow(MEDICAL, [TRANSLATION, complete])
         flow.run()
         revision = flow.store.load_actions_snapshot("s1").revision

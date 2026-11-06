@@ -1,16 +1,22 @@
-"""PayloadBuilder (core/ports, #18) for the `local_document` Connector (#23).
+"""PayloadBuilders (core/ports, #18) for the `local_document` (#23) and `google_calendar` (#44) Connectors.
 
 It makes, at preview time, the final payload of each `local_document` step: the exact document text
 and the path it will be written to, so the User approves both (ADR 0002). The folder is the app's,
 given when the builder is built, and the file name comes from the content: no option, Domain or
 model answer chooses the path. LocalDocumentConnector.send() checks the same rule again.
 """
-from datetime import date
+import os
+import re
+import uuid
+from collections.abc import Callable
+from datetime import date, datetime, time, timezone
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from norev.adapters.connectors.local_document import NAME, destination, export_dir_of, render
 from norev.core.models import Domain, ProposedAction, UnsupportedWorkflow, ValidationError
+from norev.core.ports import PayloadBuilder
 from norev.usecases.approve import domain_digest
 
 GENERIC_FIELDS = ("title", "description", "owner", "due_date", "transcript_excerpt")  # domains/README.md
@@ -59,3 +65,115 @@ class LocalDocumentPayloadBuilder:
             steps.append({"step": step.name, "connector": NAME, "payload": payload})
         return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
                 "action_type": action.action_type, "steps": steps}
+
+
+CALENDAR = "google_calendar"
+DEFAULT_TIME_ZONE = "Europe/Bucharest"
+_EMAIL = re.compile(r"[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+")
+
+
+def _zone_time(day: date, at: time, zone: ZoneInfo, field: str) -> str:
+    local = datetime.combine(day, at, tzinfo=zone)  # fold=0: in the repeated autumn hour, the first one
+    if local.astimezone(timezone.utc).astimezone(zone).replace(tzinfo=None) != local.replace(tzinfo=None):
+        raise ValidationError("nonexistent_time", field)  # skipped by the spring clock change
+    return local.isoformat()
+
+
+def _attendees(value: str | None) -> list[dict[str, str]]:
+    emails: list[str] = []
+    for part in (value or "").split(","):
+        email = part.strip()
+        if not email:
+            continue
+        if not _EMAIL.fullmatch(email):
+            raise ValidationError("invalid_email", "attendees")
+        if email.lower() not in {e.lower() for e in emails}:
+            emails.append(email)
+    return [{"email": e} for e in emails]
+
+
+class GoogleCalendarPayloadBuilder:
+    """For Workflows whose Connector steps are all `google_calendar` (#44); #45 sends the payload.
+
+    Each step's payload is the exact `events.insert` request: `{"calendar_id", "event"}`. From the
+    step's `sends`: `title` is the summary, the one `date` field the day, the two `time` fields the
+    start and end, `location` and `attendees` (emails the User typed, comma-separated) map to theirs;
+    `description` and any other text field go into the description. The time zone is explicit in
+    every dateTime (offset) and in `timeZone`. `event.id` is made here, so a retry of the approved
+    payload cannot create a second event. options must be `{}`.
+    """
+
+    def __init__(self, time_zone: str = DEFAULT_TIME_ZONE, *, calendar_id: str = "primary",
+                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex) -> None:
+        self.zone = ZoneInfo(time_zone)  # an unknown zone fails here, not at preview
+        self.calendar_id = calendar_id
+        self.new_id = new_id
+
+    @classmethod
+    def from_environment(cls) -> "GoogleCalendarPayloadBuilder":
+        return cls(os.environ.get("NOREV_TIMEZONE") or DEFAULT_TIME_ZONE)
+
+    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
+        action_type = domain.action_type(action.action_type)
+        if action_type is None:
+            raise ValidationError("unknown_action_type", "action_type")
+        if options:
+            raise ValidationError("unknown_options", "options")
+        connector_steps = [s for s in action_type.workflow.steps if s.connector]
+        for step in connector_steps:
+            if step.connector != CALENDAR:
+                raise UnsupportedWorkflow(f"no payload builder for Connector {step.connector!r}")
+        labels = {f.name: f.label for f in action_type.fields}
+        types = {f.name: f.type for f in action_type.fields}
+        steps = []
+        for step in connector_steps:
+            if set(step.sends) - set(types) - {"title", "description"}:
+                # owner, due_date, transcript_excerpt have no place in an event: refuse, never drop silently
+                raise UnsupportedWorkflow(f"step {step.name!r} sends fields an event cannot hold")
+            dates = [n for n in step.sends if types.get(n) == "date"]
+            times = [n for n in step.sends if types.get(n) == "time"]
+            if "title" not in step.sends or len(dates) != 1 or len(times) != 2:
+                # shortcut: one-off events only; recurring ones (medication_reminder) are out of scope for #44
+                raise UnsupportedWorkflow(f"step {step.name!r} is not a single event")
+            for name in dates + times:
+                if not _value(action, name):
+                    raise ValidationError("required", name)
+            day = date.fromisoformat(_value(action, dates[0]))
+            start, end = (time.fromisoformat(_value(action, n)) for n in times)
+            if end <= start:
+                raise ValidationError("end_before_start", times[1])
+            notes = [_value(action, "description")] if "description" in step.sends else []
+            notes += [f"{labels[n]}: {_value(action, n)}" for n in step.sends
+                      if types.get(n) == "string" and n not in ("location", "attendees") and _value(action, n)]
+            event: dict[str, Any] = {
+                "id": self.new_id(),
+                "summary": action.title,
+                "description": "\n".join(n for n in notes if n),
+                "start": {"dateTime": _zone_time(day, start, self.zone, times[0]), "timeZone": self.zone.key},
+                "end": {"dateTime": _zone_time(day, end, self.zone, times[1]), "timeZone": self.zone.key},
+            }
+            if "location" in step.sends and _value(action, "location"):
+                event["location"] = _value(action, "location")
+            attendees = _attendees(_value(action, "attendees")) if "attendees" in step.sends else []
+            if attendees:
+                event["attendees"] = attendees
+            steps.append({"step": step.name, "connector": CALENDAR,
+                          "payload": {"calendar_id": self.calendar_id, "event": event}})
+        return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
+                "action_type": action.action_type, "steps": steps}
+
+
+class ConnectorPayloadBuilder:
+    """Picks the builder for the Connector of an Action Type's Workflow; one Connector per Workflow."""
+
+    def __init__(self, builders: dict[str, PayloadBuilder]) -> None:
+        self.builders = builders
+
+    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
+        action_type = domain.action_type(action.action_type)
+        if action_type is None:
+            raise ValidationError("unknown_action_type", "action_type")
+        connectors = {s.connector for s in action_type.workflow.steps if s.connector}
+        if len(connectors) != 1 or next(iter(connectors)) not in self.builders:
+            raise UnsupportedWorkflow(f"no payload builder for Connectors {sorted(connectors)!r}")
+        return self.builders[connectors.pop()].build(action, domain, options)

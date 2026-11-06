@@ -54,6 +54,13 @@ required = true
 description = "Time of the visit, only if it was said."
 
 [[action_types.fields]]
+name = "visit_end_time"
+label = "Ora de sfârșit"
+type = "time"
+required = true
+description = "Time the visit ends, only if it was said or follows from a duration that was said."
+
+[[action_types.fields]]
 name = "location"
 label = "Locație"
 type = "string"
@@ -68,7 +75,7 @@ label = "Pregătește invitația"
 name = "send_invite"
 label = "Trimite în Google Calendar"
 connector = "google_calendar"
-sends = ["reason", "visit_date", "visit_time", "location"]
+sends = ["title", "reason", "visit_date", "visit_time", "visit_end_time", "location"]
 
 [[action_types.workflow]]
 name = "save_result"

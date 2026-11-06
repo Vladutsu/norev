@@ -135,6 +135,8 @@ The model's output is constrained to this schema. It must be:
   instead of making a value up. `date` fields have the pattern `^[0-9]{4}-[0-9]{2}-[0-9]{2}$`,
   `time` fields `^[0-9]{2}:[0-9]{2}$`.
 - A generic Proposed Action left out of the answer does not fit the Domain and is dropped.
+- A field whose schema is exactly `{"type": "null"}` is filled only by the User (e.g. attendee
+  emails, since a Speaker is not a Contact): the core keeps it null whatever the model answers.
 
 The answer is untrusted: the core validates it again against `domain.toml` before showing it.
 

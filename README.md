@@ -116,6 +116,7 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `LLM_SECOND_PASS` | `0` | `1`: second look for missed Proposed Actions (more found, but more wrong owners; ~3x slower extraction) |
 | `LLM_TEMPERATURE` | `0` | sampling temperature |
 | `NOREV_DATE` | today | Session date used to resolve relative dates |
+| `NOREV_TIMEZONE` | `Europe/Bucharest` | IANA time zone of Google Calendar events (explicit in every payload) |
 | `LLAMA_SERVER` | `~/Repositories/llama.cpp/build/bin/llama-server` | llama.cpp server binary |
 | `LLAMACPP_PORT` / `LLAMACPP_CTX` / `LLAMACPP_GPU_LAYERS` | `8080` / `4096` / `99` | server options (`LLAMACPP_CTX` is per slot) |
 | `WHISPER_MODEL` | `large-v3-turbo` | `small`, `medium`, `large-v3-turbo`, … |

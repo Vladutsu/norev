@@ -54,6 +54,7 @@ DOMAIN_ANSWER = {
                 "reason": "Blood tests: cholesterol, blood sugar, creatinine and ionogram",
                 "visit_date": None,
                 "visit_time": None,
+                "visit_end_time": None,
                 "location": "the lab next to the polyclinic",
             },
         },
@@ -169,6 +170,7 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
             "reason": "Blood tests: cholesterol, blood sugar, creatinine and ionogram",
             "visit_date": None,
             "visit_time": None,
+            "visit_end_time": None,
             "location": "the lab next to the polyclinic",
         })
         self.assertEqual(pill.action_type, "medication_reminder")

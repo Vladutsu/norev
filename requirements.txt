@@ -11,3 +11,6 @@ nvidia-cudnn-cu12==9.*
 
 # store (encrypted SessionStore, #26)
 cryptography==50.0.2
+
+# time zones for Google Calendar payloads (#44): zoneinfo has no database on Windows
+tzdata==2026.1
