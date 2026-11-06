@@ -84,6 +84,10 @@ class SessionStore(Protocol):
 
     def get_session(self, session_id: str) -> Session | None: ...
 
+    def list_sessions(self) -> list[Session]:
+        """Every stored Session, newest first (Recent Sessions, OPEN-QUESTIONS #8)."""
+        ...
+
     def save_transcript(self, session_id: str, transcript: Transcript) -> str: ...
 
     def load_transcript(self, transcript_ref: str) -> Transcript: ...
@@ -145,6 +149,16 @@ class SessionStore(Protocol):
 
 
 @runtime_checkable
+class ExecutionStore(Protocol):
+    """Step states of each action's Workflow (#23); must survive a restart, so an interrupted step
+    stays visible as uncertain. save_step replaces the record of that step only."""
+
+    def load_steps(self, action_id: str) -> dict[str, StepRecord]: ...
+
+    def save_step(self, action_id: str, record: StepRecord) -> None: ...
+
+
+@runtime_checkable
 class AuditLog(Protocol):
     def record(self, event: AuditEvent) -> None: ...
 
@@ -157,16 +171,6 @@ class ExecutionAuditLog(Protocol):
     def record(self, event: AuditEvent) -> None: ...
 
     def record_result(self, result: SendResult) -> None: ...
-
-
-@runtime_checkable
-class ExecutionStore(Protocol):
-    """Step states of each action's Workflow; must survive a restart. The last record saved for a
-    step replaces the earlier one."""
-
-    def load_steps(self, action_id: str) -> dict[str, StepRecord]: ...
-
-    def save_step(self, action_id: str, record: StepRecord) -> None: ...
 
 
 @runtime_checkable

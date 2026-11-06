@@ -66,5 +66,66 @@ class CheckedOwnerTest(unittest.TestCase):
             self.assertIn(checked_owner(owner, "I'll call him tomorrow.", TURNS), (owner, None))
 
 
+class VolunteerOwnerTest(unittest.TestCase):
+    def setUp(self):
+        self.turns = [
+            Segment(0, 1, "Please get an appointment next week.", "S1"),
+            Segment(1, 2, "I will take care of the appointment, I'll call tomorrow.", "S2"),
+            Segment(2, 3, "Elena, please prepare the documents.", "S1"),
+            Segment(3, 4, "Sure, I will prepare them today.", "S2"),
+        ]
+        self.action = {"title": "Book an appointment", "owner": "Requester",
+                       "transcript_excerpt": self.turns[0].text}
+
+    def check(self, action=None, turns=None):
+        from norev.adapters.llm.owner_check import _checked_action_owner
+        return _checked_action_owner(action or self.action, self.turns if turns is None else turns)
+
+    def test_explicit_volunteer_with_established_name_owns_action(self):
+        self.assertEqual(self.check(), "Elena")
+
+    def test_volunteer_excerpt_and_speaker_labels(self):
+        from dataclasses import replace
+        turns = [replace(t, text=f"[{t.speaker_id}] {t.text}") for t in self.turns]
+        self.assertEqual(self.check({**self.action, "owner": "S2",
+                                    "transcript_excerpt": self.turns[1].text}, turns), "Elena")
+
+    def test_unrelated_action_is_not_reassigned(self):
+        self.assertEqual(self.check({**self.action, "title": "Write a referral"}), "Requester")
+
+    def test_no_name_or_no_acceptance_leaves_owner_unchanged(self):
+        from dataclasses import replace
+        self.assertEqual(self.check(turns=self.turns[:2]), "Requester")
+        self.assertEqual(self.check(turns=self.turns[:3] + [replace(self.turns[3], text="No, ask someone else.")]), "Requester")
+
+    def test_ambiguous_names_or_speakers_are_not_used(self):
+        more = [Segment(4, 5, "Mara, please send the invoice.", "S1"),
+                Segment(5, 6, "Yes, I will send it.", "S2")]
+        self.assertEqual(self.check(turns=self.turns + more), "Requester")
+
+    def test_name_used_for_two_voices_is_ambiguous(self):
+        more = [Segment(4, 5, "Elena, please send the invoice.", "S1"),
+                Segment(5, 6, "Yes, I will send it.", "S3")]
+        self.assertEqual(self.check(turns=self.turns + more), "Requester")
+
+    def test_speaker_ids_are_not_person_names(self):
+        from dataclasses import replace
+        turns = [*self.turns[:2], replace(self.turns[2], text="S2, please prepare the documents."), self.turns[3]]
+        self.assertEqual(self.check(turns=turns), "Requester")
+
+    def test_repeated_excerpt_and_pronoun_only_handoff_are_inconclusive(self):
+        from dataclasses import replace
+        self.assertEqual(self.check(turns=self.turns + [self.turns[0]]), "Requester")
+        turns = [self.turns[0], replace(self.turns[1], text="I will take care of that."), *self.turns[2:]]
+        self.assertEqual(self.check(turns=turns), "Requester")
+
+    def test_different_object_or_negative_commitment_is_not_used(self):
+        from dataclasses import replace
+        for text in ("I will take care of the invoice.", "I will not take care of the appointment.",
+                     "Could I take care of the appointment?", "I will take care of the appointment if I have time."):
+            with self.subTest(text=text):
+                self.assertEqual(self.check(turns=[self.turns[0], replace(self.turns[1], text=text), *self.turns[2:]]), "Requester")
+
+
 if __name__ == "__main__":
     unittest.main()

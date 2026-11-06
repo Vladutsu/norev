@@ -15,9 +15,10 @@ from norev.processor.central import CentralProcessor
 from norev.processor.identity import LocalUser
 from norev.processor.payloads import LocalDocumentPayloadBuilder
 from norev.processor.workflow import WorkflowExecutor
-from norev.testing.fakes import FakeLlmClient, FixedClock, InMemoryExecutionStore
+from norev.testing.fakes import FakeLlmClient, FixedClock
 from norev.usecases.approve import approve_action, preview_action
 from test_processor_send import RecordingAuditLog
+from test_processor_workflow import InMemoryExecutionStore
 from test_usecases_session_flow import ANSWERS, CORPORATE, MEDICAL, OTHERS, TRANSLATION, Flow
 
 AT = datetime(2026, 11, 6, 12, tzinfo=timezone.utc)

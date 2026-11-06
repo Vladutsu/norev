@@ -7,6 +7,10 @@ the owner's name to another Speaker, the owner is wrong and becomes None (unknow
 a Speaker only by the Transcript: a greeting ("Good day, Mrs. Dumitrescu.") or a question by name
 ("Maria, what's new?") answered by the next Speaker; "Thank you, Mihai" ties nothing. A name tied to two
 Speakers is not used. No Speaker id ever becomes a name here (#24).
+
+An explicit "I will take care of the <object>" reply can establish a different owner
+when the object appears in both the action title and excerpt, and an addressed request
+elsewhere in the conversation unambiguously links the accepting voice to a name.
 """
 import re
 from collections.abc import Sequence
@@ -79,3 +83,65 @@ def checked_owner(owner: str | None, excerpt: str | None, turns: Sequence[Segmen
     if len(owners_speakers) != 1:
         return owner  # the Transcript does not tie the name to one Speaker: nothing to check against
     return None if owners_speakers.pop() != speaker else owner
+
+
+# A narrow, explicit handoff: the named volunteer takes care of the same object as
+# the Proposed Action. Do not infer an owner from a mere adjacent reply or pronoun.
+_TAKE_CARE = re.compile(r"^(?:Yes,?\s+|Sure,?\s+)?I(?: will|'ll) take care of (?:the |an? )?(\w{3,})\b", re.I)
+_ADDRESSED_REQUEST = re.compile(r"(?:^|[.!?]\s+)([A-Z][\w'-]+),\s+please\s+", re.UNICODE)
+_ACCEPTANCE = re.compile(r"^(?:Yes|Sure|Of course|Certainly)\b", re.I)
+_UNCERTAIN = re.compile(r"\b(?:if|unless|maybe|perhaps|not|can't|cannot|won't)\b|\?", re.I)
+
+
+def _turn_text(turn: Segment) -> str:
+    text = turn.text.strip()
+    prefix = f"[{turn.speaker_id}] "
+    return text[len(prefix):] if turn.speaker_id and text.startswith(prefix) else text
+
+
+def _checked_action_owner(action: dict, turns: Sequence[Segment]) -> str | None:
+    """Resolve an explicit named volunteer; otherwise retain the existing owner check."""
+    owner = action.get("owner")
+    excerpt = action.get("transcript_excerpt")
+    if not excerpt:
+        return owner
+    quoted = [i for i, t in enumerate(turns) if _plain(excerpt) in _plain(_turn_text(t))]
+    if len(quoted) != 1:
+        return checked_owner(owner, excerpt, turns)
+    index = quoted[0]
+    volunteers = []
+    for i in (index, index + 1):
+        if i >= len(turns) or not turns[i].speaker_id:
+            continue
+        text = _turn_text(turns[i])
+        match = _TAKE_CARE.match(text)
+        if not match or _UNCERTAIN.search(text):
+            continue
+        obj = match.group(1).lower()
+        if obj in {"this", "that", "everything", "anything", "something"}:
+            continue
+        word = rf"\b{re.escape(obj)}\b"
+        if not re.search(word, excerpt, re.I) or not re.search(word, action.get("title") or "", re.I):
+            continue
+        if i != index and turns[i].speaker_id == turns[index].speaker_id:
+            continue
+        volunteers.append(turns[i].speaker_id)
+    if len(set(volunteers)) != 1:
+        return checked_owner(owner, excerpt, turns)
+    volunteer = volunteers[0]
+    # Names must be explicitly addressed and the next, different voice must accept.
+    # Require a one-to-one mapping: multiple names/voices make this inconclusive.
+    identities: dict[str, set[str]] = {}
+    speaker_ids = {turn.speaker_id for turn in turns}
+    for request, reply in zip(turns, turns[1:]):
+        names = _ADDRESSED_REQUEST.findall(_turn_text(request))
+        response = _turn_text(reply)
+        if (len(names) != 1 or names[0] in speaker_ids
+                or not reply.speaker_id or reply.speaker_id == request.speaker_id
+                or not _ACCEPTANCE.match(response) or _UNCERTAIN.search(response)):
+            continue
+        identities.setdefault(names[0], set()).add(reply.speaker_id)
+    names = [name for name, speakers in identities.items() if volunteer in speakers]
+    if len(names) == 1 and identities[names[0]] == {volunteer}:
+        return names[0]
+    return checked_owner(owner, excerpt, turns)

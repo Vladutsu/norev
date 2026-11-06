@@ -74,6 +74,8 @@ def _value(action: ProposedAction, name: str) -> Any:
 
 
 class DemoBackend:
+    can_execute = False  # the demo reviews only; SessionBackend executes through the Central Processor (#43)
+
     def __init__(self, store: SessionStore, *, approved_by: str, clock: Clock | None = None,
                  domains_dir: Path = ROOT / "domains", monotonic=time.monotonic) -> None:
         self.store = store
@@ -181,6 +183,13 @@ class DemoBackend:
         session_id = self.start(mode, language, contact, others)["session_id"]
         return self.stop(session_id)
 
+    def import_file(self, mode: str, language: str, contact: str, others: dict[str, Any] | None = None) -> dict[str, str]:
+        return self.import_example(mode, language, contact, others)  # the demo has its examples, no file dialog
+
+    def progress(self, session_id: str) -> dict[str, Any]:
+        self._state(session_id)
+        return {"stage": "ready", "failed": None}  # stop() analysed it already
+
     # --- review
 
     def sessions(self) -> list[dict[str, Any]]:
@@ -198,8 +207,9 @@ class DemoBackend:
         return sorted(listed, key=lambda s: s["started_at"], reverse=True)
 
     def review(self, session_id: str) -> dict[str, Any]:
-        state = self._state(session_id)
         session = self.store.get_session(session_id)
+        if session is None:
+            raise LookupError("Session does not exist")
         domain = self.domain(session.domain)
         snapshot = self.store.load_actions_snapshot(session_id)
         transcript = self.store.load_transcript(session.transcript_ref)
@@ -209,12 +219,24 @@ class DemoBackend:
             "contact": session.contact_id or "",
             "started_at": session.started_at.isoformat(),
             "domain": {"name": domain.name, "label": domain.label},
-            "summary": state["summary"],
-            "speakers": [{"id": sid, "role": state["roles"].get(sid)} for sid in _speaker_ids(transcript)],
+            "summary": self._summary(session_id),
+            "speakers": self._speakers(session_id, transcript),
+            "untranslated": self._partial(session_id, transcript),
+            "can_execute": self.can_execute,
             "roles": [{"name": r.name, "label": r.label or r.name} for r in domain.roles],
             "actions": [self._action_view(a, domain) for a in snapshot.actions],
             "suggestions": [dataclasses.asdict(s) for s in self.store.load_suggestions(session_id)],
         }
+
+    def _summary(self, session_id: str) -> str:
+        return self._state(session_id)["summary"]
+
+    def _speakers(self, session_id: str, transcript: Transcript) -> list[dict[str, Any]]:
+        roles = self._state(session_id)["roles"]
+        return [{"id": sid, "role": roles.get(sid)} for sid in _speaker_ids(transcript)]
+
+    def _partial(self, session_id: str, transcript: Transcript) -> int:
+        return 0  # the demo Transcript is complete
 
     def _action_view(self, action: ProposedAction, domain: Domain) -> dict[str, Any]:
         action_type = domain.action_type(action.action_type)

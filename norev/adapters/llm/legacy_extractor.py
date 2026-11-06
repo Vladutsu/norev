@@ -7,7 +7,7 @@ from LLM.AI_Model.extractor import RealtimeActionExtractor
 from LLM.AI_Model.prompt import DeepSeekPromptBuilder
 from LLM.AI_Model.settings import DeepSeekSettings
 from norev.adapters.llm.excerpt_dates import corrected_due_date
-from norev.adapters.llm.owner_check import checked_owner
+from norev.adapters.llm.owner_check import _checked_action_owner
 from norev.core.models import Transcript
 from norev.core.ports import LlmClient
 
@@ -49,5 +49,5 @@ class LegacyActionExtractor:
             if isinstance(action, dict):
                 excerpt = action.get("transcript_excerpt")
                 action["due_date"] = corrected_due_date(action.get("due_date"), excerpt, session_date)
-                action["owner"] = checked_owner(action.get("owner"), excerpt, transcript.segments)
+                action["owner"] = _checked_action_owner(action, transcript.segments)
         return result

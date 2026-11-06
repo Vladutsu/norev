@@ -11,6 +11,7 @@ import threading
 import wave
 from collections.abc import Iterable, Iterator
 from pathlib import Path
+from typing import BinaryIO
 
 SAMPLE_RATE = 16000  # Whisper's working rate; one hour is about 115 MB
 SAMPLE_WIDTH = 2  # 16-bit PCM
@@ -27,12 +28,13 @@ class Recorder:
         seconds = recorder.record()  # blocks until recorder.stop() (from another thread) or Ctrl+C
 
     `source` replaces the device with any iterable of 16 kHz mono s16 PCM blocks (tests, fakes).
+    `wav_path` may also be a binary file object (io.BytesIO), so the audio never touches the disk.
     """
 
     def __init__(
-        self, wav_path: Path, device: str | None = None, source: Iterable[bytes] | None = None
+        self, wav_path: Path | BinaryIO, device: str | None = None, source: Iterable[bytes] | None = None
     ) -> None:
-        self.wav_path = Path(wav_path)
+        self.wav_path = wav_path if hasattr(wav_path, "write") else Path(wav_path)
         self._device = device
         self._source = source
         self._stop = threading.Event()
@@ -52,7 +54,7 @@ class Recorder:
                 close()
 
 
-def write_wav(blocks: Iterable[bytes], wav_path: Path, stop: threading.Event) -> float:
+def write_wav(blocks: Iterable[bytes], wav_path: Path | BinaryIO, stop: threading.Event) -> float:
     """Writes PCM blocks to a 16 kHz mono 16-bit WAV until `stop` is set, the blocks end or Ctrl+C.
     Returns the duration in seconds.
 
@@ -60,9 +62,11 @@ def write_wav(blocks: Iterable[bytes], wav_path: Path, stop: threading.Event) ->
     (e.g. Ctrl+C in Git Bash's mintty terminates the process instead of raising KeyboardInterrupt).
     """
     # shortcut: plain WAV on disk; ADR 0004 encrypts Session audio at rest once the SessionStore exists
-    wav_path.parent.mkdir(parents=True, exist_ok=True)
+    if not hasattr(wav_path, "write"):
+        wav_path.parent.mkdir(parents=True, exist_ok=True)
+        wav_path = str(wav_path)
     written = 0
-    with wave.open(str(wav_path), "wb") as wav:
+    with wave.open(wav_path, "wb") as wav:
         wav.setnchannels(CHANNELS)
         wav.setsampwidth(SAMPLE_WIDTH)
         wav.setframerate(SAMPLE_RATE)

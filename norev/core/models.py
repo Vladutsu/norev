@@ -330,6 +330,7 @@ class SendResult:
     error_type: str | None = None  # exception class name only, never its message
 
 
+# Workflow execution (#23): the state of each step, persisted by the ExecutionStore port
 class StepState(str, Enum):
     STARTED = "started"
     DONE = "done"

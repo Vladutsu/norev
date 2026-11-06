@@ -6,7 +6,7 @@ import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
 
 from norev.adapters.store.encrypted import (
@@ -34,7 +34,7 @@ from norev.core.models import (
     Transcript,
 )
 from norev.core.ports import AuditLog, ExecutionAuditLog, ExecutionStore, SessionStore
-from norev.testing.fakes import InMemoryAuditLog, InMemoryExecutionStore, InMemorySessionStore
+from norev.testing.fakes import InMemoryAuditLog, InMemorySessionStore
 
 SENTINEL = "SENTINEL-Ionescu-amlodipina-7f3a"
 AT = datetime(2026, 11, 6, 10, 24)
@@ -78,8 +78,8 @@ def a_done_step() -> StepRecord:
 
 
 class StoreContract:
-    """Same behaviour for every SessionStore + ExecutionAuditLog + ExecutionStore.
-    Subclasses set up self.store, self.audit and self.steps."""
+    """Same behaviour for every SessionStore + ExecutionStore + ExecutionAuditLog.
+    Subclasses set up self.store and self.audit."""
 
     def events(self) -> list[AuditEvent]:
         raise NotImplementedError
@@ -88,7 +88,6 @@ class StoreContract:
         self.assertIsInstance(self.store, SessionStore)
         self.assertIsInstance(self.audit, AuditLog)
         self.assertIsInstance(self.audit, ExecutionAuditLog)
-        self.assertIsInstance(self.steps, ExecutionStore)
 
     def test_session_round_trip_and_missing(self):
         self.store.save_session(a_session())
@@ -259,19 +258,38 @@ class StoreContract:
         self.store.save_speakers("s1", [Speaker("S1", "caregiver", role_confirmed=True)])  # a new User correction wins
         self.assertEqual(self.store.load_speakers("s1"), [Speaker("S1", "caregiver", True)])
 
+    def test_approval_time_and_approver_round_trip(self):
+        self.store.save_session(a_session())
+        action = approved_action()
+        action.approved_by, action.approved_at = "local:ana", datetime(2026, 11, 6, 10, 30)
+        self.store.save_actions("s1", [action], expected_revision=0)
+        self.assertEqual(self.store.load_actions("s1"), [action])
+
+    def test_list_sessions_newest_first(self):
+        self.assertEqual(self.store.list_sessions(), [])
+        older, newer = a_session("s1"), a_session("s2")
+        newer.started_at = datetime(2026, 11, 7, 9, 0)
+        self.store.save_session(older)
+        self.store.save_session(newer)
+        self.assertEqual([s.id for s in self.store.list_sessions()], ["s2", "s1"])
+
+    def test_workflow_steps_round_trip_per_step(self):
+        self.assertIsInstance(self.store, ExecutionStore)
+        self.assertEqual(self.store.load_steps("s1-1"), {})
+        self.store.save_step("s1-1", StepRecord("save_document", StepState.STARTED))
+        self.store.save_step("s1-1", StepRecord("build_document", StepState.DONE, result={"path": SENTINEL}))
+        self.store.save_step("s1-1", StepRecord("save_document", StepState.FAILED, error_type="OSError"))
+        self.assertEqual(self.store.load_steps("s1-1"), {
+            "build_document": StepRecord("build_document", StepState.DONE, result={"path": SENTINEL}),
+            "save_document": StepRecord("save_document", StepState.FAILED, error_type="OSError"),
+        })
+        self.assertEqual(self.store.load_steps("s1-2"), {})
+
     def test_audit_keeps_events_in_order(self):
         first, second = an_event(), AuditEvent(AT, "s1-2", "local_document", {"n": 2}, "user")
         self.audit.record(first)
         self.audit.record(second)
         self.assertEqual(self.events(), [first, second])
-
-    def test_who_approved_and_when_round_trip(self):
-        action = approved_action()
-        action.approved_by, action.approved_at = "local:ana", datetime(2026, 11, 6, 9, 30, tzinfo=timezone.utc)
-        self.store.save_session(a_session())
-        self.store.save_actions("s1", [action], expected_revision=0)
-        [loaded] = self.store.load_actions("s1")
-        self.assertEqual((loaded.approved_by, loaded.approved_at), ("local:ana", action.approved_at))
 
     def test_results_read_back_in_order(self):
         first = SendResult(AT, "s1-1", "local_document", ok=True)
@@ -281,31 +299,16 @@ class StoreContract:
         self.audit.record_result(second)
         self.assertEqual(self.audit.load_results(), [first, second])
 
-    def test_no_steps_for_an_unknown_action(self):
-        self.assertEqual(self.steps.load_steps("s1-9"), {})
-
-    def test_the_last_saved_state_of_a_step_replaces_the_earlier_one(self):
-        self.steps.save_step("s1-1", StepRecord("prepare", StepState.DONE))
-        self.steps.save_step("s1-1", StepRecord("export", StepState.STARTED))
-        self.steps.save_step("s1-1", a_done_step())
-        self.steps.save_step("s1-2", StepRecord("export", StepState.FAILED, error_type="OSError"))
-        self.assertEqual(self.steps.load_steps("s1-1"), {
-            "prepare": StepRecord("prepare", StepState.DONE),
-            "export": a_done_step(),
-        })
-        self.assertEqual(self.steps.load_steps("s1-2"), {"export": StepRecord("export", StepState.FAILED, error_type="OSError")})
-
     def test_loaded_steps_are_copies(self):
-        self.steps.save_step("s1-1", a_done_step())
-        self.steps.load_steps("s1-1")["export"].result["path"] = "changed"
-        self.assertEqual(self.steps.load_steps("s1-1"), {"export": a_done_step()})
+        self.store.save_step("s1-1", a_done_step())
+        self.store.load_steps("s1-1")["export"].result["path"] = "changed"
+        self.assertEqual(self.store.load_steps("s1-1"), {"export": a_done_step()})
 
 
 class InMemoryStoreContractTest(StoreContract, unittest.TestCase):
     def setUp(self):
         self.store = InMemorySessionStore()
         self.audit = InMemoryAuditLog()
-        self.steps = InMemoryExecutionStore()
 
     def events(self):
         return self.audit.events
@@ -324,7 +327,6 @@ class TempStoreCase(unittest.TestCase):
         self.db = self.data_dir / "norev.db"
         self.store = self.open()
         self.audit = self.store
-        self.steps = self.store
 
     def open(self) -> EncryptedStore:
         store = open_store(StoreSettings(path=self.db, key_file=self.key_file))
@@ -341,6 +343,35 @@ class EncryptedStoreContractTest(StoreContract, TempStoreCase):
 
 
 class EncryptedStoreTest(TempStoreCase):
+    def test_used_from_several_threads(self):
+        """pywebview calls the backend from its own threads; every write still lands, none is refused."""
+        import threading
+
+        self.store.save_session(a_session())
+        errors = []
+
+        def write(n):
+            try:
+                for i in range(20):
+                    self.store.save_step(f"a{n}", StepRecord(f"step{i}", StepState.DONE))
+                    self.store.get_session("s1")
+            except Exception as e:  # pragma: no cover - reported below
+                errors.append(e)
+
+        threads = [threading.Thread(target=write, args=(n,)) for n in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertEqual(errors, [])
+        self.assertEqual([len(self.store.load_steps(f"a{n}")) for n in range(4)], [20] * 4)
+
+    def test_steps_survive_a_restart_and_stay_encrypted(self):
+        self.store.save_step("s1-1", StepRecord("save_document", StepState.STARTED, result={"note": SENTINEL}))
+        self.store.close()
+        self.assertNotIn(SENTINEL.encode(), self.data_bytes())
+        self.assertEqual(self.open().load_steps("s1-1")["save_document"].state, StepState.STARTED)
+
     def fill(self) -> str:
         self.store.save_session(a_session())
         ref = self.store.save_transcript("s1", a_transcript())

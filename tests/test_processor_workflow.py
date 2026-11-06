@@ -31,7 +31,7 @@ from norev.processor.workflow import (
     StepState,
     WorkflowExecutor,
 )
-from norev.testing.fakes import FakeLlmClient, FixedClock, InMemoryExecutionStore, InMemorySessionStore
+from norev.testing.fakes import FakeLlmClient, FixedClock, InMemorySessionStore
 from norev.usecases.approve import approve_action, preview_action
 from test_processor_send import RecordingAuditLog
 
@@ -59,6 +59,17 @@ DOMAIN = Domain(
     prompt_template="",
     answer_schema={},
 )
+
+
+class InMemoryExecutionStore:
+    def __init__(self) -> None:
+        self.steps: dict[str, dict[str, StepRecord]] = {}
+
+    def load_steps(self, action_id: str) -> dict[str, StepRecord]:
+        return dict(self.steps.get(action_id, {}))
+
+    def save_step(self, action_id: str, record: StepRecord) -> None:
+        self.steps.setdefault(action_id, {})[record.step] = record
 
 
 class WorkflowTest(unittest.TestCase):

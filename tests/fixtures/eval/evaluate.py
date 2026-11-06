@@ -348,7 +348,7 @@ def _refresh_variance(settings) -> None:
     if not path.exists():
         return
     from norev.adapters.llm.excerpt_dates import corrected_due_date
-    from norev.adapters.llm.owner_check import checked_owner
+    from norev.adapters.llm.owner_check import _checked_action_owner
     data = _json(path)
     for variant, per_session in data["actions"].items():
         for name, runs in per_session.items():
@@ -357,7 +357,7 @@ def _refresh_variance(settings) -> None:
             for actions in runs:
                 for a in actions:
                     a["due_date"] = corrected_due_date(a.get("due_date"), a.get("transcript_excerpt"), session_date)
-                    a["owner"] = checked_owner(a.get("owner"), a.get("transcript_excerpt"), turns)
+                    a["owner"] = _checked_action_owner(a, turns)
     _write(path, data)
 
 
