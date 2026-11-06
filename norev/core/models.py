@@ -265,7 +265,8 @@ class Session:
     domain: str
     contact_id: str | None = None
     audio_ref: str | None = None
-    transcript_ref: str | None = None
+    transcript_ref: str | None = None  # the Transcript extraction runs on (English)
+    source_transcript_ref: str | None = None  # the Transcript in the spoken language, when it was translated
 
 
 @dataclass(frozen=True)

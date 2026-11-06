@@ -114,6 +114,21 @@ def apply_answer(
     return list(typed.values()), suggestions
 
 
+def ask_domain(
+    domain: Domain, llm: LlmClient, transcript: Transcript, actions: list[ProposedAction], session_date: date
+) -> tuple[list[ProposedAction], list[Suggestion]]:
+    """One Domain stage call, validated; saves nothing. A non-JSON or non-object answer raises ValueError."""
+    prompt = build_prompt(domain, transcript, actions, session_date)
+    raw = llm.generate_json(prompt, model=domain.model, json_schema=domain.answer_schema)
+    try:
+        answer = json.loads(raw)
+    except json.JSONDecodeError:  # not re-raised: the error object would carry the raw answer (patient data)
+        answer = None
+    if not isinstance(answer, dict):
+        raise ValueError("Domain stage answer is not a JSON object")
+    return apply_answer(domain, actions, answer)
+
+
 def run_domain_stage(
     session_id: str, store: SessionStore, domain: Domain, llm: LlmClient, transcript: Transcript
 ) -> tuple[list[ProposedAction], list[Suggestion]]:
@@ -134,15 +149,7 @@ def run_domain_stage(
         raise ValueError(f"Session {session_id!r} already went through the Domain stage; run the generic extraction again first")
     started = session.started_at
     session_date = (started.astimezone() if started.tzinfo else started).date()  # local day of the Session
-    prompt = build_prompt(domain, transcript, actions, session_date)
-    raw = llm.generate_json(prompt, model=domain.model, json_schema=domain.answer_schema)
-    try:
-        answer = json.loads(raw)
-    except json.JSONDecodeError:  # not re-raised: the error object would carry the raw answer (patient data)
-        answer = None
-    if not isinstance(answer, dict):
-        raise ValueError("Domain stage answer is not a JSON object")
-    typed, suggestions = apply_answer(domain, actions, answer)
+    typed, suggestions = ask_domain(domain, llm, transcript, actions, session_date)
     # Actions and Suggestions commit together, or neither does if a User decision won.
     store.save_actions(session_id, typed, expected_revision=snapshot.revision, suggestions=suggestions)
     return typed, suggestions
