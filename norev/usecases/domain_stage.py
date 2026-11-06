@@ -7,10 +7,11 @@ model's answer is untrusted: it is validated here against the Domain, never deci
 import dataclasses
 import json
 import re
+from collections.abc import Sequence
 from datetime import date
 from typing import Any
 
-from norev.core.models import ActionStatus, Domain, ProposedAction, Suggestion, Transcript
+from norev.core.models import ActionStatus, Domain, ProposedAction, Speaker, Suggestion, Transcript
 from norev.core.ports import LlmClient, SessionStore
 
 _PLACEHOLDER = re.compile(r"\{\{(.*?)\}\}")
@@ -28,8 +29,12 @@ def _action_types_text(domain: Domain) -> str:
     return "\n".join(lines)
 
 
-def build_prompt(domain: Domain, transcript: Transcript, actions: list[ProposedAction], session_date: date) -> str:
-    """Fill the Domain stage prompt; any `{{...}}` other than the five known placeholders is a ValueError."""
+def build_prompt(
+    domain: Domain, transcript: Transcript, actions: list[ProposedAction], session_date: date,
+    speakers: Sequence[Speaker] = (),
+) -> str:
+    """Fill the Domain stage prompt; any `{{...}}` other than the six known placeholders is a ValueError."""
+    role_names = {r.name for r in domain.roles}
     values = {
         # One line per segment: newlines inside the text could forge Speaker lines or sections
         "transcript": "\n".join(f"[{s.speaker_id or '?'}] {' '.join(s.text.split())}" for s in transcript.segments),
@@ -50,6 +55,9 @@ def build_prompt(domain: Domain, transcript: Transcript, actions: list[ProposedA
         "session_date": session_date.isoformat(),
         "roles": "\n".join(f"{r.name}: {r.description}" for r in domain.roles),
         "action_types": _action_types_text(domain),
+        # a Role kept from before a Domain change is not one of this Domain's: unknown here
+        "speaker_roles": "\n".join(f"{s.id}: {s.role if s.role in role_names else 'unknown'}" for s in speakers)
+        or "(no speakers)",
     }
     # Checked on the template and replaced in one pass, so placeholder text inside the Transcript
     # is neither replaced nor rejected.
@@ -94,8 +102,10 @@ def apply_answer(
     """Validate the model's answer against the Domain; return the typed Proposed Actions and the Suggestions.
 
     Generic actions the answer leaves out are dropped. Items with an unknown id or Action Type are
-    skipped; for a repeated id the first valid item wins.
+    skipped; for a repeated id the first valid item wins. The owner is one of the Domain's Roles or
+    None (#60): never a Speaker id or a person's name, whatever the generic stage or the model said.
     """
+    roles = {r.name for r in domain.roles}
     by_id = {a.id: a for a in actions}
     typed: dict[str, ProposedAction] = {}
     items = answer.get("proposed_actions")
@@ -114,6 +124,7 @@ def apply_answer(
         typed[action_id] = dataclasses.replace(
             by_id[action_id],
             action_type=action_type.name,
+            owner=item["owner"] if isinstance(item.get("owner"), str) and item["owner"] in roles else None,
             prepared_payload=None,
             fields={f.name: None if f.name in user_only else _field_value(f.type, raw_fields.get(f.name))
                     for f in action_type.fields},
@@ -128,10 +139,11 @@ def apply_answer(
 
 
 def ask_domain(
-    domain: Domain, llm: LlmClient, transcript: Transcript, actions: list[ProposedAction], session_date: date
+    domain: Domain, llm: LlmClient, transcript: Transcript, actions: list[ProposedAction], session_date: date,
+    speakers: Sequence[Speaker] = (),
 ) -> tuple[list[ProposedAction], list[Suggestion]]:
     """One Domain stage call, validated; saves nothing. A non-JSON or non-object answer raises ValueError."""
-    prompt = build_prompt(domain, transcript, actions, session_date)
+    prompt = build_prompt(domain, transcript, actions, session_date, speakers)
     raw = llm.generate_json(prompt, model=domain.model, json_schema=domain.answer_schema)
     try:
         answer = json.loads(raw)
@@ -162,7 +174,7 @@ def run_domain_stage(
         raise ValueError(f"Session {session_id!r} already went through the Domain stage; run the generic extraction again first")
     started = session.started_at
     session_date = (started.astimezone() if started.tzinfo else started).date()  # local day of the Session
-    typed, suggestions = ask_domain(domain, llm, transcript, actions, session_date)
+    typed, suggestions = ask_domain(domain, llm, transcript, actions, session_date, store.load_speakers(session_id))
     # Actions and Suggestions commit together, or neither does if a User decision won.
     store.save_actions(session_id, typed, expected_revision=snapshot.revision, suggestions=suggestions)
     return typed, suggestions

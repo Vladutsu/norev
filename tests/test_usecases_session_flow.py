@@ -10,11 +10,12 @@ from norev.adapters.domains.loader import load_domain
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.store.encrypted import KEY_BYTES, EncryptedStore
 from norev.core.models import (
-    ActionStatus, Domain, OthersPrompt, Segment, Session, SpeakerTurn, Transcript,
+    ActionStatus, Domain, OthersPrompt, Segment, Session, Speaker, SpeakerTurn, Transcript,
 )
 from norev.testing.fakes import FakeActionExtractor, FakeDiarizer, FakeLlmClient, FakeTranscriber, InMemorySessionStore
 from norev.usecases.others_prompt import confirm
 from norev.usecases.session_flow import run_session, select_domain
+from norev.usecases.speaker_roles import set_speaker_role
 from norev.usecases.transcribe import transcribe_session
 
 DOMAINS = Path(__file__).resolve().parents[1] / "domains"
@@ -35,6 +36,8 @@ SPOKEN = Transcript(
 # Diarizer labels; attach_speakers (#24) renames them S1, S2 in order of first appearance
 TURNS = [SpeakerTurn(0.0, 2.1, "spk_7"), SpeakerTurn(2.1, 3.5, "spk_3")]
 TRANSLATION = {"turns": [{"id": "1", "text": "I will send the report on Friday."}, {"id": "2", "text": "Fine, thanks."}]}
+# Roles call (#60) before the Domain stage: both unknown, so owners stay empty
+ROLES = {"speakers": [{"id": "S1", "role": None}, {"id": "S2", "role": None}]}
 GENERIC = {"session_summary": "", "proposed_actions": [
     {"title": "Send the report", "description": "Send the report on Friday.", "owner": None,
      "due_date": None, "transcript_excerpt": "I will send the report on Friday."},
@@ -86,7 +89,7 @@ class RunSessionTest(unittest.TestCase):
     def test_each_domain_end_to_end(self):
         for domain in (CORPORATE, MEDICAL, OTHERS):
             with self.subTest(domain=domain.name):
-                flow = Flow(domain, [TRANSLATION, ANSWERS[domain.name]])
+                flow = Flow(domain, [TRANSLATION, ROLES, ANSWERS[domain.name]])
                 result = flow.run()
 
                 self.assertEqual([a.action_type for a in result.actions], [domain.action_types[0].name])
@@ -102,7 +105,7 @@ class RunSessionTest(unittest.TestCase):
                 self.assertIn("[S2] Fine, thanks.", domain_prompt)
 
     def test_both_transcripts_are_saved_in_the_store(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"]])
         flow.run()
         session = flow.store.get_session("s1")
         self.assertEqual(flow.store.load_transcript(session.transcript_ref).language, "en")
@@ -112,18 +115,18 @@ class RunSessionTest(unittest.TestCase):
 
     def test_english_session_is_not_translated(self):
         english = Transcript((Segment(0.0, 2.0, "I will send the report."),), language="en")
-        flow = Flow(CORPORATE, [ANSWERS["corporate"]], spoken=english)
+        flow = Flow(CORPORATE, [ROLES, ANSWERS["corporate"]], spoken=english)
         flow.run()
-        self.assertEqual(len(flow.llm.calls), 1)  # only the Domain stage
+        self.assertEqual(len(flow.llm.calls), 2)  # only Roles and the Domain stage
         session = flow.store.get_session("s1")
         self.assertEqual(session.transcript_ref, session.source_transcript_ref)
 
     def test_translation_can_be_turned_off(self):
-        flow = Flow(CORPORATE, [ANSWERS["corporate"]])
+        flow = Flow(CORPORATE, [ROLES, ANSWERS["corporate"]])
         run_session("s1", store=flow.store, translator=TurnTranslator(flow.llm),
                     extractor=flow.extractor, domain=CORPORATE, llm=flow.llm, translate=False)
         self.assertEqual(flow.extractor.calls[0][0].language, "ro")
-        self.assertEqual(len(flow.llm.calls), 1)
+        self.assertEqual(len(flow.llm.calls), 2)
 
     def test_not_transcribed_session_is_refused(self):
         store = InMemorySessionStore()
@@ -136,7 +139,7 @@ class RunSessionTest(unittest.TestCase):
 
     def test_untranslated_turn_makes_the_result_partial(self):
         only_first = {"turns": [TRANSLATION["turns"][0]]}
-        flow = Flow(CORPORATE, [only_first, {"turns": []}, ANSWERS["corporate"]])  # the retry also misses it
+        flow = Flow(CORPORATE, [only_first, {"turns": []}, ROLES, ANSWERS["corporate"]])  # the retry also misses it
         result = flow.run()
         self.assertTrue(result.partial)
         self.assertEqual([(s.speaker_id, s.text) for s in result.untranslated], [("S2", "Bine, mulțumesc.")])
@@ -149,13 +152,13 @@ class RunSessionTest(unittest.TestCase):
         self.assertEqual(flow.llm.calls, [])
 
     def test_failed_domain_stage_saves_nothing_and_executes_nothing(self):
-        flow = Flow(CORPORATE, [TRANSLATION, "not json"])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, "not json"])
         with self.assertRaises(ValueError):
             flow.run()
         self.assertEqual(flow.store.load_actions("s1"), [])
 
     def test_failed_rerun_keeps_the_previous_typed_actions(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"], "not json"])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"], ROLES, "not json"])
         flow.run()
         with self.assertRaises(ValueError):
             flow.run()
@@ -164,14 +167,14 @@ class RunSessionTest(unittest.TestCase):
                          [("work_item", {"deliverable": "report"}, ActionStatus.PROPOSED)])
 
     def test_run_again_reuses_the_transcript_and_regenerates(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"], ANSWERS["corporate"]])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"], ROLES, ANSWERS["corporate"]])
         flow.run()
         result = flow.run()  # one translation answer only: a second translation would fail
         self.assertEqual([a.action_type for a in result.actions], ["work_item"])
         self.assertEqual(len(flow.extractor.calls), 2)
 
     def test_decided_actions_are_never_overwritten(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"], ANSWERS["corporate"]])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"], ROLES, ANSWERS["corporate"]])
         flow.run()
         snapshot = flow.store.load_actions_snapshot("s1")
         action = snapshot.actions[0]
@@ -199,10 +202,10 @@ class RegenerationTest(unittest.TestCase):
         return json.dumps(ANSWERS[name]).replace('"s1-1"', f'"s1-r{revision}-1"')
 
     def test_regeneration_keeps_the_decided_action_and_replaces_the_proposed_ones(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"]])
         flow.run()
         self._decide(flow, lambda a: a.reject())
-        flow.llm = FakeLlmClient([self._answer_for_next_ids(flow, "corporate")])  # no translation: reused
+        flow.llm = FakeLlmClient([json.dumps(ROLES), self._answer_for_next_ids(flow, "corporate")])  # no translation: reused
 
         result = self._regenerate(flow, CORPORATE)
 
@@ -212,10 +215,10 @@ class RegenerationTest(unittest.TestCase):
                          [("s1-1", ActionStatus.REJECTED), (new_id, ActionStatus.PROPOSED)])
 
     def test_regeneration_can_change_the_domain(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"]])
         flow.run()
         self._decide(flow, lambda a: a.reject())
-        flow.llm = FakeLlmClient([self._answer_for_next_ids(flow, "medical")])
+        flow.llm = FakeLlmClient([json.dumps(ROLES), self._answer_for_next_ids(flow, "medical")])
 
         result = self._regenerate(flow, MEDICAL)
 
@@ -224,7 +227,7 @@ class RegenerationTest(unittest.TestCase):
         self.assertEqual(flow.store.load_actions("s1")[0].action_type, "work_item")  # the decision, unchanged
 
     def test_domain_change_waits_for_approved_actions(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"]])
         flow.run()
         self._decide(flow, lambda a: a.approve({"steps": []}))
         with self.assertRaisesRegex(ValueError, "before changing the Domain"):
@@ -233,13 +236,80 @@ class RegenerationTest(unittest.TestCase):
         self.assertEqual(len(flow.extractor.calls), 1)  # refused before any model call
 
 
+def roles(**by_speaker):
+    return {"speakers": [{"id": sid, "role": role} for sid, role in by_speaker.items()]}
+
+
+def medical_answer(owner):
+    return {"proposed_actions": [{"id": "s1-1", "action_type": "schedule_visit", "owner": owner,
+                                  "fields": {"reason": "Report"}}]}
+
+
+class SpeakerRolesInFlowTest(unittest.TestCase):
+    """#60: Roles are proposed after extraction, before the Domain stage, and decide the owner."""
+
+    def test_roles_are_proposed_before_the_domain_stage_with_the_domain_model(self):
+        flow = Flow(MEDICAL, [TRANSLATION, roles(S1="doctor", S2="patient"), medical_answer("patient")])
+        result = flow.run()
+
+        roles_call, domain_call = flow.llm.calls[-2:]
+        self.assertEqual(roles_call[1], MEDICAL.model)
+        self.assertIn("speakers", roles_call[2]["properties"])  # the Roles answer schema
+        self.assertIn("S1: doctor\nS2: patient", domain_call[0])
+        self.assertEqual(flow.store.load_speakers("s1"), [Speaker("S1", "doctor"), Speaker("S2", "patient")])
+        self.assertEqual(result.actions[0].owner, "patient")
+
+    def test_a_confirmed_role_is_never_overwritten(self):
+        flow = Flow(MEDICAL, [TRANSLATION, roles(S2="doctor"), medical_answer(None)])
+        set_speaker_role("s1", flow.store, MEDICAL, "S1", "caregiver")
+        flow.run()
+
+        roles_schema = flow.llm.calls[-2][2]
+        self.assertEqual(roles_schema["properties"]["speakers"]["items"]["properties"]["id"]["enum"], ["S2"])
+        self.assertEqual(flow.store.load_speakers("s1"),
+                         [Speaker("S1", "caregiver", role_confirmed=True), Speaker("S2", "doctor")])
+        self.assertIn("S1: caregiver\nS2: doctor", flow.llm.calls[-1][0])
+
+    def test_an_invalid_roles_answer_leaves_them_unknown_and_the_analysis_goes_on(self):
+        for bad in ("not json", roles(S1="Ion Popescu", S2="manager")):
+            with self.subTest(bad=bad):
+                flow = Flow(MEDICAL, [TRANSLATION, bad, medical_answer("doctor")])
+                result = flow.run()
+                self.assertEqual(flow.store.load_speakers("s1"), [Speaker("S1"), Speaker("S2")])
+                self.assertIn("S1: unknown\nS2: unknown", flow.llm.calls[-1][0])
+                self.assertEqual([a.action_type for a in result.actions], ["schedule_visit"])
+
+    def test_owner_is_never_a_speaker_id(self):
+        flow = Flow(MEDICAL, [TRANSLATION, ROLES, medical_answer("S1")])
+        self.assertIsNone(flow.run().actions[0].owner)
+
+    def test_regeneration_after_a_role_correction_keeps_the_decided_actions(self):
+        flow = Flow(MEDICAL, [TRANSLATION, roles(S1="patient", S2="doctor"), medical_answer("patient")])
+        flow.run()
+        snapshot = flow.store.load_actions_snapshot("s1")
+        snapshot.actions[0].reject()
+        flow.store.save_actions("s1", list(snapshot.actions), expected_revision=snapshot.revision)
+        set_speaker_role("s1", flow.store, MEDICAL, "S1", "doctor")
+        revision = flow.store.load_actions_snapshot("s1").revision
+        regenerated = json.dumps(medical_answer("doctor")).replace('"s1-1"', f'"s1-r{revision}-1"')
+        flow.llm = FakeLlmClient([json.dumps(roles(S2="patient")), regenerated])
+
+        run_session("s1", store=flow.store, translator=TurnTranslator(flow.llm), extractor=flow.extractor,
+                    domain=MEDICAL, llm=flow.llm, regenerate=True)
+
+        self.assertIn("S1: doctor\nS2: patient", flow.llm.calls[-1][0])
+        self.assertEqual([(a.id, a.status, a.owner) for a in flow.store.load_actions("s1")],
+                         [("s1-1", ActionStatus.REJECTED, "patient"),
+                          (f"s1-r{revision}-1", ActionStatus.PROPOSED, "doctor")])
+
+
 class EncryptedStoreFlowTest(unittest.TestCase):
     def test_flow_runs_on_the_encrypted_store_with_no_plaintext_on_disk(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "norev.db"
             store = EncryptedStore(path, os.urandom(KEY_BYTES))
             try:
-                flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]], store=store)
+                flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"]], store=store)
                 result = flow.run()
                 self.assertEqual([a.action_type for a in result.actions], ["work_item"])
                 self.assertIsNotNone(flow.store.get_session("s1").source_transcript_ref)

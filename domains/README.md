@@ -106,6 +106,7 @@ Plain text. The core replaces these placeholders before calling the model:
 | `{{proposed_actions}}` | the generic Proposed Actions as a JSON list (`id`, `title`, `description`, `owner`, `due_date`, `transcript_excerpt`) | required |
 | `{{session_date}}` | the Session date, YYYY-MM-DD | optional |
 | `{{roles}}` | `name: description` of every Role | optional |
+| `{{speaker_roles}}` | `S1: <Role name or unknown>`, one line per Speaker; proposed before this stage (#60), a Role the User confirmed is kept | optional |
 | `{{action_types}}` | every Action Type with its description and fields (name, type, description) | optional |
 | `{{user_instructions}}` | `others` only (#21): the instructions the User confirmed, filled before the others; exactly once | required in `others` |
 
@@ -121,7 +122,7 @@ The model's output is constrained to this schema. It must be:
 ```json
 {
   "proposed_actions": [
-    {"id": "<id of the generic Proposed Action>", "action_type": "<Action Type name>", "fields": {"<field>": "<value or null>"}}
+    {"id": "<id of the generic Proposed Action>", "action_type": "<Action Type name>", "owner": "<Role name or null>", "fields": {"<field>": "<value or null>"}}
   ],
   "suggestions": [
     {"text": "...", "transcript_excerpt": "..."}
@@ -135,6 +136,8 @@ The model's output is constrained to this schema. It must be:
   `additionalProperties: false`. Every field allows `null`, so the model can say "not said"
   instead of making a value up. `date` fields have the pattern `^[0-9]{4}-[0-9]{2}-[0-9]{2}$`,
   `time` fields `^[0-9]{2}:[0-9]{2}$`.
+- Every variant has a required `owner`: `anyOf` a string `enum` of every Role name and `null`. It
+  replaces the generic owner, so an owner is a Role or empty, never a Speaker id or a name (#60).
 - A generic Proposed Action left out of the answer does not fit the Domain and is dropped.
 - A field whose schema is exactly `{"type": "null"}` is filled only by the User (e.g. attendee
   emails, since a Speaker is not a Contact): the core keeps it null whatever the model answers.

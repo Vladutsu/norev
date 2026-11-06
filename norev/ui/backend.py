@@ -298,6 +298,9 @@ class DemoBackend:
         self._sessions.pop(session_id, None)
         return {"deleted": session_id}
 
+    def regenerate(self, session_id: str) -> dict[str, Any]:
+        raise ModeUnavailable("regenerate")  # the demo has no model to analyse again
+
     def set_role(self, session_id: str, speaker_id: str, role: str) -> dict[str, Any]:
         state = self._state(session_id)
         domain = self.domain(self.store.get_session(session_id).domain)
