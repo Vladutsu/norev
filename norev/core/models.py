@@ -37,6 +37,7 @@ class Role:
 
     name: str
     description: str = ""
+    label: str = ""
 
 
 @dataclass(frozen=True)
@@ -88,10 +89,13 @@ class Transcript:
 
 @dataclass(frozen=True)
 class WorkflowStep:
-    """One step of a Workflow; `connector` names the Connector it uses, if any."""
+    """One step of a Workflow; `connector` names the Connector it uses, if any, and `sends` the
+    payload fields that step sends through the Central Processor (domains/README.md)."""
 
     name: str
     connector: str | None = None
+    sends: tuple[str, ...] = ()
+    label: str = ""
 
 
 @dataclass(frozen=True)
@@ -99,13 +103,53 @@ class Workflow:
     steps: tuple[WorkflowStep, ...]
 
 
+FIELD_TYPES = ("string", "date", "time")  # date: YYYY-MM-DD, time: HH:MM 24-hour
+
+
+@dataclass(frozen=True)
+class DomainField:
+    """A Domain field of an Action Type; a required field left empty blocks approval (OPEN-QUESTIONS #6)."""
+
+    name: str
+    type: str
+    required: bool
+    label: str = ""
+    description: str = ""
+
+    def __post_init__(self) -> None:
+        if self.type not in FIELD_TYPES:
+            raise ValueError(f"unknown field type {self.type!r}")
+
+
 @dataclass(frozen=True)
 class ActionType:
     """A kind of action a Domain allows to be proposed, with its fields and its Workflow (ADR 0005)."""
 
     name: str
-    fields: tuple[str, ...]
+    fields: tuple[DomainField, ...]
     workflow: Workflow
+    label: str = ""
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class Domain:
+    """An industry, loaded from domains/<name>/ (format: domains/README.md). The core never reads the folder."""
+
+    name: str
+    label: str
+    model: str  # GGUF name or path, loaded for the Domain stage
+    context: int
+    roles: tuple[Role, ...]
+    action_types: tuple[ActionType, ...]
+    prompt_template: str  # with the {{...}} placeholders of domains/README.md
+    answer_schema: dict[str, Any]  # JSON schema the Domain stage answer is constrained to
+
+    def action_type(self, name: str) -> ActionType | None:
+        return next((t for t in self.action_types if t.name == name), None)
+
+    def __repr__(self) -> str:
+        return f"Domain({self.name}, action_types={[t.name for t in self.action_types]})"
 
 
 @dataclass

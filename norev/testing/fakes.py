@@ -3,7 +3,7 @@ import copy
 from datetime import date, datetime
 from typing import Any
 
-from norev.core.models import AuditEvent, ProposedAction, Session, Transcript
+from norev.core.models import AuditEvent, ProposedAction, Session, Suggestion, Transcript
 
 
 class FakeLlmClient:
@@ -45,6 +45,7 @@ class InMemorySessionStore:
         self._sessions: dict[str, Session] = {}
         self._transcripts: dict[str, Transcript] = {}
         self._actions: dict[str, list[ProposedAction]] = {}
+        self._suggestions: dict[str, list[Suggestion]] = {}
 
     def save_session(self, session: Session) -> None:
         self._sessions[session.id] = copy.deepcopy(session)
@@ -67,6 +68,12 @@ class InMemorySessionStore:
 
     def load_actions(self, session_id: str) -> list[ProposedAction]:
         return copy.deepcopy(self._actions.get(session_id, []))
+
+    def save_suggestions(self, session_id: str, suggestions: list[Suggestion]) -> None:
+        self._suggestions[session_id] = copy.deepcopy(suggestions)
+
+    def load_suggestions(self, session_id: str) -> list[Suggestion]:
+        return copy.deepcopy(self._suggestions.get(session_id, []))
 
 
 class InMemoryAuditLog:

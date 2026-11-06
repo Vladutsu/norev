@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from norev.core.models import AuditEvent, ProposedAction, Segment, Session, Transcript
+from norev.core.models import AuditEvent, ProposedAction, Segment, Session, Suggestion, Transcript
 from norev.core.ports import AuditLog, Clock, LlmClient, SessionStore, Transcriber
 from norev.testing.fakes import (
     FakeLlmClient,
@@ -83,6 +83,13 @@ class InMemorySessionStoreTest(unittest.TestCase):
         self.assertEqual(self.store.load_actions("s1")[0].fields, {})
         self.assertEqual(len(self.store.load_actions("s1")), 1)
         self.assertEqual(self.store.load_actions("other"), [])
+
+    def test_suggestions_round_trip(self):
+        suggestions = [Suggestion("Verificați alergia", transcript_excerpt="sunt alergic")]
+        self.store.save_suggestions("s1", suggestions)
+        suggestions.clear()
+        self.assertEqual(self.store.load_suggestions("s1"), [Suggestion("Verificați alergia", transcript_excerpt="sunt alergic")])
+        self.assertEqual(self.store.load_suggestions("other"), [])
 
 
 class InMemoryAuditLogTest(unittest.TestCase):

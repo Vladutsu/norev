@@ -3,12 +3,16 @@ from datetime import datetime
 
 from norev.core.models import (
     ActionStatus,
+    ActionType,
+    Domain,
+    DomainField,
     AuditEvent,
     InvalidTransition,
     ProposedAction,
     Segment,
     Suggestion,
     Transcript,
+    Workflow,
 )
 
 SECRET = "PATIENT_SECRET"
@@ -152,6 +156,16 @@ class ReprHidesContentTest(unittest.TestCase):
 
 
 class ValidationTest(unittest.TestCase):
+    def test_domain_field_rejects_unknown_type(self):
+        with self.assertRaises(ValueError):
+            DomainField("dose", "number", required=True)
+
+    def test_domain_finds_action_type_by_name(self):
+        visit = ActionType("schedule_visit", (DomainField("visit_date", "date", True),), Workflow(()))
+        domain = Domain("medical", "Medicină", "m.gguf", 8192, (), (visit,), "{{transcript}}", {})
+        self.assertIs(domain.action_type("schedule_visit"), visit)
+        self.assertIsNone(domain.action_type("other"))
+
     def test_segment_accepts_zero_length_at_zero(self):
         self.assertEqual(Segment(0, 0, "").end, 0)
 

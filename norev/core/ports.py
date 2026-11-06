@@ -6,7 +6,7 @@ which is the only module that holds real `LlmClient` and `Connector` implementat
 from datetime import date, datetime
 from typing import Any, Protocol, runtime_checkable
 
-from norev.core.models import AuditEvent, ProposedAction, Session, SpeakerTurn, Transcript
+from norev.core.models import AuditEvent, ProposedAction, Session, SpeakerTurn, Suggestion, Transcript
 
 
 @runtime_checkable
@@ -61,6 +61,10 @@ class SessionStore(Protocol):
     def save_actions(self, session_id: str, actions: list[ProposedAction]) -> None: ...
 
     def load_actions(self, session_id: str) -> list[ProposedAction]: ...
+
+    def save_suggestions(self, session_id: str, suggestions: list[Suggestion]) -> None: ...
+
+    def load_suggestions(self, session_id: str) -> list[Suggestion]: ...
 
 
 @runtime_checkable
