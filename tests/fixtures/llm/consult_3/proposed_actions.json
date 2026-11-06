@@ -1,0 +1,120 @@
+{
+  "session_summary": "A medical session discussing Mrs. Georgescu's diabetes management and foot wound. The doctor referred her to surgery and outlined follow-up tests and care instructions.",
+  "proposed_actions": [
+    {
+      "id": "A1",
+      "title": "Book Surgery Appointment",
+      "description": "Doctor will call to arrange an appointment for the outpatient clinic of the county hospital.",
+      "owner": "Doctor",
+      "due_date": "2026-11-07",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I will take care of the appointment, I'll call you tomorrow morning.",
+      "needs_review": false
+    },
+    {
+      "id": "A2",
+      "title": "Prepare Weekly Pill Box",
+      "description": "Ana will prepare a weekly pill box for Mrs. Georgescu on Sunday evening.",
+      "owner": "Ana",
+      "due_date": "2026-11-07",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "Ana, please prepare it for her on Sunday evening for the whole week.",
+      "needs_review": false
+    },
+    {
+      "id": "A3",
+      "title": "Buy Medication from Pharmacy",
+      "description": "Ana will buy the weekly pill box from the pharmacy today.",
+      "owner": "Ana",
+      "due_date": "2026-11-06",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "Sure, I will buy it from the pharmacy today.",
+      "needs_review": false
+    },
+    {
+      "id": "A4",
+      "title": "Inform Community Assistant",
+      "description": "Doctor will inform the community assistant, Mrs. Ioana, to visit on Monday afternoon.",
+      "owner": "Doctor",
+      "due_date": "2026-11-08",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I will inform the community assistant, Mrs. Ioana, to visit you on Monday afternoon.",
+      "needs_review": false
+    },
+    {
+      "id": "A5",
+      "title": "Schedule Lab Tests",
+      "description": "Doctor will schedule glycosylated hemoglobin and urine tests at the lab until Friday.",
+      "owner": "Doctor",
+      "due_date": "2026-11-12",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I also want a glycosylated hemoglobin and a urine test. You do them at the lab until Friday.",
+      "needs_review": false
+    },
+    {
+      "id": "A6",
+      "title": "Reschedule Lab Tests",
+      "description": "Doctor will reschedule the lab tests to Thursday due to availability.",
+      "owner": "Doctor",
+      "due_date": "2026-11-11",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "We will do them on Thursday, because I have free time.",
+      "needs_review": false
+    },
+    {
+      "id": "A7",
+      "title": "Schedule Follow-Up Appointment",
+      "description": "Doctor will schedule a follow-up appointment on November 20th at eleven o'clock.",
+      "owner": "Doctor",
+      "due_date": "2026-11-20",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "Come back on November 20th at eleven o'clock with the results and with the medical letter from the surgeon.",
+      "needs_review": false
+    },
+    {
+      "id": "A8",
+      "title": "Write Down Appointment Date",
+      "description": "Ana will write down the appointment date for Mrs. Georgescu.",
+      "owner": "Ana",
+      "due_date": "2026-11-06",
+      "priority": "medium",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "Ana, please write it down, please. I noted.",
+      "needs_review": false
+    }
+  ],
+  "decisions": [
+    "Doctor referred Mrs. Georgescu to the outpatient clinic of the county hospital.",
+    "Lab tests will be scheduled for Thursday."
+  ],
+  "risks": [
+    "If fever appears or the foot swells, Mrs. Georgescu should come immediately."
+  ],
+  "follow_up_questions": [
+    "Who will ensure the community assistant visits on Monday afternoon?",
+    "Is there a specific pharmacy Ana should use for the weekly pill box?"
+  ]
+}
