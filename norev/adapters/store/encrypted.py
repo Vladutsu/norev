@@ -34,6 +34,7 @@ from norev.core.models import (
     Suggestion,
     Transcript,
 )
+from norev.core.models import check_decisions_kept
 from norev.core.speakers import merge_speakers
 
 KEY_BYTES = 32
@@ -202,6 +203,27 @@ class EncryptedStore:
 
     def load_actions(self, session_id: str) -> list[ProposedAction]:
         return [_action(d) for d in self._get("actions", session_id) or []]
+
+    def regenerate_actions(
+        self, session_id: str, actions: list[ProposedAction], *, domain: str, expected_revision: int,
+        suggestions: list[Suggestion],
+    ) -> int:
+        """Same compare-and-set as save_actions, plus the Domain, in one transaction."""
+        actions_plaintext = _encode([_action_dict(a) for a in actions])  # TypeError before any write
+        suggestions_plaintext = _encode([dataclasses.asdict(s) for s in suggestions])
+        with self._transaction():
+            revision = self._check_revision(session_id, expected_revision)
+            if len({a.id for a in actions}) != len(actions):
+                raise ValueError("Duplicate Proposed Action ids")
+            # compared after the same encoding round trip, so an unchanged action is equal
+            check_decisions_kept(self.load_actions(session_id), [_action(d) for d in json.loads(actions_plaintext)])
+            session = self._get("session", session_id)
+            session["domain"] = domain
+            self._write("session", session_id, _encode(session))
+            self._write("actions", session_id, actions_plaintext)
+            self._write("suggestions", session_id, suggestions_plaintext)
+            self._write("revision", session_id, _encode(revision + 1))
+        return revision + 1
 
     def save_suggestions(
         self, session_id: str, suggestions: list[Suggestion], *, expected_revision: int,

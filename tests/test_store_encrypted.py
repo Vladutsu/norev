@@ -184,6 +184,40 @@ class StoreContract:
             self.store.save_session(changed)
         self.assertEqual(self.store.get_session("s1").transcript_ref, "t-1")
 
+    # Explicit regeneration (#19)
+
+    def test_regeneration_replaces_proposed_keeps_decided_and_sets_the_domain(self):
+        self.store.save_session(a_session())
+        proposed = ProposedAction(id="s1-2", title="Vechi", description="", transcript_excerpt="")
+        self.store.save_actions("s1", [approved_action(), proposed], expected_revision=0, suggestions=[Suggestion("x")])
+        new = ProposedAction(id="s1-r1-1", title="Nou", description="", transcript_excerpt="", action_type="work_item")
+        kept = self.store.load_actions("s1")[0]
+
+        revision = self.store.regenerate_actions("s1", [kept, new], domain="corporate", expected_revision=1,
+                                                 suggestions=[Suggestion("y")])
+
+        self.assertEqual(revision, 2)
+        self.assertEqual(self.store.get_session("s1").domain, "corporate")
+        self.assertEqual([(a.id, a.status) for a in self.store.load_actions("s1")],
+                         [("s1-1", ActionStatus.APPROVED), ("s1-r1-1", ActionStatus.PROPOSED)])
+        self.assertEqual(self.store.load_actions("s1")[0].approved_payload, approved_action().approved_payload)
+        self.assertEqual(self.store.load_suggestions("s1"), [Suggestion("y")])
+
+    def test_regeneration_that_drops_or_changes_a_decision_saves_nothing(self):
+        self.store.save_session(a_session())
+        self.store.save_actions("s1", [approved_action()], expected_revision=0)
+        changed = self.store.load_actions("s1")[0]
+        changed.title = "Altul"
+        for actions in ([], [changed]):
+            with self.subTest(actions=len(actions)), self.assertRaises(ValueError):
+                self.store.regenerate_actions("s1", actions, domain="corporate", expected_revision=1, suggestions=[])
+        with self.assertRaises(StaleRevision):
+            self.store.regenerate_actions("s1", self.store.load_actions("s1"), domain="corporate",
+                                          expected_revision=0, suggestions=[])
+        self.assertEqual(self.store.get_session("s1").domain, "medical")
+        self.assertEqual(self.store.load_actions("s1")[0].title, "Programare control")
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 1)
+
     # Audio and Speakers (#24)
 
     def test_audio_round_trip_and_unknown_ref(self):

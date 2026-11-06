@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Transcribe a recorded Session and extract Proposed Actions, all locally.
+# Transcribe a recorded Session and extract Proposed Actions, all locally, into the encrypted store.
 #
-#   1. Whisper        transcript in the spoken language (preselected list or auto-detection)
-#   2. LLM translator  transcript -> English (skipped when the Session is already in English)
-#   3. LLM extractor   English Transcript -> Session summary, Proposed Actions, decisions, risks
+#   1. Whisper + diarization  Transcript with Speakers in the spoken language (python -m norev.session transcribe)
+#   2. LLM                    translation per Speaker turn, generic extraction, Domain stage (... analyse)
+#   3. show                   the Proposed Actions waiting for review (... show)
 #
-# Each LLM stage can use its own GGUF model. Models are loaded one at a time, so a stage only
-# needs the GPU memory of its own model; consecutive stages with the same model share one server.
+# llama-server starts only after Whisper and diarization finished, so they never share the GPU;
+# the whole analysis runs on one GGUF model (NOREV_EXTRACT_MODEL).
 #
 # Usage: ./norev.sh <audio_or_video_file> [language]
 #        NOREV_LANGUAGES=ro,en,de ./norev.sh session.mp4
@@ -37,6 +37,10 @@ NOREV_TRANSLATE="${NOREV_TRANSLATE:-auto}"
 export WHISPER_LANGUAGES="${NOREV_LANGUAGES:-${WHISPER_LANGUAGES:-}}"
 # Session date (YYYY-MM-DD) used to resolve "Friday", "13 November"... Empty: today.
 export LLM_SESSION_DATE="${NOREV_DATE:-${LLM_SESSION_DATE:-}}"
+# corporate (default) or medical; others needs a confirmed prompt (#21). Unknown names are an error.
+NOREV_DOMAIN="${NOREV_DOMAIN:-}"
+# 1: Speakers by diarization (requirements-diarization.txt) | 0: one Transcript without Speakers
+NOREV_SPEAKERS="${NOREV_SPEAKERS:-1}"
 
 LLAMACPP_PORT="${LLAMACPP_PORT:-8080}"
 # 4096 fits one transcript chunk + prompt and leaves room for Whisper on an 8 GB GPU
@@ -61,6 +65,8 @@ export LLM_SECOND_PASS="${LLM_SECOND_PASS:-0}"
 
 PYTHON="$SCRIPT_DIR/.venv/bin/python"
 [[ -x "$PYTHON" ]] || die ".venv missing. Run: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"
+# Sessions are kept only in the encrypted store (ADR 0004), never as plaintext files
+[[ "$1" == --* || -n "${NOREV_STORE_KEY_FILE:-}" ]] || die "NOREV_STORE_KEY_FILE is not set. Create a key: $PYTHON -m norev.adapters.store new-key <path outside the store folder>"
 
 model_name() { basename "$1" .gguf; }
 
@@ -122,29 +128,27 @@ if [[ "$1" == --* ]]; then
     exit 0
 fi
 
-# ── 1. Whisper ─────────────────────────────────────────────────────────────────
+# ── 1. Transcript with Speakers (Whisper + diarization, no LLM) ───────────────
 
-log "[1/3] Transcribing $1 (Whisper: ${WHISPER_MODEL:-large-v3-turbo}, languages: ${2:-${WHISPER_LANGUAGES:-auto}})"
-TRANSCRIPT="$(WHISPER_SKIP_LLM=1 "$PYTHON" -m LLM.Whisper.whisper "$@")"
-LANGUAGE="$("$PYTHON" -c 'import json,sys; print(json.load(open(sys.argv[1]))["detected_language"] or "")' "$TRANSCRIPT")"
-log "Transcript ($LANGUAGE) written to $TRANSCRIPT"
+log "[1/3] Transcribing $1 (Whisper: ${WHISPER_MODEL:-large-v3-turbo}, languages: ${2:-${WHISPER_LANGUAGES:-auto}}, Domain: ${NOREV_DOMAIN:-corporate})"
+TRANSCRIBE_ARGS=()
+[[ -n "${2:-}" ]] && TRANSCRIBE_ARGS+=(--language "$2")
+[[ -n "${NOREV_DOMAIN:-}" ]] && TRANSCRIBE_ARGS+=(--domain "$NOREV_DOMAIN")
+[[ -n "$LLM_SESSION_DATE" ]] && TRANSCRIBE_ARGS+=(--date "$LLM_SESSION_DATE")
+[[ "$NOREV_SPEAKERS" == 0 ]] && TRANSCRIBE_ARGS+=(--no-speakers)
+SESSION="$("$PYTHON" -m norev.session transcribe "$1" "${TRANSCRIBE_ARGS[@]}")"
+log "Session $SESSION transcribed into the encrypted store"
 
-# ── 2. Translation ─────────────────────────────────────────────────────────────
+# ── 2-3. Translation per Speaker turn, extraction and Domain stage ─────────────
 
-if [[ "$NOREV_TRANSLATE" != 0 && "$LANGUAGE" != en ]]; then
-    use_model "$NOREV_TRANSLATE_MODEL"
-    log "[2/3] Translating $LANGUAGE -> en (LLM: $LLM_MODEL)"
-    TRANSCRIPT="$("$PYTHON" -m LLM.pipeline translate "$TRANSCRIPT")"
-    log "Translation written to $TRANSCRIPT"
-else
-    log "[2/3] Translation skipped (language: $LANGUAGE)"
-fi
-
-# ── 3. Proposed Action extraction ──────────────────────────────────────────────
-
+# shortcut: one llama-server for the whole analysis; per-stage models come back with model swaps in the Central Processor
+[[ "$NOREV_TRANSLATE_MODEL" == "$NOREV_EXTRACT_MODEL" ]] || warn "NOREV_TRANSLATE_MODEL is ignored: the analysis runs on NOREV_EXTRACT_MODEL"
 use_model "$NOREV_EXTRACT_MODEL"
-log "[3/3] Extracting Proposed Actions (LLM: $LLM_MODEL)"
-PROPOSED_ACTIONS="$("$PYTHON" -m LLM.pipeline extract "$TRANSCRIPT")"
+ANALYSE_ARGS=()
+[[ "$NOREV_TRANSLATE" == 0 ]] && ANALYSE_ARGS+=(--no-translate)
+log "[2/3] Translating, extracting Proposed Actions and running the Domain stage (LLM: $LLM_MODEL)"
+"$PYTHON" -m norev.session analyse "$SESSION" "${ANALYSE_ARGS[@]}"
 stop_llama_server
 
-"$PYTHON" -m LLM.pipeline show "$TRANSCRIPT" "$PROPOSED_ACTIONS"
+log "[3/3] Result"
+"$PYTHON" -m norev.session show "$SESSION"

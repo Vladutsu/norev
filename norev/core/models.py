@@ -240,6 +240,14 @@ class ProposedAction:
         )
 
 
+def check_decisions_kept(stored: list[ProposedAction], actions: list[ProposedAction]) -> None:
+    """A regeneration may replace Proposed actions only: every decided one stays in `actions`, unchanged."""
+    new = {a.id: a for a in actions}
+    for action in stored:
+        if action.status is not ActionStatus.PROPOSED and new.get(action.id) != action:
+            raise ValueError(f"regeneration would change or drop the decided Proposed Action {action.id}")
+
+
 @dataclass(frozen=True, repr=False)
 class ActionsSnapshot:
     """Detached copy of a Session's actions, paired with their store revision."""
@@ -271,7 +279,10 @@ class Session:
     domain: str
     contact_id: str | None = None
     audio_ref: str | None = None
+    # After transcription: the Transcript as spoken. After the first analysis (#19): the one
+    # extraction runs on (English, unless not translated), and source_transcript_ref the spoken one.
     transcript_ref: str | None = None
+    source_transcript_ref: str | None = None
 
 
 @dataclass(frozen=True)

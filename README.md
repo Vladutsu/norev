@@ -42,8 +42,18 @@ Also needed:
 
 ## Usage
 
+Sessions are kept only in the encrypted store (ADR 0004). Create the key once, outside the
+store's folder, and back it up: without it the store cannot be read.
+
 ```bash
-./norev.sh session.mp4                          # auto-detect the language
+.venv/bin/python -m norev.adapters.store new-key ~/.config/norev/norev.key
+export NOREV_STORE_KEY_FILE=~/.config/norev/norev.key
+```
+
+```bash
+./norev.sh session.mp4                          # Corporate Domain, auto-detect the language
+NOREV_DOMAIN=medical ./norev.sh consult.mp4     # Medical Domain (example)
+NOREV_SPEAKERS=0 ./norev.sh session.mp4         # no diarization (requirements-diarization.txt not installed)
 ./norev.sh session.mp4 ro                       # force Romanian
 NOREV_LANGUAGES=ro,en,de ./norev.sh session.mp4 # pick the most likely of these languages
 NOREV_DATE=2026-11-06 ./norev.sh session.mp4    # Session date for "Friday", "13 November"...
@@ -52,13 +62,31 @@ NOREV_DATE=2026-11-06 ./norev.sh session.mp4    # Session date for "Friday", "13
 
 Supported: `.wav .mp3 .m4a .flac .ogg .opus .aac .webm .mp4 .mkv .mov .avi`.
 
-Output:
-- `Outputs/Audio/<name>.json` — Transcript in the spoken language, with timestamped segments
-- `Outputs/Audio/<name>.en.json` — English translation (when translated)
-- `Outputs/Json/<name>.proposed_actions.json` — `session_summary`, `proposed_actions`, `decisions`, `risks`
+`norev.sh` runs the three steps of `python -m norev.session`, which can also be run by hand:
 
-The Transcript has no Speaker attribution yet, so "I'll do it" cannot be tied to a person: such
-Proposed Actions get no owner rather than a guessed one.
+```bash
+SESSION=$(.venv/bin/python -m norev.session transcribe session.mp4 [--domain corporate|medical] [--language ro] [--date 2026-11-06] [--no-speakers])
+.venv/bin/python -m norev.session analyse "$SESSION" [--no-translate]   # needs llama-server running
+.venv/bin/python -m norev.session analyse "$SESSION" --regenerate [--domain medical]
+.venv/bin/python -m norev.session show "$SESSION"
+```
+
+- `transcribe`: the audio is sealed in the store, then Whisper + diarization (decoded in memory);
+  the Transcript with Speakers is saved in the store; prints the Session id.
+- `analyse`: translation per Speaker turn, extraction (only from this final Transcript), Domain stage.
+  Running it again regenerates the Proposed Actions; once any of them was decided it is refused
+  unless you ask for `--regenerate`, which replaces only the undecided ones and keeps every decision.
+  `--regenerate --domain X` also changes the Session's Domain; it waits until no approved action is
+  still to be executed.
+  Turns that could not be translated are kept in the spoken language and the result is marked partial.
+- `show`: the Proposed Actions waiting for review, Suggestions, and any untranslated turns.
+
+The Domain is `corporate` unless `--domain`/`NOREV_DOMAIN` says otherwise; an unknown name is an
+error. `others` needs a prompt confirmed by the User (#21) and is refused until then. Speaker ids
+(`S1`, `S2`, ...) only tell voices apart, they are not people: Roles and owners are not guessed from them.
+
+Nothing is written to `Outputs/` except `llama-server.log`. The old stages
+`python -m LLM.pipeline translate|extract` are deprecated (they write plaintext JSON) and print a warning.
 
 ## Before pushing
 
@@ -74,11 +102,15 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 
 | Variable | Default | |
 |---|---|---|
+| `NOREV_STORE_KEY_FILE` | required | key of the encrypted store (see Usage) |
+| `NOREV_STORE_PATH` | `%LOCALAPPDATA%/norev/norev.db` or `~/.local/share/norev/norev.db` | the encrypted store |
+| `NOREV_DOMAIN` | `corporate` | `corporate` or `medical`; `others` after #21 |
+| `NOREV_SPEAKERS` | `1` | `0`: skip diarization (one Transcript without Speakers) |
 | `NOREV_LANGUAGES` | empty (auto-detect) | Whisper language codes to choose from, e.g. `ro,en,de` |
 | `NOREV_TRANSLATE` | `auto` | `auto` translates non-English Sessions, `0` extracts from the original language |
-| `LLAMACPP_MODEL` | Qwen3-8B (see above) | default model for both LLM stages |
-| `NOREV_TRANSLATE_MODEL` | `$LLAMACPP_MODEL` | GGUF for the translation stage |
-| `NOREV_EXTRACT_MODEL` | `$LLAMACPP_MODEL` | GGUF for the Proposed Action extraction stage |
+| `LLAMACPP_MODEL` | Qwen3-8B (see above) | default model for the analysis |
+| `NOREV_EXTRACT_MODEL` | `$LLAMACPP_MODEL` | GGUF the whole analysis runs on (translation, extraction, Domain stage) |
+| `NOREV_TRANSLATE_MODEL` | `$LLAMACPP_MODEL` | ignored for now, with a warning when it differs: one model per run |
 | `LLM_PARALLEL` | `4` | concurrent requests (llama-server slots) per stage |
 | `LLM_SECOND_PASS` | `0` | `1`: second look for missed Proposed Actions (more found, but more wrong owners; ~3x slower extraction) |
 | `LLM_TEMPERATURE` | `0` | sampling temperature |
