@@ -15,13 +15,22 @@ Each folder:
   Role, segments `{start, end, speaker_id, text}`. The times come from the synthetic audio clips
   (dev data, not in git).
 - `responses.json`: every LLM call in order: `stage` (`translate`, then `extract`), `prompt`,
-  `json_schema` and `response`, the text llama-server returned.
+  `json_schema` and `response`, the text llama-server returned. The translation is per Speaker
+  turn (`norev/adapters/llm/translator.py`, decision #13): several turns per call, each tagged with
+  an id, answered as `{"turns": [{"id", "text"}]}`.
+- `transcript.en.json`: the English Transcript built from that answer. One segment per Speaker
+  turn, with the turn's `speaker_id`, `start` and `end`, and `untranslated` (true when the turn
+  kept its original text because the answer left it out).
 - `proposed_actions.json`: the generic Proposed Actions the extractor built from those responses.
 
 The Proposed Actions are **what the model produced, not a gold standard**. Known mistakes, kept
-on purpose so tests see real output: in `consult_3` the surgery appointment that Ana said she
-would book is given to the doctor, and the lab tests appear twice (A5, A6). The extraction
-ignores Speakers today (it sees only the text).
+on purpose so tests see real output:
+- In `consult_1`, the follow-up visit on 13 November is missed, although the translation has it.
+- In `consult_3`, the surgery appointment that Ana said she would book is given to the doctor.
+- In `consult_1`, the translation says "call 122" where the doctor said 112 ("o sută doisprezece").
+
+The generic extraction still ignores Speakers (it sees only the text); the Domain stage sees
+them. Re-recording can change the Proposed Actions a little even at temperature 0.
 
 ## Using them in a test
 
@@ -35,7 +44,8 @@ llm = FakeLlmClient([call["response"] for call in recorded["calls"]])
 ```
 
 `python tests/fixtures/llm/record.py --check` replays the responses through the current code,
-with no model, and fails if a prompt or the result changed: then the fixtures need re-recording.
+with no model, and fails if a prompt or a result changed: then the fixtures need re-recording.
+`tests/test_adapters_translator.py` replays the translations in `./check.sh`.
 
 ## Re-recording (GPU laptop only)
 
