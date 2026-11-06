@@ -1,14 +1,18 @@
-"""The norev desktop app (pywebview, #27).
+"""The norev desktop app (pywebview, #27, #43).
 
-  python -m norev.ui          open the app on the demo consultation (the full flow comes with #19)
+  python -m norev.ui           record or import a Session and analyse it locally (Whisper, llama-server)
+  python -m norev.ui --demo    the synthetic examples, reviewed but never executed
 
 With NOREV_STORE_KEY_FILE set, Sessions go to the encrypted store (#26); otherwise they stay in
-memory and are gone when the window closes. Needs `pip install -r requirements-ui.txt`.
+memory and are gone when the window closes. Approved Proposed Actions are exported to
+NOREV_EXPORT_DIR (default: Documents/norev). llama-server starts for the analysis only, as
+`norev.cmd process` starts it (#48), with the same variables. Needs `pip install -r requirements-ui.txt`.
 """
 import argparse
 import logging
 import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 from norev.adapters.store.encrypted import StoreKeyError, StoreSettings, open_store
@@ -18,11 +22,59 @@ from norev.ui.backend import DemoBackend
 from norev.ui.bridge import Bridge
 
 INDEX = Path(__file__).resolve().parent / "web" / "index.html"
+AUDIO_TYPES = ("Audio și video (*.wav;*.mp3;*.m4a;*.flac;*.ogg;*.opus;*.aac;*.webm;*.mp4;*.mkv;*.mov;*.avi)",)
+
+
+def session_backend(store, approved_by: str, pick_file):
+    """The real backend, built here so the GPU libraries load only outside --demo. main() ran prepare()."""
+    from norev.adapters.recorder.recorder import capture, resolve_device
+    from norev.adapters.whisper.transcriber import WhisperTranscriber
+    from norev.launcher.__main__ import LLM_DEFAULTS
+    from norev.launcher.llama import server_from_environment
+    from norev.launcher.paths import AppPaths
+    from norev.processor.compose import build_desktop_processor
+    from norev.session import WORKERS, _NoSpeakers
+    from norev.ui.session_backend import SessionBackend
+
+    paths = AppPaths.from_environment()
+    for name, value in LLM_DEFAULTS.items():
+        os.environ.setdefault(name, value)
+    llama = server_from_environment(paths.logs / "llama-server.log")
+    os.environ.setdefault("LLAMACPP_URL", llama.url)
+    os.environ.setdefault("LLM_MODEL", llama.alias)  # the alias llama-server answers to
+    try:
+        from norev.adapters.diarization.sortformer import SortformerDiarizer
+
+        diarizer = SortformerDiarizer(store)
+    except ImportError:
+        print("requirements-diarization.txt is not installed: Transcripts have no Speakers", file=sys.stderr)
+        diarizer = _NoSpeakers()
+    export_dir = Path(os.environ.get("NOREV_EXPORT_DIR") or Path.home() / "Documents" / "norev").resolve()
+    processor = build_desktop_processor(store, export_dir, transcriber=WhisperTranscriber(store), diarizer=diarizer)
+    return SessionBackend(
+        store, approved_by=approved_by, processor=processor, export_dir=export_dir,
+        llm_session=lambda: _alias(llama),
+        record_source=lambda: capture(resolve_device(os.environ.get("NOREV_INPUT_DEVICE"))),
+        pick_file=pick_file, workers=WORKERS,
+    )
+
+
+@contextmanager
+def _alias(server):
+    with server:
+        yield server.alias
 
 
 def main(argv: list[str]) -> int:
-    argparse.ArgumentParser(prog="python -m norev.ui", description=__doc__.splitlines()[0]).parse_args(argv)
+    parser = argparse.ArgumentParser(prog="python -m norev.ui", description=__doc__.splitlines()[0])
+    parser.add_argument("--demo", action="store_true", help="the synthetic examples instead of real Sessions")
+    args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO)
+    if not args.demo:  # store, key, model, llama-server and CUDA DLL paths, as norev.cmd sets them (#48)
+        from norev.launcher.__main__ import prepare
+        from norev.launcher.paths import AppPaths
+
+        prepare(AppPaths.from_environment())
     try:
         import webview
     except ImportError:
@@ -39,9 +91,16 @@ def main(argv: list[str]) -> int:
         print("NOREV_STORE_KEY_FILE is not set: Sessions are kept in memory only", file=sys.stderr)
         store = InMemorySessionStore()
 
-    backend = DemoBackend(store, approved_by=LocalUser.from_os().id)
-    webview.create_window("norev", url=str(INDEX), js_api=Bridge(backend), width=1360, height=900,
-                          min_size=(980, 680), background_color="#E7ECF3")
+    windows = []
+
+    def pick_file() -> str | None:
+        chosen = windows[0].create_file_dialog(webview.FileDialog.OPEN, file_types=AUDIO_TYPES)
+        return chosen[0] if chosen else None
+
+    approved_by = LocalUser.from_os().id
+    backend = DemoBackend(store, approved_by=approved_by) if args.demo else session_backend(store, approved_by, pick_file)
+    windows.append(webview.create_window("norev", url=str(INDEX), js_api=Bridge(backend), width=1360, height=900,
+                                         min_size=(980, 680), background_color="#E7ECF3"))
     webview.start()
     return 0
 

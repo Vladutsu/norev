@@ -197,8 +197,10 @@ class CorporateTest(BridgeCase):
 
 class BoundaryTest(unittest.TestCase):
     def test_the_bridge_exposes_no_send_or_connector_call(self):
+        # #43: execute/retry/reconcile reach the Workflow executor (tests/test_ui_session_backend.py), never a Connector
         public = {n for n in dir(Bridge) if not n.startswith("_")}
-        self.assertFalse({n for n in public if re.search(r"send|execute|connector|retry", n)})
+        self.assertFalse({n for n in public if re.search(r"send|connector", n)})
+        self.assertEqual({n for n in public if re.search(r"execute|retry|reconcile", n)}, {"execute", "retry", "reconcile"})
         for path in (ROOT / "norev" / "ui").glob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
                 if isinstance(node, ast.ImportFrom):

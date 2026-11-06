@@ -1,14 +1,18 @@
 """The pywebview js_api (#27): the only Python that JavaScript can call.
 
 Arguments and results are JSON values. The backend validates and decides; the UI only shows what
-it returns. No method here sends anything or calls a Connector (ADR 0002, #22/#23).
+it returns. No method here holds a Connector: execute, retry and reconcile reach the Workflow executor,
+which sends only an approved payload through the Central Processor (ADR 0002, #22/#23, #43).
 Errors come back as {"ok": false, "error": {"code", "field"}}, never with Session content.
 """
 import logging
 from typing import Any, Callable
 
 from norev.core.models import InvalidTransition, StaleRevision, UnsupportedWorkflow, ValidationError
+from norev.launcher.llama import LlamaError
+from norev.processor.workflow import AlreadyRunning, ExecutionRefused
 from norev.ui.backend import DemoBackend, ModeUnavailable, PromptNotConfirmed
+from norev.ui.session_backend import MicrophoneUnavailable
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +27,8 @@ class Bridge:
     def others_confirm(self, context, prompt): return self._call(self._backend.others_confirm, context, prompt)
     def start(self, mode, language, contact, others=None): return self._call(self._backend.start, mode, language, contact, others)
     def import_example(self, mode, language, contact, others=None): return self._call(self._backend.import_example, mode, language, contact, others)
+    def import_file(self, mode, language, contact, others=None): return self._call(self._backend.import_file, mode, language, contact, others)
+    def progress(self, session_id): return self._call(self._backend.progress, session_id)
     def live(self, session_id): return self._call(self._backend.live, session_id)
     def pause(self, session_id): return self._call(self._backend.pause, session_id)
     def stop(self, session_id): return self._call(self._backend.stop, session_id)
@@ -32,6 +38,17 @@ class Bridge:
     def preview(self, session_id, action_id, revision): return self._call(self._backend.preview, session_id, action_id, revision)
     def approve(self, session_id, action_id, revision): return self._call(self._backend.approve, session_id, action_id, revision)
     def reject(self, session_id, action_id, revision): return self._call(self._backend.reject, session_id, action_id, revision)
+    def execute(self, session_id, action_id): return self._call(self._executing("execute"), session_id, action_id)
+    def retry(self, session_id, action_id): return self._call(self._executing("retry"), session_id, action_id)
+    def reconcile(self, session_id, action_id, step, happened): return self._call(self._executing("reconcile"), session_id, action_id, step, happened)
+
+    def _executing(self, name: str) -> Callable[..., Any]:
+        if self._backend.can_execute:
+            return getattr(self._backend, name)
+
+        def refused(*args: Any) -> Any:
+            raise ExecutionRefused("the demo does not execute")
+        return refused
 
     @staticmethod
     def _call(fn: Callable[..., Any], *args: Any) -> dict[str, Any]:
@@ -49,6 +66,14 @@ class Bridge:
             return _error("mode_unavailable", "mode")
         except UnsupportedWorkflow:
             return _error("unsupported_workflow", "workflow")
+        except MicrophoneUnavailable:
+            return _error("no_microphone", "device")
+        except AlreadyRunning:
+            return _error("already_running", "action")
+        except ExecutionRefused:
+            return _error("not_executable", "action")
+        except LlamaError:
+            return _error("llm_unavailable", "")
         except LookupError:
             return _error("not_found", "session")
         except ValueError:

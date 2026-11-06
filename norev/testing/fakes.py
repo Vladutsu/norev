@@ -6,7 +6,7 @@ from threading import RLock
 from typing import Any
 
 from norev.core.models import (
-    ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, Session, Speaker, SpeakerTurn, StaleRevision, Suggestion,
+    ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, Session, Speaker, SpeakerTurn, StaleRevision, StepRecord, Suggestion,
     Transcript,
 )
 from norev.core.models import check_decisions_kept
@@ -69,6 +69,7 @@ class InMemorySessionStore:
         self._suggestions: dict[str, list[Suggestion]] = {}
         self._audio: dict[str, bytes] = {}
         self._speakers: dict[str, list[Speaker]] = {}
+        self._steps: dict[str, dict[str, StepRecord]] = {}
 
     def save_session(self, session: Session) -> None:
         with self._lock:
@@ -84,6 +85,10 @@ class InMemorySessionStore:
     def get_session(self, session_id: str) -> Session | None:
         with self._lock:
             return copy.deepcopy(self._sessions.get(session_id))
+
+    def list_sessions(self) -> list[Session]:
+        with self._lock:
+            return sorted(copy.deepcopy(list(self._sessions.values())), key=lambda s: s.started_at, reverse=True)
 
     def save_transcript(self, session_id: str, transcript: Transcript) -> str:
         with self._lock:
@@ -188,6 +193,15 @@ class InMemorySessionStore:
     def load_speakers(self, session_id: str) -> list[Speaker]:
         with self._lock:
             return list(self._speakers.get(session_id, []))
+
+    # ExecutionStore
+    def load_steps(self, action_id: str) -> dict[str, StepRecord]:
+        with self._lock:
+            return copy.deepcopy(self._steps.get(action_id, {}))
+
+    def save_step(self, action_id: str, record: StepRecord) -> None:
+        with self._lock:
+            self._steps.setdefault(action_id, {})[record.step] = copy.deepcopy(record)
 
 
 class InMemoryAuditLog:

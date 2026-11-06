@@ -5,9 +5,11 @@ tests/test_processor_composition.py fails if another module under norev/ imports
 """
 from collections.abc import Iterable
 from datetime import datetime
+from pathlib import Path
 
 from LLM.AI_Model.client import build_llm_client
 from LLM.AI_Model.settings import DeepSeekSettings
+from norev.adapters.connectors.local_document import LocalDocumentConnector
 from norev.core.ports import Clock, Connector, Diarizer, Transcriber
 from norev.processor.central import CentralProcessor, ExecutionAuditLog
 from norev.processor.identity import LocalUser
@@ -39,3 +41,17 @@ def build_central_processor(
         transcriber=transcriber,
         diarizer=diarizer,
     )
+
+
+# The app's local Workflow steps (#23), by the names Domains use. The document is built at preview
+# time (its exact text is the approved payload) and the executor saves each step and the action's
+# status itself, so neither step has more to do.
+LOCAL_STEPS = {"build_document": lambda action: None, "save_result": lambda action: None}
+
+
+def build_desktop_processor(
+    store: ExecutionAuditLog, export_dir: Path, *, transcriber: Transcriber | None = None, diarizer: Diarizer | None = None,
+) -> CentralProcessor:
+    """The desktop app's processor (#43): the local_document Connector writes into `export_dir`."""
+    return build_central_processor(store, connectors=[LocalDocumentConnector(export_dir)],
+                                   transcriber=transcriber, diarizer=diarizer)

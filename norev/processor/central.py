@@ -161,6 +161,11 @@ class CentralProcessor:
         with self._gpu.use("diarizer", getattr(self._diarizer, "close", None)):
             return self._diarizer.diarize(audio_ref)
 
+    def free_gpu(self) -> None:
+        """Release Whisper and diarization before an out-of-process model (llama-server) loads."""
+        with self._gpu.use("external"):
+            pass
+
     # ── Connector sends ─────────────────────────────────────────────────────
 
     def has_connector(self, name: str) -> bool:

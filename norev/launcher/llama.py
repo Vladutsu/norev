@@ -3,6 +3,7 @@
 The Python version of the lifecycle in norev.sh, so the same flow runs on Windows. Only
 127.0.0.1 is ever contacted. A server already answering on the port is reused and left running.
 """
+import os
 import subprocess
 import sys
 import time
@@ -98,3 +99,17 @@ class LlamaServer:
             self._process.kill()
             self._process.wait()
         self._process = None
+
+
+def server_from_environment(log_file: Path, env=None) -> LlamaServer:
+    """The server norev.sh would start, from the variables apply_defaults filled (README.md)."""
+    env = os.environ if env is None else env
+    return LlamaServer(
+        binary=Path(env["LLAMA_SERVER"]),
+        model=Path(env["NOREV_EXTRACT_MODEL"]),
+        log_file=log_file,
+        port=int(env.get("LLAMACPP_PORT", "8080")),
+        ctx=int(env.get("LLAMACPP_CTX", "4096")),
+        parallel=int(env.get("LLM_PARALLEL", "4")),
+        gpu_layers=int(env.get("LLAMACPP_GPU_LAYERS", "99")),
+    )
