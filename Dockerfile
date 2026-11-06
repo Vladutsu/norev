@@ -1,6 +1,6 @@
 # Shared dev container (docs/ARCHITECTURE.md, Development environment). How to use it: devenv/README.md
 #   target dev  CPU only, no models: bash check.sh and the tests, on every laptop
-#   target gpu  CUDA runtime + llama.cpp at a fixed commit, models mounted at /models (laptop 4 only)
+#   target gpu  CUDA runtime + llama.cpp at a fixed commit + diarization (NeMo), models mounted at /models (laptop 4 only)
 # The repo is not copied in: docker-compose.yml mounts it at /workspace.
 ARG CUDA_VERSION=12.8.1
 
@@ -45,9 +45,11 @@ FROM docker.io/nvidia/cuda:${CUDA_VERSION}-runtime-ubuntu24.04 AS gpu
 RUN apt-get update && apt-get install -y --no-install-recommends python3.12 python3.12-venv curl libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
-COPY requirements.txt /tmp/requirements.txt
+COPY requirements.txt requirements-diarization.txt /tmp/
+# Diarization (NeMo + torch, ~6 GB) only here, for norev.adapters.diarization (#24). Both files in one
+# install, so the pins of requirements.txt hold (NeMo alone would pull an av that breaks faster-whisper)
 RUN python3.12 -m venv /workspace/.venv \
-    && /workspace/.venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+    && /workspace/.venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/requirements-diarization.txt
 COPY --from=llamacpp /build/bin/llama-server /opt/llama.cpp/llama-server
 ENV PATH=/workspace/.venv/bin:$PATH \
     NOREV_DATA_DIR=/data \

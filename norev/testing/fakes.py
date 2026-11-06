@@ -4,7 +4,11 @@ from datetime import date, datetime
 from threading import RLock
 from typing import Any
 
-from norev.core.models import ActionsSnapshot, Domain, StaleRevision, AuditEvent, ProposedAction, Session, Suggestion, Transcript
+from norev.core.models import (
+    ActionsSnapshot, AuditEvent, Domain, ProposedAction, Session, Speaker, SpeakerTurn, StaleRevision, Suggestion,
+    Transcript,
+)
+from norev.core.speakers import merge_speakers
 
 
 class FakeLlmClient:
@@ -31,6 +35,18 @@ class FakeTranscriber:
         return self._transcripts[audio_ref]
 
 
+class FakeDiarizer:
+    """Returns recorded diarization turns per audio_ref."""
+
+    def __init__(self, turns: dict[str, list[SpeakerTurn]]) -> None:
+        self._turns = {ref: list(t) for ref, t in turns.items()}
+
+    def diarize(self, audio_ref: str) -> list[SpeakerTurn]:
+        if audio_ref not in self._turns:
+            raise KeyError(f"FakeDiarizer has no turns for audio_ref {audio_ref!r}")
+        return list(self._turns[audio_ref])
+
+
 class FixedClock:
     def __init__(self, at: datetime) -> None:
         self._at = at
@@ -49,6 +65,8 @@ class InMemorySessionStore:
         self._transcripts: dict[str, Transcript] = {}
         self._actions: dict[str, list[ProposedAction]] = {}
         self._suggestions: dict[str, list[Suggestion]] = {}
+        self._audio: dict[str, bytes] = {}
+        self._speakers: dict[str, list[Speaker]] = {}
 
     def save_session(self, session: Session) -> None:
         with self._lock:
@@ -127,6 +145,28 @@ class InMemorySessionStore:
     def load_suggestions(self, session_id: str) -> list[Suggestion]:
         with self._lock:
             return copy.deepcopy(self._suggestions.get(session_id, []))
+
+    def save_audio(self, session_id: str, audio: bytes) -> str:
+        with self._lock:
+            ref = f"audio-{len(self._audio) + 1}"
+            self._audio[ref] = bytes(audio)
+            return ref
+
+    def load_audio(self, audio_ref: str) -> bytes:
+        with self._lock:
+            if audio_ref not in self._audio:
+                raise KeyError("audio does not exist")
+            return self._audio[audio_ref]
+
+    def save_speakers(self, session_id: str, speakers: list[Speaker]) -> None:
+        with self._lock:
+            if session_id not in self._sessions:
+                raise LookupError("Session does not exist")
+            self._speakers[session_id] = merge_speakers(self._speakers.get(session_id, []), speakers)
+
+    def load_speakers(self, session_id: str) -> list[Speaker]:
+        with self._lock:
+            return list(self._speakers.get(session_id, []))
 
 
 class InMemoryAuditLog:

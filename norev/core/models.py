@@ -59,10 +59,16 @@ class Role:
 
 @dataclass(frozen=True)
 class Speaker:
-    """A distinct voice in a Session; `role` is a Role name once known."""
+    """A distinct voice in a Session; `role` is a Role name once known.
+
+    `id` (S1, S2...) only tells voices apart: it is never a person's name, Contact or owner.
+    `role_confirmed` is True once the User set or confirmed the Role; such a Role is never
+    replaced automatically (None with role_confirmed means the User said "unknown").
+    """
 
     id: str
     role: str | None = None
+    role_confirmed: bool = False
 
 
 @dataclass(frozen=True)
