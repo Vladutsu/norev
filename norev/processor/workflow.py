@@ -4,8 +4,11 @@
   approved payload and audits the send. A step without one must be in the explicit registry of local
   steps the app gives the executor. Anything else refuses the whole Workflow before any step runs, so
   a Domain or a model answer cannot name code or commands to run.
-- Every Connector step's payload is checked against the approved snapshot before the first step runs:
-  an action edited after approval runs nothing.
+- The approved payload is #18's approval plan. Before the first step runs, the plan must still match
+  the Domain (same digest and Action Type) and every Connector step's payload is checked through the
+  Central Processor: a Domain changed after approval, or a plan without a step, runs nothing.
+- The action is saved through the store's revision check (#18); a concurrent change to another
+  action of the Session is reloaded, never overwritten.
 - Each step's state is saved before and after it runs. A step saved as started, with no end, is
   uncertain (the app stopped mid-step): it is never run again automatically, the User reconciles it.
 - One run per action at a time: a second Execute while one runs is refused (double click).
@@ -19,11 +22,12 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Protocol, runtime_checkable
 
-from norev.core.models import ActionStatus, Domain, ProposedAction, WorkflowStep
+from norev.core.models import ActionStatus, Domain, ProposedAction, StaleRevision, WorkflowStep
 from norev.core.ports import SessionStore
 from norev.processor.central import CentralProcessor, ConnectorFailed
+from norev.usecases.approve import domain_digest
 
-GENERIC_FIELDS = ("title", "description", "owner", "due_date", "transcript_excerpt")  # domains/README.md
+MAX_SAVE_ATTEMPTS = 5  # revision conflicts with other writers of the Session before giving up
 
 
 class StepState(str, Enum):
@@ -75,21 +79,6 @@ class ExecutionOutcome:
 LocalStep = Callable[[ProposedAction], dict[str, Any] | None]
 
 
-def step_payload(action: ProposedAction, step: WorkflowStep) -> dict[str, Any]:
-    """The payload a Connector step sends, built from the action's current values, in `sends` order."""
-    payload = {}
-    for name in step.sends:
-        if name in action.fields:
-            payload[name] = action.fields[name]
-        elif name == "due_date":
-            payload[name] = action.due_date.isoformat() if action.due_date else None
-        elif name in GENERIC_FIELDS:
-            payload[name] = getattr(action, name)
-        else:
-            raise ExecutionRefused(f"step {step.name} sends unknown field {name!r}")
-    return payload
-
-
 class WorkflowExecutor:
     def __init__(
         self,
@@ -107,31 +96,13 @@ class WorkflowExecutor:
         self._lock = threading.Lock()
         self._running: set[str] = set()
 
-    def preview(self, session_id: str, action_id: str) -> list[dict[str, Any]]:
-        """For the approval screen: every Connector step with its exact payload and what the Connector
-        will do with it (for local_document: destination and content). No side effect."""
-        action = self._action(session_id, action_id)
-        previews = []
-        for step in self._workflow(action):
-            if step.connector:
-                payload = step_payload(action, step)
-                previews.append(
-                    {"step": step.name, "label": step.label, "connector": step.connector, "payload": payload,
-                     **self._processor.preview(step.connector, payload)}
-                )
-        return previews
-
     def execute(self, session_id: str, action_id: str) -> ExecutionOutcome:
         with self._one_run(action_id):
             action = self._action(session_id, action_id)
             if action.status is not ActionStatus.APPROVED:
                 raise ExecutionRefused(f"action {action_id} is {action.status.value}, not approved")
             workflow = self._workflow(action)
-            payloads = {}
-            for step in workflow:  # before any step runs, so a changed payload runs nothing
-                if step.connector:
-                    payloads[step.name] = step_payload(action, step)
-                    self._processor.check_send(action, step.connector, payloads[step.name], fields=step.sends)
+            payloads = self._approved_payloads(action, workflow)  # before any step runs
 
             records = self._steps.load_steps(action_id)
             uncertain = [s.name for s in workflow if s.name in records and records[s.name].state is StepState.STARTED]
@@ -145,7 +116,7 @@ class WorkflowExecutor:
                 error_type = None
                 try:
                     if step.connector:
-                        result = self._processor.send(action, step.connector, payloads[step.name], fields=step.sends)
+                        result = self._processor.send(action, step.connector, payloads[step.name], step=step.name)
                     else:
                         result = self._local[step.name](copy.deepcopy(action))
                 except ConnectorFailed as exc:
@@ -157,11 +128,11 @@ class WorkflowExecutor:
                     continue
                 self._save_step(action_id, records, StepRecord(step.name, StepState.FAILED, error_type=error_type))
                 action.mark_failed(f"Step {step.label or step.name} failed ({error_type}).")
-                self._save_action(session_id, action)
+                self._save_action(session_id, action, ActionStatus.APPROVED)
                 return ExecutionOutcome(action_id, "failed", records)
 
             action.mark_executed()
-            self._save_action(session_id, action)
+            self._save_action(session_id, action, ActionStatus.APPROVED)
             return ExecutionOutcome(action_id, "executed", records)
 
     def retry(self, session_id: str, action_id: str) -> None:
@@ -169,7 +140,7 @@ class WorkflowExecutor:
         with self._one_run(action_id):
             action = self._action(session_id, action_id)
             action.retry()
-            self._save_action(session_id, action)
+            self._save_action(session_id, action, ActionStatus.FAILED)
 
     def reconcile(self, session_id: str, action_id: str, step: str, happened: bool) -> None:
         """The User's answer for an uncertain step: it did happen (done, not run again) or it did not
@@ -201,7 +172,8 @@ class WorkflowExecutor:
                 self._running.discard(action_id)
 
     def _action(self, session_id: str, action_id: str) -> ProposedAction:
-        action = next((a for a in self._sessions.load_actions(session_id) if a.id == action_id), None)
+        # an unknown Session raises LookupError; another Domain's plan fails the plan check before any step
+        action = next((a for a in self._sessions.load_actions_snapshot(session_id).actions if a.id == action_id), None)
         if action is None:
             raise LookupError(f"no Proposed Action {action_id!r} in Session {session_id!r}")
         return action
@@ -218,11 +190,39 @@ class WorkflowExecutor:
                 raise ExecutionRefused(f"step {step.name}: no known local implementation")
         return action_type.workflow.steps
 
+    def _approved_payloads(self, action: ProposedAction, workflow: tuple[WorkflowStep, ...]) -> dict[str, dict]:
+        """Each Connector step's payload from the approval plan, checked as send() will check it."""
+        plan = action.approved_payload
+        if (not isinstance(plan, dict) or plan.get("version") != 1 or plan.get("domain") != self._domain.name
+                or plan.get("domain_digest") != domain_digest(self._domain) or plan.get("action_type") != action.action_type):
+            raise ExecutionRefused(f"the approved plan of action {action.id} does not match the Domain; approve it again")
+        steps = plan.get("steps") if isinstance(plan.get("steps"), list) else []
+        by_name = {s.get("step"): s.get("payload") for s in steps if isinstance(s, dict)}
+        payloads = {}
+        for step in workflow:
+            if step.connector:
+                payload = by_name.get(step.name)
+                payload = payload if isinstance(payload, dict) else {}
+                payloads[step.name] = self._processor.check_send(action, step.connector, payload, step=step.name)
+        return payloads
+
     def _save_step(self, action_id: str, records: dict[str, StepRecord], record: StepRecord) -> None:
         self._steps.save_step(action_id, record)
         records[record.step] = record
 
-    def _save_action(self, session_id: str, action: ProposedAction) -> None:
-        # shortcut: read-modify-write of the Session's list; the atomic update comes with the store (#26)
-        actions = self._sessions.load_actions(session_id)
-        self._sessions.save_actions(session_id, [action if a.id == action.id else a for a in actions])
+    def _save_action(self, session_id: str, action: ProposedAction, was: ActionStatus) -> None:
+        """Save this action's new status with the store's revision check. Other actions of the Session
+        may change meanwhile (the User reviews them): reload and apply again. If this action itself
+        changed status, someone else decided it: StaleRevision, nothing saved."""
+        for _ in range(MAX_SAVE_ATTEMPTS):
+            snapshot = self._sessions.load_actions_snapshot(session_id)
+            current = next((a for a in snapshot.actions if a.id == action.id), None)
+            if current is None or current.status is not was:
+                raise StaleRevision(f"Proposed Action {action.id} changed while it ran")
+            actions = [action if a.id == action.id else a for a in snapshot.actions]
+            try:
+                self._sessions.save_actions(session_id, actions, expected_revision=snapshot.revision)
+                return
+            except StaleRevision:
+                continue
+        raise StaleRevision(f"Session {session_id!r} kept changing; Proposed Action {action.id} not saved")

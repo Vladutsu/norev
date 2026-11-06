@@ -13,7 +13,7 @@ import copy
 import json
 import logging
 import threading
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
@@ -166,35 +166,28 @@ class CentralProcessor:
     def has_connector(self, name: str) -> bool:
         return name in self._connectors
 
-    def preview(self, connector: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """What the Connector would do with `payload` (e.g. destination and exact content), with no side
-        effect, for the approval screen (ADR 0002). The UI never holds the Connector itself."""
-        target = self._connectors.get(connector)
-        if target is None:
-            raise SendRefused(f"unknown Connector {connector!r}")
-        preview = getattr(target, "preview", None)
-        if preview is None:
-            raise SendRefused(f"Connector {connector!r} has no preview")
-        return preview(copy.deepcopy(payload))
-
     def check_send(
-        self, action: ProposedAction, connector: str, payload: dict[str, Any], *, fields: Sequence[str] | None = None
+        self, action: ProposedAction, connector: str, payload: dict[str, Any], *, step: str | None = None
     ) -> dict[str, Any]:
         """The checks of send(), with no side effect; returns the approved payload that would be sent.
 
-        `fields`: a Workflow step sends only these fields of the approved payload (its `sends`); then
-        `payload` must equal exactly that part of the snapshot. Without `fields`, the whole snapshot.
+        `step`: the approved payload is an approval plan (#18, `{"steps": [{"step", "connector",
+        "payload"}], ...}`); the step must be in it with this Connector, and `payload` must equal exactly
+        that step's payload. Without `step`, `payload` must equal the whole approved payload.
         """
         # shortcut: checks this in-memory copy; the atomic claim of the action in the store comes with #26
         if connector not in self._connectors:
             raise SendRefused(f"unknown Connector {connector!r}")
         if action.status is not ActionStatus.APPROVED or action.approved_payload is None:
             raise SendRefused(f"action {action.id} is {action.status.value}, not approved")
+        self._approved_by(action)
         snapshot = action.approved_payload
-        if fields is not None:
-            if not fields or any(name not in snapshot for name in fields):
-                raise SendRefused(f"the approved payload of action {action.id} does not have the step's fields")
-            snapshot = {name: snapshot[name] for name in fields}
+        if step is not None:
+            steps = snapshot.get("steps") if isinstance(snapshot, dict) else None
+            matches = [s for s in steps if isinstance(s, dict) and s.get("step") == step] if isinstance(steps, list) else []
+            if len(matches) != 1 or matches[0].get("connector") != connector or not isinstance(matches[0].get("payload"), dict):
+                raise SendRefused(f"step {step} with Connector {connector} is not in the approved plan of action {action.id}")
+            snapshot = matches[0]["payload"]
         try:
             same = _canonical(payload) == _canonical(snapshot)
         except (TypeError, ValueError):
@@ -203,17 +196,27 @@ class CentralProcessor:
             raise SendRefused(f"payload for action {action.id} differs from the approved one")
         return copy.deepcopy(snapshot)  # the Connector cannot change the approved snapshot
 
+    def _approved_by(self, action: ProposedAction) -> str:
+        """Who approved it: #18 stores it on the action, checked against the LocalUser contract;
+        the processor's own identity for an action approved without it."""
+        if action.approved_by is None:
+            return self.identity.id
+        try:
+            return LocalUser(action.approved_by).id
+        except ValueError:
+            raise SendRefused(f"action {action.id} has an invalid approved_by") from None
+
     def send(
-        self, action: ProposedAction, connector: str, payload: dict[str, Any], *, fields: Sequence[str] | None = None
+        self, action: ProposedAction, connector: str, payload: dict[str, Any], *, step: str | None = None
     ) -> dict[str, Any]:
         """Send `payload` through `connector` if it is exactly the payload the User approved (ADR 0002).
 
         Order: checks -> audit attempt -> Connector -> audit result. Raises SendRefused or AuditFailed
         without calling the Connector, ConnectorFailed if it raised. Returns the Connector's answer.
         """
-        sent = self.check_send(action, connector, payload, fields=fields)
+        sent = self.check_send(action, connector, payload, step=step)
         target = self._connectors[connector]
-        event = AuditEvent(self._clock.now(), action.id, connector, copy.deepcopy(sent), self.identity.id)
+        event = AuditEvent(self._clock.now(), action.id, connector, copy.deepcopy(sent), self._approved_by(action))
         try:
             self._audit.record(event)
         except Exception as exc:
