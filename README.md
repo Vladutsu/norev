@@ -52,7 +52,25 @@ NOREV_DATE=2026-11-06 ./norev.sh session.mp4    # Session date for "Friday", "13
 
 Supported: `.wav .mp3 .m4a .flac .ogg .opus .aac .webm .mp4 .mkv .mov .avi`.
 
+### Recording from a microphone
+
+```bash
+./norev.sh --record                             # record (Enter stops), then transcribe + extract
+./norev.sh --record ro                          # same, forcing Romanian
+python -m LLM.Recorder.record --list-devices    # input device names
+python -m LLM.Recorder.record                   # record only -> Outputs/Recordings/session-<time>.wav
+python -m LLM.Recorder.record out.wav --seconds 60 --device "Microphone Array (Realtek(R) Audio)"
+```
+
+Records 16 kHz mono WAV (what Whisper uses; about 115 MB per hour) through PyAV's FFmpeg capture
+devices, so no extra dependency: DirectShow on Windows, ALSA on Linux (`default` or `plughw:C,D`).
+Stop with Enter or Ctrl+C; the audio so far is always kept, and the file stays valid even if the
+process is killed. The PyAV Linux wheel has no PulseAudio support, so inside WSL there is usually no
+capture device: record on Windows (`python -m LLM.Recorder.record`) and transcribe the WAV.
+The WAV is not encrypted yet (ADR 0004).
+
 Output:
+- `Outputs/Recordings/session-<time>.wav` — Session audio, when recorded with `--record`
 - `Outputs/Audio/<name>.json` — Transcript in the spoken language, with timestamped segments
 - `Outputs/Audio/<name>.en.json` — English translation (when translated)
 - `Outputs/Json/<name>.proposed_actions.json` — `session_summary`, `proposed_actions`, `decisions`, `risks`
@@ -89,3 +107,4 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `WHISPER_DEVICE` | `cuda` | `cuda` or `cpu` (falls back to CPU on GPU OOM) |
 | `LLM_CHUNK_CHARS` | `4000` | Transcript chunk size sent to the extractor |
 | `LLM_PROVIDER` | `llamacpp` | `llamacpp` or `ollama` |
+| `NOREV_INPUT_DEVICE` | system default | microphone for `--record` (see `--list-devices`) |

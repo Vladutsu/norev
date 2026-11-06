@@ -43,13 +43,15 @@ Avoid the listed "_Avoid_" synonyms (e.g. say Proposed Action, not task/todo).
 
 ## Current state of the code (gap vs goals)
 
-- `LLM/Whisper/` — transcribes an existing file (faster-whisper). No mic
-  recording, no diarization (segments have no Speaker).
+- `LLM/Recorder/` — records the Session from a microphone to WAV (PyAV: DirectShow
+  on Windows, ALSA on Linux). No Live Transcript while recording.
+- `LLM/Whisper/` — transcribes an existing file (faster-whisper). No diarization
+  (segments have no Speaker).
 - `LLM/AI_Model/` — chunked LLM extraction via llama.cpp/ollama. Prompt and
   schema are **project-management**, hard-coded in `prompt.py` → must move into a Domain.
 - `extractor.py` `RealtimeTaskExtractor` extracts during transcription — conflicts
   with "extract only from the final Transcript". Open question #1 (recommended: drop it).
-- No tests yet.
+- Tests: only `tests/test_recorder.py` (stdlib `unittest`, run by `./check.sh`).
 
 Open questions (#1–#8, #10 in `OPEN-QUESTIONS.md`) are **not decided**. If a task
 depends on one, stop and ask; don't silently pick the recommendation.
@@ -59,7 +61,8 @@ depends on one, stop and ask; don't silently pick the recommendation.
 - Python 3 (dataclasses, type hints, `X | None`), settings read from env vars via
   `Settings.from_environment()` frozen dataclasses. Follow that pattern.
 - Setup: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`
-- Run: `./norev.sh <audio_or_video> [lang]` (starts/reuses `llama-server`)
+- Run: `./norev.sh <audio_or_video> [lang]` (starts/reuses `llama-server`), or
+  `./norev.sh --record [lang]` to record from the microphone first
 - Before every push to `main`: `./check.sh` (same checks as CI in `.github/workflows/ci.yml`;
   no GPU or models needed). Push only if it ends with `OK`.
 - Module entry: `.venv/bin/python -m LLM.Whisper.whisper ...` (run from the repo root)
