@@ -13,6 +13,7 @@ import dataclasses
 import json
 import os
 import sqlite3
+import threading
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -32,6 +33,8 @@ from norev.core.models import (
     Session,
     Speaker,
     StaleRevision,
+    StepRecord,
+    StepState,
     Suggestion,
     Transcript,
 )
@@ -117,7 +120,9 @@ class EncryptedStore:
         if not is_new:
             self._check_key()  # read-only, before anything can write
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(self._path, isolation_level=None)
+        # The UI calls in from pywebview's threads: one connection, used by one thread at a time
+        self._lock = threading.RLock()
+        self._db = sqlite3.connect(self._path, isolation_level=None, check_same_thread=False)
         self._db.text_factory = bytes  # a blob rewritten as text on disk then fails authentication, not decoding
         self._db.execute("PRAGMA secure_delete = ON")
         self._db.execute("PRAGMA temp_store = MEMORY")
@@ -171,6 +176,11 @@ class EncryptedStore:
         if d.get("others_prompt"):
             d["others_prompt"] = OthersPrompt(**d["others_prompt"])
         return Session(**d)
+
+    def list_sessions(self) -> list[Session]:
+        with self._lock:
+            ids = [row[0].decode() for row in self._db.execute("SELECT id FROM records WHERE kind = 'session'")]
+        return sorted((self.get_session(i) for i in ids), key=lambda s: s.started_at, reverse=True)
 
     def save_transcript(self, session_id: str, transcript: Transcript) -> str:
         ref = f"t-{uuid.uuid4().hex}"
@@ -251,7 +261,8 @@ class EncryptedStore:
         return ref
 
     def load_audio(self, audio_ref: str) -> bytes:
-        row = self._db.execute("SELECT blob FROM records WHERE kind = 'audio' AND id = ?", (audio_ref,)).fetchone()
+        with self._lock:
+            row = self._db.execute("SELECT blob FROM records WHERE kind = 'audio' AND id = ?", (audio_ref,)).fetchone()
         if row is None:
             raise KeyError("audio does not exist")
         return self._open(row[0], _aad("audio", audio_ref), f"audio {audio_ref!r}")
@@ -266,6 +277,21 @@ class EncryptedStore:
 
     def load_speakers(self, session_id: str) -> list[Speaker]:
         return [Speaker(**d) for d in self._get("speakers", session_id) or []]
+
+    # --- ExecutionStore (#23): one record per action, holding each step's state
+
+    def load_steps(self, action_id: str) -> dict[str, StepRecord]:
+        return {name: StepRecord(name, StepState(d["state"]), d["result"], d["error_type"])
+                for name, d in (self._get("steps", action_id) or {}).items()}
+
+    def save_step(self, action_id: str, record: StepRecord) -> None:
+        d = dataclasses.asdict(record)
+        d["state"] = record.state.value
+        d = json.loads(_encode(d))  # TypeError on a non-JSON result, before any write
+        with self._transaction():  # read and write together: steps of one action never overwrite each other
+            steps = self._get("steps", action_id) or {}
+            steps[record.step] = d
+            self._write("steps", action_id, _encode(steps))
 
     # --- secrets (the SecretStore of norev/adapters/connectors/google_calendar.py, #45)
 
@@ -291,10 +317,18 @@ class EncryptedStore:
             seq = self._db.execute("SELECT COALESCE(MAX(seq), 0) + 1 FROM audit").fetchone()[0]
             self._db.execute("INSERT INTO audit VALUES (?, ?)", (seq, self._seal(plaintext, f"audit\0{seq}".encode())))
 
+    def record_result(self, result: Any) -> None:
+        """The result of one send (the Central Processor's SendResult, #22): with no result, the send is uncertain."""
+        d = dataclasses.asdict(result)
+        d["at"] = result.at.isoformat()
+        self._put("send_result", f"r-{uuid.uuid4().hex}", d)
+
     def load_events(self) -> list[AuditEvent]:
         # shortcut: a deleted audit row is not detected; a hash chain over the rows would catch it.
         events = []
-        for seq, blob in self._db.execute("SELECT seq, blob FROM audit ORDER BY seq"):
+        with self._lock:
+            rows = self._db.execute("SELECT seq, blob FROM audit ORDER BY seq").fetchall()
+        for seq, blob in rows:
             d = json.loads(self._open(blob, f"audit\0{seq}".encode(), f"audit {seq}"))
             d["at"] = datetime.fromisoformat(d["at"])
             events.append(AuditEvent(**d))
@@ -331,16 +365,18 @@ class EncryptedStore:
         self._db.execute("INSERT OR REPLACE INTO records VALUES (?, ?, ?)", (kind, record_id, blob))
 
     def _exists(self, kind: str, record_id: str) -> bool:
-        return self._db.execute("SELECT 1 FROM records WHERE kind = ? AND id = ?", (kind, record_id)).fetchone() is not None
+        with self._lock:
+            return self._db.execute("SELECT 1 FROM records WHERE kind = ? AND id = ?", (kind, record_id)).fetchone() is not None
 
     def _get(self, kind: str, record_id: str) -> Any:
-        row = self._db.execute("SELECT blob FROM records WHERE kind = ? AND id = ?", (kind, record_id)).fetchone()
+        with self._lock:
+            row = self._db.execute("SELECT blob FROM records WHERE kind = ? AND id = ?", (kind, record_id)).fetchone()
         if row is None:
             return None
         return json.loads(self._open(row[0], _aad(kind, record_id), f"{kind} {record_id!r}"))
 
     def _transaction(self):
-        return _Transaction(self._db)
+        return _Transaction(self._db, self._lock)
 
     def _seal(self, plaintext: bytes, aad: bytes) -> bytes:
         nonce = os.urandom(_NONCE_BYTES)
@@ -360,14 +396,25 @@ class EncryptedStore:
 
 
 class _Transaction:
-    def __init__(self, db: sqlite3.Connection) -> None:
+    """BEGIN IMMEDIATE ... COMMIT while holding the store's lock, so threads never interleave."""
+
+    def __init__(self, db: sqlite3.Connection, lock: threading.RLock) -> None:
         self._db = db
+        self._lock = lock
 
     def __enter__(self) -> None:
-        self._db.execute("BEGIN IMMEDIATE")
+        self._lock.acquire()
+        try:
+            self._db.execute("BEGIN IMMEDIATE")
+        except BaseException:
+            self._lock.release()
+            raise
 
     def __exit__(self, exc_type, exc, tb) -> None:
-        self._db.execute("ROLLBACK" if exc_type else "COMMIT")
+        try:
+            self._db.execute("ROLLBACK" if exc_type else "COMMIT")
+        finally:
+            self._lock.release()
 
 
 def _encode(value: Any) -> bytes:
@@ -381,11 +428,13 @@ def _aad(kind: str, record_id: str) -> bytes:
 def _action_dict(action: ProposedAction) -> dict[str, Any]:
     d = dataclasses.asdict(action)
     d["due_date"] = action.due_date.isoformat() if action.due_date else None
+    d["approved_at"] = action.approved_at.isoformat() if action.approved_at else None
     d["status"] = action.status.value
     return d
 
 
 def _action(d: dict[str, Any]) -> ProposedAction:
     d["due_date"] = date.fromisoformat(d["due_date"]) if d["due_date"] else None
+    d["approved_at"] = datetime.fromisoformat(d["approved_at"]) if d.get("approved_at") else None
     d["status"] = ActionStatus(d["status"])
     return ProposedAction(**d)

@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 16.0,
+ "elapsed_seconds": 16.2,
  "calls": [
   {
    "stage": "translate",
@@ -63,7 +63,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Georgescu. I see you came with your daughter.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day, Doctor. Yes, Ana brought me, because I don't remember everything I need anymore.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Good day. Mom lost her diabetes tablets again last week and her blood sugar was high.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"How high was it?\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"In the morning 210, in the evening 180. I measured it with her device.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Mrs. Georgescu, what tablets are you taking now?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Metformin, I think 1000, in the morning and evening. But sometimes I forget the evening one.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"And how is the left foot? Last time you had a small wound on the heel.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"It still hurts and turns red in the evening.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Let me check. The wound hasn't closed and the skin around it is red. You need to see a surgeon.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Where do we go?\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"I will take care of the appointment, I'll call tomorrow morning.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Very well. Until then, daily dressing with physiological serum and betadine. The community assistant can come to your home to show you how to do it.\"\n    },\n    {\n      \"id\": \"15\",\n      \"text\": \"That would be a great help, I work until 5.\"\n    },\n    {\n      \"id\": \"16\",\n      \"text\": \"I will inform the community assistant, Mrs. Ioana, to visit you on Monday afternoon.\"\n    },\n    {\n      \"id\": \"17\",\n      \"text\": \"And what about the tablets, since I keep forgetting them?\"\n    },\n    {\n      \"id\": \"18\",\n      \"text\": \"I recommend a box of pills for the days of the week. Ana, please prepare it for the whole week on Sunday evening.\"\n    },\n    {\n      \"id\": \"19\",\n      \"text\": \"Sure, I will buy it from the pharmacy today.\"\n    },\n    {\n      \"id\": \"20\",\n      \"text\": \"I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.\"\n    },\n    {\n      \"id\": \"21\",\n      \"text\": \"We will do them on Thursday, because I have free time.\"\n    },\n    {\n      \"id\": \"22\",\n      \"text\": \"Come back then on November 20th at 11, with the results and with the medical letter from the surgeon.\"\n    },\n    {\n      \"id\": \"23\",\n      \"text\": \"November 20th, at 11. Ana, please write it down, please.\"\n    },\n    {\n      \"id\": \"24\",\n      \"text\": \"I noted it down. Thank you very much, Doctor.\"\n    },\n    {\n      \"id\": \"25\",\n      \"text\": \"You're welcome. If fever appears or the foot swells, come immediately.\"\n    }\n  ]\n}"
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Georgescu. I see you came with your daughter.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day, Doctor. Yes, Ana brought me, because I don't remember everything I need anymore.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Good day. Mom lost her diabetes tablets again last week and her blood sugar was high.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"How high was it?\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"In the morning 210, in the evening 180. I measured it with her device.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Mrs. Georgescu, what tablets are you taking now?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Metformin, I think 1000, in the morning and evening. But sometimes I forget the evening one.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"And how is the left foot? Last time you had a small wound on the heel.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"It still hurts and turns red in the evening.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Let me check. The wound hasn't closed and the skin around it is red. You need to see a surgeon.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Where do we go?\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"I will take care of the appointment, I'll call tomorrow morning.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Very well. Until then, daily dressing with physiological serum and betadine. The community assistant can come to your home to show you how to do it.\"\n    },\n    {\n      \"id\": \"15\",\n      \"text\": \"That would be a great help, I work until 5.\"\n    },\n    {\n      \"id\": \"16\",\n      \"text\": \"I will inform the community assistant, Mrs. Ioana, to visit you on Monday afternoon.\"\n    },\n    {\n      \"id\": \"17\",\n      \"text\": \"And what about the tablets, since I keep forgetting them?\"\n    },\n    {\n      \"id\": \"18\",\n      \"text\": \"I recommend a box of pills for the days of the week. Ana, please prepare it for the whole week on Sunday evening.\"\n    },\n    {\n      \"id\": \"19\",\n      \"text\": \"Sure, I'll buy it from the pharmacy today.\"\n    },\n    {\n      \"id\": \"20\",\n      \"text\": \"I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.\"\n    },\n    {\n      \"id\": \"21\",\n      \"text\": \"We'll do them on Thursday, since I'm free.\"\n    },\n    {\n      \"id\": \"22\",\n      \"text\": \"Come back then on November 20th at 11, with the results and with the medical letter from the surgeon.\"\n    },\n    {\n      \"id\": \"23\",\n      \"text\": \"November 20th, at 11. Ana, please write it down, please.\"\n    },\n    {\n      \"id\": \"24\",\n      \"text\": \"I noted it. Thank you very much, Doctor.\"\n    },\n    {\n      \"id\": \"25\",\n      \"text\": \"You're welcome. If fever appears or the foot swells, come immediately.\"\n    }\n  ]\n}"
   }
  ],
  "english": {
@@ -216,7 +216,7 @@
     "start": 92.47,
     "end": 95.02,
     "speaker_id": "S3",
-    "text": "Sure, I will buy it from the pharmacy today.",
+    "text": "Sure, I'll buy it from the pharmacy today.",
     "untranslated": false
    },
    {
@@ -230,7 +230,7 @@
     "start": 102.283,
     "end": 104.0,
     "speaker_id": "S3",
-    "text": "We will do them on Thursday, because I have free time.",
+    "text": "We'll do them on Thursday, since I'm free.",
     "untranslated": false
    },
    {
@@ -251,7 +251,7 @@
     "start": 117.186,
     "end": 120.375,
     "speaker_id": "S3",
-    "text": "I noted it down. Thank you very much, Doctor.",
+    "text": "I noted it. Thank you very much, Doctor.",
     "untranslated": false
    },
    {

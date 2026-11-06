@@ -317,3 +317,21 @@ class AuditEvent:
             f"AuditEvent(at={self.at.isoformat()}, action_id={self.action_id}, "
             f"connector={self.connector}, payload_keys={sorted(self.payload)})"
         )
+
+
+# Workflow execution (#23): the state of each step, persisted by the ExecutionStore port
+class StepState(str, Enum):
+    STARTED = "started"
+    DONE = "done"
+    FAILED = "failed"
+
+
+@dataclass(frozen=True)
+class StepRecord:
+    step: str
+    state: StepState
+    result: dict[str, Any] | None = None  # what the step answered, e.g. the path of the document
+    error_type: str | None = None  # exception class name only, never its message
+
+    def __repr__(self) -> str:
+        return f"StepRecord({self.step}, {self.state.value}, result_keys={sorted(self.result or {})}, error={self.error_type})"

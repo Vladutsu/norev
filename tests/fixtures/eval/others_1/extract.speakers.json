@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 10.0,
+ "elapsed_seconds": 10.3,
  "calls": [
   {
    "stage": "extract",
@@ -104,7 +104,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed apartment viewings, price negotiations, and loan documentation. The team plans to schedule a viewing and prepare necessary documents for the loan.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Call apartment owner for price reduction\",\n      \"description\": \"Contact the owner to discuss price reduction for the apartment in Drumul Taberei\",\n      \"owner\": \"Mr. Ionescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll call him tomorrow\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Schedule viewing for 3-bedroom apartment\",\n      \"description\": \"Arrange a viewing for the 3-bedroom apartment in Militari\",\n      \"owner\": \"Mr. Ionescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll schedule a viewing Saturday at 11 o'clock\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Send list of loan documents\",\n      \"description\": \"Email the list of required documents for the loan\",\n      \"owner\": \"Mr. Ionescu\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll send you by email the list of documents by tonight\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Talk with bank for pre-approval\",\n      \"description\": \"Discuss loan pre-approval with the bank\",\n      \"owner\": \"S2\",\n      \"due_date\": \"2026-11-14\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll talk with the bank next week for pre-approval\"\n    }\n  ],\n  \"decisions\": [\n    \"If the owner accepts 88,000 euros, they will make the preliminary contract\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": []\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed apartment viewings, price negotiations, and loan documentation. The team plans to schedule a viewing and prepare necessary documents for the loan.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Call apartment owner for price reduction\",\n      \"description\": \"Contact the owner to discuss price reduction for the apartment in Drumul Taberei\",\n      \"owner\": \"Mr. Ionescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll call him tomorrow\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Schedule viewing for 3-bedroom apartment\",\n      \"description\": \"Arrange a viewing for the 3-bedroom apartment in Militari\",\n      \"owner\": \"Mr. Ionescu\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll schedule a viewing Saturday at 11 o'clock\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Send list of loan documents\",\n      \"description\": \"Email the list of required documents for the loan\",\n      \"owner\": \"Mr. Ionescu\",\n      \"due_date\": \"2026-11-06\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll send you by email the list of documents by tonight\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Talk with bank for pre-approval\",\n      \"description\": \"Discuss loan pre-approval with the bank\",\n      \"owner\": \"S2\",\n      \"due_date\": \"2026-11-14\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll talk with the bank next week for pre-approval\"\n    }\n  ],\n  \"decisions\": [\n    \"If the owner accepts 88,000 euros, they will make the preliminary contract\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"What is the exact deadline for the bank pre-approval?\"\n  ]\n}"
   }
  ],
  "result": {
@@ -167,6 +167,8 @@
    "If the owner accepts 88,000 euros, they will make the preliminary contract"
   ],
   "risks": [],
-  "follow_up_questions": []
+  "follow_up_questions": [
+   "What is the exact deadline for the bank pre-approval?"
+  ]
  }
 }

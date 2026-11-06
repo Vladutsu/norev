@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 9.3,
+ "elapsed_seconds": 10.3,
  "calls": [
   {
    "stage": "extract",
@@ -104,11 +104,11 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"The session discussed Vlad's poor math grades and proposed recovery classes and an exercise sheet. The parent agreed to ensure Vlad attends the classes and sign the grade book.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Prepare exercise sheet on fractions\",\n      \"description\": \"Prepare an exercise sheet on fractions until Monday\",\n      \"owner\": null,\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I prepare an exercise sheet on fractions until Monday\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Conduct recovery classes\",\n      \"description\": \"Conduct recovery classes on Tuesday, after school\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I propose recovery classes on Tuesday, after school\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Sign grade book\",\n      \"description\": \"Sign the grade book by Friday\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Please sign the grade book by Friday\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Schedule recovery test\",\n      \"description\": \"Schedule recovery test on November 25th\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-25\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"The recovery test will be on November 25th\"\n    }\n  ],\n  \"decisions\": [\n    \"Mrs. Dumitrescu agreed to ensure Vlad attends the recovery classes\"\n  ],\n  \"risks\": [],\n  \"follow_up_questions\": [\n    \"Who is responsible for sending the exercise sheet to Vlad?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"The session discussed Vlad's poor math grades and proposed recovery classes and an exercise sheet. The parent agreed to ensure attendance and sign the grade book.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Prepare exercise sheet on fractions\",\n      \"description\": \"Prepare an exercise sheet on fractions until Monday\",\n      \"owner\": null,\n      \"due_date\": \"2026-11-08\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I prepare an exercise sheet on fractions until Monday\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Conduct recovery classes\",\n      \"description\": \"Conduct recovery classes on Tuesday, after school\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I propose recovery classes on Tuesday, after school\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Sign grade book\",\n      \"description\": \"Sign the grade book by Friday\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-12\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"Please sign the grade book by Friday\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Send email for questions\",\n      \"description\": \"Send email if Vlad has questions\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": null,\n      \"priority\": \"low\",\n      \"transcript_excerpt\": \"May I write to you by email if he has questions?\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Schedule recovery test\",\n      \"description\": \"Schedule recovery test on November 25th\",\n      \"owner\": \"Mrs. Dumitrescu\",\n      \"due_date\": \"2026-11-25\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"The recovery test will be on November 25th\"\n    }\n  ],\n  \"decisions\": [],\n  \"risks\": [],\n  \"follow_up_questions\": []\n}"
   }
  ],
  "result": {
-  "session_summary": "The session discussed Vlad's poor math grades and proposed recovery classes and an exercise sheet. The parent agreed to ensure Vlad attends the classes and sign the grade book.",
+  "session_summary": "The session discussed Vlad's poor math grades and proposed recovery classes and an exercise sheet. The parent agreed to ensure attendance and sign the grade book.",
   "proposed_actions": [
    {
     "id": "A1",
@@ -151,6 +151,19 @@
    },
    {
     "id": "A4",
+    "title": "Send email for questions",
+    "description": "Send email if Vlad has questions",
+    "owner": "Mrs. Dumitrescu",
+    "due_date": null,
+    "priority": "low",
+    "status": "proposed",
+    "dependencies": [],
+    "confidence": 0.0,
+    "transcript_excerpt": "May I write to you by email if he has questions?",
+    "needs_review": false
+   },
+   {
+    "id": "A5",
     "title": "Schedule recovery test",
     "description": "Schedule recovery test on November 25th",
     "owner": "Mrs. Dumitrescu",
@@ -163,12 +176,8 @@
     "needs_review": false
    }
   ],
-  "decisions": [
-   "Mrs. Dumitrescu agreed to ensure Vlad attends the recovery classes"
-  ],
+  "decisions": [],
   "risks": [],
-  "follow_up_questions": [
-   "Who is responsible for sending the exercise sheet to Vlad?"
-  ]
+  "follow_up_questions": []
  }
 }

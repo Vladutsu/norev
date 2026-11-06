@@ -14,6 +14,17 @@ const ERRORS = {
   not_found: "Sesiunea nu mai există.",
   invalid: "Datele nu sunt valide.",
   internal: "Ceva n-a mers. Încearcă din nou.",
+  unsupported_workflow: "Acest tip de acțiune are nevoie de un Connector care nu e încă disponibil.",
+  already_running: "Acțiunea se execută deja.",
+  not_executable: "Acțiunea nu poate fi executată acum.",
+  llm_unavailable: "Modelul local (llama-server) nu a pornit. Verifică LLAMA_SERVER și LLAMACPP_MODEL.",
+  no_microphone: "Microfonul nu a putut fi deschis.",
+};
+const STAGES = {
+  transcribing: "Se face transcrierea finală",
+  starting_llm: "Se pornește modelul local",
+  analysing: "Se analizează conversația",
+  recording: "Înregistrarea",
 };
 const STATUS = {
   proposed: ["În așteptare", ""],
@@ -184,8 +195,15 @@ function initNew() {
     startRecording(session_id);
   }));
   $("import").addEventListener("click", (e) => guarded(e.currentTarget, async () => {
-    const { session_id } = await api("import_example", state.mode, state.lang, $("contact").value.trim(), othersPayload());
-    await openReview(session_id);
+    const { session_id } = await api("import_file", state.mode, state.lang, $("contact").value.trim(), othersPayload());
+    if (!session_id) return; // the User closed the file dialog
+    state.sessionId = session_id;
+    $("rec-title").textContent = $("contact").value.trim() || "Fără contact";
+    $("rec-meta").textContent = `${LANGS[state.lang]} · fișier importat`;
+    $("live").replaceChildren();
+    $("rec-controls").hidden = true;
+    show("recording");
+    await waitAnalysis(session_id);
   }));
 }
 
@@ -254,18 +272,36 @@ function initRecording() {
     stopPolling();
     $("view-recording").classList.remove("recording");
     $("rec-controls").hidden = true;
-    const line = $("analysis");
-    line.hidden = false;
-    line.replaceChildren(h("span", { class: "recdot pulse", "aria-hidden": "true" }), "Se face transcrierea finală și se analizează…");
-    try {
-      await api("stop", state.sessionId);
-      await openReview(state.sessionId);
-    } catch (err) {
-      line.replaceChildren(ERRORS[err.code] || ERRORS.internal, " ",
-        h("button", { type: "button", class: "btn", onclick: () => $("stop").click() }, "Încearcă din nou"));
-      $("rec-controls").hidden = false;
-    }
+    await waitAnalysis(state.sessionId);
   }));
+}
+
+// Stop and import return at once; the analysis runs in the backend and reports its stage.
+async function waitAnalysis(sessionId) {
+  const line = $("analysis");
+  line.hidden = false;
+  const busy = (text) => line.replaceChildren(h("span", { class: "recdot pulse", "aria-hidden": "true" }), `${text}…`);
+  busy(STAGES.transcribing);
+  try {
+    await api("stop", sessionId);
+    for (;;) {
+      const p = await api("progress", sessionId);
+      if (p.failed) {
+        const what = p.failed === "no_audio" ? "Nu s-a înregistrat nimic. Pornește o sesiune nouă."
+          : `Analiza s-a oprit la etapa „${STAGES[p.stage] || p.stage}”. Ce s-a salvat până acolo e păstrat.`;
+        line.replaceChildren(what, " ", p.failed === "no_audio" ? "" : h("button", {
+          type: "button", class: "btn", onclick: (e) => guarded(e.currentTarget, () => waitAnalysis(sessionId)) }, "Încearcă din nou"));
+        return;
+      }
+      if (p.stage === "ready") break;
+      busy(STAGES[p.stage] || STAGES.analysing);
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    line.hidden = true;
+    await openReview(sessionId);
+  } catch (err) {
+    line.replaceChildren(ERRORS[err.code] || ERRORS.internal);
+  }
 }
 
 // ---------- Review
@@ -285,10 +321,14 @@ async function reloadReview() {
   refreshPending();
 }
 
-async function act(button, name, ...args) {
+// edit, preview, approve, reject: checked against the revision the User saw
+const act = (button, name, ...args) => call(button, name, ...args, state.review.revision);
+
+// execute, retry, reconcile: the executor checks the approved payload itself (#23)
+async function call(button, name, ...args) {
   await guarded(button, async () => {
     try {
-      state.review = await api(name, state.sessionId, ...args, state.review.revision);
+      state.review = await api(name, state.sessionId, ...args);
       renderReview();
       refreshPending();
     } catch (err) {
@@ -307,7 +347,9 @@ function renderReview() {
   $("decided").textContent = `${decided} din ${r.actions.length} decise`;
   $("decided-bar").style.width = r.actions.length ? `${Math.round((decided / r.actions.length) * 100)}%` : "0";
   $("summary").textContent = r.summary || "—";
-  $("actions").replaceChildren(...r.actions.map(actionCard));
+  const partial = r.untranslated ? h("p", { class: "small muted", role: "note" },
+    `Rezultat parțial: ${r.untranslated} intervenții n-au putut fi traduse și au rămas în limba vorbită.`) : null;
+  $("actions").replaceChildren(...[partial, ...r.actions.map(actionCard)].filter(Boolean));
 
   const roleOptions = (current) => [
     h("option", { value: "", selected: !current, disabled: true }, "Alege rolul"),
@@ -348,7 +390,21 @@ function actionCard(a) {
     h("pre", {}, Object.entries(step.payload).map(([k, v]) => `${k}: ${v === null || v === "" ? "—" : v}`).join("\n"))));
 
   let buttons = null;
-  if (open) {
+  const runnable = state.review.can_execute;
+  if (runnable && a.status === "approved" && a.uncertain_step) {
+    buttons = h("div", { class: "actions" },
+      h("span", { class: "hint" }, "Execuția a fost întreruptă. S-a salvat documentul?"),
+      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, false) }, "Nu s-a salvat"),
+      h("button", { type: "button", class: "btn", onclick: (e) => call(e.currentTarget, "reconcile", a.id, a.uncertain_step, true) }, "S-a salvat"));
+  } else if (runnable && a.status === "approved") {
+    buttons = h("div", { class: "actions" },
+      h("span", { class: "hint" }, "Se trimite exact ce ai aprobat."),
+      h("button", { type: "button", class: "btn primary", onclick: (e) => call(e.currentTarget, "execute", a.id) }, icon("arrow", 18), "Execută"));
+  } else if (runnable && a.status === "failed") {
+    buttons = h("div", { class: "actions" },
+      h("span", { class: "hint" }, a.error || "Execuția a eșuat."),
+      h("button", { type: "button", class: "btn primary", onclick: (e) => call(e.currentTarget, "retry", a.id) }, "Reîncearcă"));
+  } else if (open) {
     const hint = a.missing.length ? `Completează: ${a.missing.join(", ")}`
       : a.prepared ? "Se aprobă exact ce vezi mai sus." : "Vezi exact ce se trimite înainte de aprobare.";
     const next = a.prepared
