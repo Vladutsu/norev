@@ -132,7 +132,8 @@ Nothing is written to `Outputs/` except `llama-server.log`. The old stages
 ```
 
 Same flow as `norev.sh`, started from the window: the audio is sealed in the store (never written to
-a file), Whisper and diarization run first, then the app starts `llama-server` for the analysis and
+a file), Whisper and diarization run first, each in a child process that ends before the next model
+loads (so no CUDA context stays on the GPU), then the app starts `llama-server` for the analysis and
 stops it after (same variables as `norev.sh`; a server already running at `LLAMACPP_URL` is used).
 An approved Proposed Action is executed only on **Execute**, through the Workflow executor and the
 Central Processor; a failed one is retried by hand, and a step interrupted by a restart is shown for
