@@ -1,10 +1,10 @@
 {
-  "session_summary": "A patient visited a doctor for persistent cough, fever, and fatigue. The doctor prescribed medication, recommended a chest X-ray, and issued a sick leave. Additional tests were scheduled, and the patient was advised to quit smoking.",
+  "session_summary": "A patient visited a doctor for persistent cough, fever, and fatigue. The doctor prescribed medication, recommended tests, and issued a sick leave. The patient was advised to quit smoking and attend a cessation program.",
   "proposed_actions": [
     {
       "id": "A1",
       "title": "Schedule Chest X-ray",
-      "description": "Patient to schedule chest X-ray at the county hospital radiology department.",
+      "description": "Get a chest X-ray done at the county hospital radiology department.",
       "owner": "Patient",
       "due_date": "2026-11-07",
       "priority": "high",
@@ -17,7 +17,7 @@
     {
       "id": "A2",
       "title": "Take Medication",
-      "description": "Patient to take amoxicillin with clavulanic acid, one thousand milligrams, twice a day, for seven days.",
+      "description": "Take amoxicillin with clavulanic acid, one thousand milligrams, twice a day, for seven days.",
       "owner": "Patient",
       "due_date": null,
       "priority": "high",
@@ -30,10 +30,10 @@
     {
       "id": "A3",
       "title": "Take Paracetamol for Fever",
-      "description": "Patient to take paracetamol for fever, no more than four tablets a day.",
+      "description": "Take paracetamol for fever, no more than four tablets a day.",
       "owner": "Patient",
       "due_date": null,
-      "priority": "high",
+      "priority": "medium",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
@@ -43,7 +43,7 @@
     {
       "id": "A4",
       "title": "Get Sick Leave Certificate",
-      "description": "Patient to obtain a sick leave certificate from the doctor and submit it to human resources.",
+      "description": "Collect the sick leave certificate from the doctor and take it to human resources.",
       "owner": "Patient",
       "due_date": "2026-11-10",
       "priority": "high",
@@ -55,8 +55,8 @@
     },
     {
       "id": "A5",
-      "title": "Undergo Hematology Panel and C-Reactive Protein Test",
-      "description": "Patient to undergo hematology panel and C-reactive protein test tomorrow morning on an empty stomach.",
+      "title": "Undergo Blood Tests",
+      "description": "Undergo a hematology panel and C-reactive protein test tomorrow morning on an empty stomach.",
       "owner": "Patient",
       "due_date": "2026-11-07",
       "priority": "high",
@@ -68,42 +68,38 @@
     },
     {
       "id": "A6",
-      "title": "Attend Follow-Up Appointment",
-      "description": "Patient to attend a follow-up appointment on Tuesday, November 10th, at half past eight, with X-ray and test results.",
+      "title": "Attend Follow-up Appointment",
+      "description": "Attend a follow-up appointment on Tuesday, November 10th, at half past eight, with the X-ray and test results.",
       "owner": "Patient",
       "due_date": "2026-11-10",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "I'll be waiting on Tuesday, November 10th, at half past eight, with the X-ray and test results.",
+      "transcript_excerpt": "I'll be waiting for you on Tuesday, November 10th, at half past eight, with the X-ray and test results.",
       "needs_review": false
     },
     {
       "id": "A7",
-      "title": "Enroll in Smoking Cessation Program",
-      "description": "Patient to enroll in the smoking cessation program at the clinic.",
+      "title": "Attend Smoking Cessation Program",
+      "description": "Attend the smoking cessation program at the clinic.",
       "owner": "Patient",
-      "due_date": "2026-11-17",
+      "due_date": null,
       "priority": "medium",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "I recommend the smoking cessation program at the clinic. I'll put you on the list and the assistant, Mrs. Elena, will call you next week.",
+      "transcript_excerpt": "I recommend the smoking cessation program at the clinic.",
       "needs_review": false
     }
   ],
   "decisions": [
-    "Doctor prescribed medication for the patient's symptoms.",
-    "Doctor issued a sick leave certificate for five days.",
-    "Doctor recommended a smoking cessation program."
+    "The patient will not work for five days, up to Tuesday inclusive."
   ],
   "risks": [
-    "Patient's condition may worsen if symptoms persist or if fever exceeds thirty-nine degrees.",
-    "Patient may not attend the follow-up appointment on time."
+    "If the fever goes above thirty-nine or the patient has trouble breathing, they should come immediately or call the emergency department."
   ],
   "follow_up_questions": [
-    "Will the patient attend the follow-up appointment on time?",
-    "Is the patient aware of the smoking cessation program details?"
+    "When will the smoking cessation program start?"
   ]
 }

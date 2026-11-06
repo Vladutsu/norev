@@ -1,10 +1,10 @@
 {
-  "session_summary": "A patient consulted a doctor about persistent headaches, high blood pressure, and palpitations. The doctor prescribed medication, recommended lifestyle changes, and scheduled follow-up tests and appointments.",
+  "session_summary": "A patient visited the doctor for persistent headaches, high blood pressure, and palpitations. The doctor prescribed medication, recommended lifestyle changes, and scheduled follow-up tests and appointments.",
   "proposed_actions": [
     {
       "id": "A1",
       "title": "Measure Blood Pressure",
-      "description": "Measure blood pressure twice daily and record values in a notebook.",
+      "description": "Measure blood pressure twice daily and record values in a notebook",
       "owner": "Mrs. Ionescu",
       "due_date": "2026-11-12",
       "priority": "high",
@@ -16,8 +16,8 @@
     },
     {
       "id": "A2",
-      "title": "Get Blood Tests Done",
-      "description": "Complete blood tests including cholesterol, blood sugar, creatinine, and ionogram.",
+      "title": "Get Blood Tests",
+      "description": "Complete blood tests: cholesterol, blood sugar, creatinine, and ionogram",
       "owner": "Mrs. Ionescu",
       "due_date": "2026-11-11",
       "priority": "high",
@@ -30,20 +30,20 @@
     {
       "id": "A3",
       "title": "Schedule Electrocardiogram",
-      "description": "Schedule and complete an electrocardiogram at the polyclinic.",
+      "description": "Undergo an electrocardiogram at the assistant's station",
       "owner": "Maria",
-      "due_date": "2026-11-08",
+      "due_date": "2026-11-06",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "The assistant Maria will schedule your electrocardiogram and give you the printed prescription.",
+      "transcript_excerpt": "we'll do it right here, at the assistant, after the consultation.",
       "needs_review": false
     },
     {
       "id": "A4",
-      "title": "Take Prescribed Medication",
-      "description": "Take amlodipine five milligrams once daily in the morning.",
+      "title": "Take Amlodipine",
+      "description": "Take amlodipine five milligrams, one tablet in the morning",
       "owner": "Mrs. Ionescu",
       "due_date": null,
       "priority": "high",
@@ -55,40 +55,26 @@
     },
     {
       "id": "A5",
-      "title": "Reduce Coffee Intake",
-      "description": "Reduce coffee consumption to at most one cup per day in the morning.",
+      "title": "Follow Up Appointment",
+      "description": "Attend a follow-up appointment on Friday, November 13th at 10:00 AM",
       "owner": "Mrs. Ionescu",
-      "due_date": null,
-      "priority": "medium",
+      "due_date": "2026-11-13",
+      "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "Please reduce your coffee to at most one a day, in the morning.",
-      "needs_review": false
-    },
-    {
-      "id": "A6",
-      "title": "Limit Salt Intake",
-      "description": "Reduce salt consumption as much as possible.",
-      "owner": "Mrs. Ionescu",
-      "due_date": null,
-      "priority": "medium",
-      "status": "proposed",
-      "dependencies": [],
-      "confidence": 0.0,
-      "transcript_excerpt": "Salt as little as possible.",
+      "transcript_excerpt": "Come back on Friday, on the 13th of November, at ten o'clock.",
       "needs_review": false
     }
   ],
   "decisions": [
-    "Prescribe amlodipine five milligrams once daily in the morning.",
-    "Schedule follow-up appointment on Friday, 13th of November, at ten o'clock."
+    "Prescribe amlodipine five milligrams, one tablet in the morning",
+    "Schedule follow-up appointment on Friday, November 13th at 10:00 AM"
   ],
   "risks": [
-    "If blood pressure exceeds 180 or symptoms like numbness, blurred vision, or chest pain occur, call 122 immediately."
+    "If blood pressure goes over 180 or symptoms like numbness, blurred vision, or chest pain occur, call 122 immediately"
   ],
   "follow_up_questions": [
-    "When will the blood pressure notebook be completed and submitted?",
-    "When will the blood test results be available?"
+    "When will the blood pressure notebook be reviewed?"
   ]
 }

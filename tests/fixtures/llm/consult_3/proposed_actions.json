@@ -1,25 +1,25 @@
 {
-  "session_summary": "The session focused on managing Mrs. Georgescu's diabetes and foot wound. A referral to surgery was made, and a plan for medication management and follow-up tests was outlined.",
+  "session_summary": "A medical session discussing Mrs. Georgescu's diabetes management, foot wound, and upcoming tests. The doctor referred her to surgery and outlined care instructions.",
   "proposed_actions": [
     {
       "id": "A1",
-      "title": "Book Surgery Appointment",
-      "description": "Call the county hospital to book an outpatient surgery appointment.",
+      "title": "Schedule Surgery Appointment",
+      "description": "Get an appointment at the county hospital outpatient clinic",
       "owner": "Doctor",
       "due_date": "2026-11-07",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "I will take care of the appointment, I'll call tomorrow morning.",
+      "transcript_excerpt": "I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.",
       "needs_review": false
     },
     {
       "id": "A2",
       "title": "Prepare Weekly Medication Box",
-      "description": "Ana should prepare a weekly medication box for Mrs. Georgescu by Sunday evening.",
+      "description": "Ana to prepare a weekly pill box for Mrs. Georgescu",
       "owner": "Ana",
-      "due_date": "2026-11-07",
+      "due_date": "2026-11-06",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
@@ -29,69 +29,56 @@
     },
     {
       "id": "A3",
-      "title": "Buy Diabetes Tablets",
-      "description": "Buy the diabetes tablets from the pharmacy today.",
-      "owner": "Ana",
-      "due_date": "2026-11-06",
+      "title": "Perform Daily Wound Care",
+      "description": "Daily dressing with physiological serum and betadine",
+      "owner": "Community Assistant",
+      "due_date": "2026-11-08",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "I will buy them from the pharmacy today.",
+      "transcript_excerpt": "The community assistant can come to your home to show you how to do it.",
       "needs_review": false
     },
     {
       "id": "A4",
       "title": "Schedule Lab Tests",
-      "description": "Schedule hemoglobin A1c and urine tests at the lab by Friday.",
+      "description": "Hemoglobin A1c and urine test at the lab",
       "owner": "Doctor",
       "due_date": "2026-11-12",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "Do those at the lab by Friday.",
+      "transcript_excerpt": "I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.",
       "needs_review": false
     },
     {
       "id": "A5",
-      "title": "Arrange Community Assistant Visit",
-      "description": "Inform the community assistant, Mrs. Ioana, to visit Mrs. Georgescu on Monday afternoon.",
-      "owner": "Doctor",
-      "due_date": "2026-11-08",
-      "priority": "high",
-      "status": "proposed",
-      "dependencies": [],
-      "confidence": 0.0,
-      "transcript_excerpt": "I will inform the community assistant, Mrs. Ioana, to visit you on Monday afternoon.",
-      "needs_review": false
-    },
-    {
-      "id": "A6",
-      "title": "Schedule Follow-Up Appointment",
-      "description": "Schedule a follow-up appointment on 2026-11-20 at 11:00.",
-      "owner": "Ana",
+      "title": "Arrange Follow-Up Appointment",
+      "description": "Return on 20 November at 11:00 with results and medical letter",
+      "owner": "Mrs. Georgescu",
       "due_date": "2026-11-20",
       "priority": "high",
       "status": "proposed",
       "dependencies": [],
       "confidence": 0.0,
-      "transcript_excerpt": "Come back then on twenty November, at eleven o'clock.",
+      "transcript_excerpt": "Come back then on twenty November, at eleven o'clock, with the results and with the medical letter from the surgeon.",
       "needs_review": false
     }
   ],
   "decisions": [
-    "Referral to surgery for the foot wound.",
-    "Schedule lab tests for hemoglobin A1c and urine test.",
-    "Follow-up appointment on 2026-11-20 at 11:00."
+    "Referral to surgery for the foot wound",
+    "Schedule lab tests for hemoglobin A1c and urine test",
+    "Assign community assistant for wound care"
   ],
   "risks": [
-    "Risk of fever or foot swelling requiring immediate attention.",
-    "Risk of non-compliance with medication regimen due to forgetfulness."
+    "Risk of fever or foot swelling requiring immediate attention",
+    "Risk of forgetting diabetes tablets leading to high blood sugar"
   ],
   "follow_up_questions": [
-    "Is there a specific time window for the surgery appointment?",
-    "What is the exact procedure for the community assistant visit?",
-    "Are there any specific instructions for the lab tests?"
+    "Is there a specific time the community assistant should arrive?",
+    "What is the exact procedure for the lab tests?",
+    "Is there a specific pharmacy for the medication box?"
   ]
 }
