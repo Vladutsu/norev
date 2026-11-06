@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 18.2,
+ "elapsed_seconds": 17.7,
  "calls": [
   {
    "stage": "extract",
@@ -104,7 +104,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"session_summary\": \"A patient reported ongoing symptoms including cough, fever, and fatigue. The doctor recommended a chest X-ray, prescribed medication, and advised a medical leave. The patient was also scheduled for blood tests and referred to a smoking cessation program.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Schedule Chest X-ray\",\n      \"description\": \"Patient to schedule chest X-ray at county hospital radiology\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I want a chest X-ray today or at the latest tomorrow.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Take Medication\",\n      \"description\": \"Patient to take amoxicillin with clavulanic acid twice daily for 7 days\",\n      \"owner\": \"Patient\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll prescribe amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Take Paracetamol for Fever\",\n      \"description\": \"Patient to take paracetamol no more than 4 tablets a day\",\n      \"owner\": \"Patient\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"For the fever take paracetamol, no more than 4 tablets a day.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Complete Blood Tests\",\n      \"description\": \"Patient to complete blood tests and C-reactive protein test on an empty stomach\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Do a complete blood count and C-reactive protein test, tomorrow morning, on an empty stomach.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Attend Follow-up Appointment\",\n      \"description\": \"Patient to attend follow-up appointment on Tuesday, November 10th, at 8:30\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll be waiting on Tuesday, November 10th, at 8:30, with the X-ray and test results.\"\n    },\n    {\n      \"id\": \"A6\",\n      \"title\": \"Obtain Medical Leave Certificate\",\n      \"description\": \"Doctor to issue medical leave certificate for the patient\",\n      \"owner\": \"Doctor\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll issue the medical leave certificate now, you take it to human resources.\"\n    },\n    {\n      \"id\": \"A7\",\n      \"title\": \"Enroll in Smoking Cessation Program\",\n      \"description\": \"Patient to enroll in smoking cessation program at the clinic\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-17\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I recommend the smoking cessation program at the clinic. I'll put you on the list and the assistant, Mrs. Elena, will call you next week.\"\n    }\n  ],\n  \"decisions\": [\n    \"Patient to take medical leave for 5 days, up to Tuesday inclusive.\",\n    \"Patient to avoid work due to health concerns.\"\n  ],\n  \"risks\": [\n    \"Patient's symptoms may worsen, requiring immediate medical attention.\"\n  ],\n  \"follow_up_questions\": [\n    \"When will the smoking cessation program be available for the patient?\"\n  ]\n}"
+   "response": "{\n  \"session_summary\": \"A patient reported ongoing symptoms including cough, fever, and fatigue. The doctor recommended a chest X-ray, prescribed medication, and advised a medical leave. The patient was also scheduled for blood tests and referred to a smoking cessation program.\",\n  \"proposed_actions\": [\n    {\n      \"id\": \"A1\",\n      \"title\": \"Schedule Chest X-ray\",\n      \"description\": \"Patient to schedule chest X-ray at county hospital radiology\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I want a chest X-ray today or at the latest tomorrow.\"\n    },\n    {\n      \"id\": \"A2\",\n      \"title\": \"Take Medication\",\n      \"description\": \"Patient to take amoxicillin with clavulanic acid twice daily for 7 days\",\n      \"owner\": \"Patient\",\n      \"due_date\": null,\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll prescribe amoxicillin with clavulanic acid, 1000 milligrams, twice a day for 7 days.\"\n    },\n    {\n      \"id\": \"A3\",\n      \"title\": \"Take Paracetamol for Fever\",\n      \"description\": \"Patient to take paracetamol no more than 4 tablets a day\",\n      \"owner\": \"Patient\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"For the fever take paracetamol, no more than 4 tablets a day.\"\n    },\n    {\n      \"id\": \"A4\",\n      \"title\": \"Complete Blood Tests\",\n      \"description\": \"Patient to complete blood tests and C-reactive protein test on an empty stomach\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-07\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"Do a complete blood count and C-reactive protein test, tomorrow morning, on an empty stomach.\"\n    },\n    {\n      \"id\": \"A5\",\n      \"title\": \"Attend Follow-up Appointment\",\n      \"description\": \"Patient to attend follow-up appointment on Tuesday, November 10th, at 8:30\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-10\",\n      \"priority\": \"high\",\n      \"transcript_excerpt\": \"I'll be waiting on Tuesday, November 10th, at 8:30, with the X-ray and test results.\"\n    },\n    {\n      \"id\": \"A6\",\n      \"title\": \"Obtain Medical Leave Certificate\",\n      \"description\": \"Doctor to issue medical leave certificate for the patient\",\n      \"owner\": \"Mr. Popa\",\n      \"due_date\": null,\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I'll issue the medical leave certificate now, you take it to human resources.\"\n    },\n    {\n      \"id\": \"A7\",\n      \"title\": \"Enroll in Smoking Cessation Program\",\n      \"description\": \"Patient to enroll in smoking cessation program at the clinic\",\n      \"owner\": \"Patient\",\n      \"due_date\": \"2026-11-17\",\n      \"priority\": \"medium\",\n      \"transcript_excerpt\": \"I recommend the smoking cessation program at the clinic. I'll put you on the list and the assistant, Mrs. Elena, will call you next week.\"\n    }\n  ],\n  \"decisions\": [\n    \"Patient to take medical leave for 5 days, up to Tuesday inclusive\"\n  ],\n  \"risks\": [\n    \"Patient's symptoms may worsen, requiring immediate medical attention\"\n  ],\n  \"follow_up_questions\": [\n    \"When will the smoking cessation program start?\"\n  ]\n}"
   }
  ],
  "result": {
@@ -179,7 +179,7 @@
     "id": "A6",
     "title": "Obtain Medical Leave Certificate",
     "description": "Doctor to issue medical leave certificate for the patient",
-    "owner": "Doctor",
+    "owner": "Mr. Popa",
     "due_date": null,
     "priority": "medium",
     "status": "proposed",
@@ -203,14 +203,13 @@
    }
   ],
   "decisions": [
-   "Patient to take medical leave for 5 days, up to Tuesday inclusive.",
-   "Patient to avoid work due to health concerns."
+   "Patient to take medical leave for 5 days, up to Tuesday inclusive"
   ],
   "risks": [
-   "Patient's symptoms may worsen, requiring immediate medical attention."
+   "Patient's symptoms may worsen, requiring immediate medical attention"
   ],
   "follow_up_questions": [
-   "When will the smoking cessation program be available for the patient?"
+   "When will the smoking cessation program start?"
   ]
  }
 }

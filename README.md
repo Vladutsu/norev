@@ -136,7 +136,10 @@ a file), Whisper and diarization run first, then the app starts `llama-server` f
 stops it after (same variables as `norev.sh`; a server already running at `LLAMACPP_URL` is used).
 An approved Proposed Action is executed only on **Execute**, through the Workflow executor and the
 Central Processor; a failed one is retried by hand, and a step interrupted by a restart is shown for
-the User to confirm, never sent again on its own. There is no Live Transcript yet (#47).
+the User to confirm, never sent again on its own. While recording, the Recording screen shows a Live
+Transcript, feedback only: the same Whisper model and device (`WHISPER_*`) in a child process, about
+every 5 s, kept in memory and never analysed. Stop ends it before the final Transcript; if it cannot
+load (no model, not enough VRAM), the screen says so and the recording goes on.
 
 ## Before pushing
 

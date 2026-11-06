@@ -79,19 +79,70 @@ class ScoreTest(unittest.TestCase):
         self.assertFalse(evaluate._owner_ok("Anastasia", ["Ana"]))
 
 
+class DomainScoreTest(unittest.TestCase):
+    EXPECTED = {
+        "actions": [
+            {"key": "demo", "match": [["demo"]], "owner": "any", "due": "any", "action_type": "calendar_event",
+             "fields": {"event_date": ["2026-11-10"], "start_time": ["10:00"], "end_time": ["11:00"]}},
+            {"key": "training", "match": [["training"]], "owner": "any", "due": "any", "action_type": "calendar_event",
+             "fields": {"event_date": ["2026-11-12"], "start_time": [None]}},
+            {"key": "slides", "match": [["slides"]], "owner": "any", "due": "any", "action_type": "work_item"},
+        ],
+        "not_actions": [{"key": "marketing", "match": [["marketing"]]}],
+        "known_cases": [{"id": "missing-time", "what": "", "action": "training"}],
+    }
+    GENERIC = [action("Client demo"), action("Internal training"), action("Prepare slides"), action("Marketing meeting")]
+
+    def typed(self, **changes):
+        typed = [
+            {"id": "pa-1", "title": "Client demo", "action_type": "calendar_event",
+             "fields": {"event_date": "2026-11-10", "start_time": "10:00", "end_time": "11:00"}},
+            {"id": "pa-2", "title": "Internal training", "action_type": "calendar_event",
+             "fields": {"event_date": "2026-11-12", "start_time": None, "end_time": None}},
+            {"id": "pa-3", "title": "Prepare slides", "action_type": "work_item", "fields": {}},
+        ]
+        for t in typed:
+            t.update(changes.get(t["id"], {}))
+        return [t for t in typed if t.get("action_type") != "drop"]
+
+    def test_all_right(self):
+        r = evaluate.score(self.EXPECTED, self.GENERIC, "", self.typed())
+        self.assertEqual(r["domain"], {"checked": 3, "wrong": {}, "cancelled_as_event": []})
+        self.assertTrue(r["known_cases"][0]["solved"])
+
+    def test_wrong_type_wrong_field_and_dropped(self):
+        typed = self.typed(**{
+            "pa-1": {"fields": {"event_date": "2026-11-10", "start_time": "11:00", "end_time": "11:00"}},
+            "pa-2": {"fields": {"event_date": "2026-11-12", "start_time": "09:00"}},  # a time nobody said
+            "pa-3": {"action_type": "drop"},
+        })
+        r = evaluate.score(self.EXPECTED, self.GENERIC, "", typed)
+        self.assertEqual(r["domain"]["wrong"], {
+            "demo": ["start_time 11:00"], "training": ["start_time 09:00"], "slides": ["dropped by the Domain stage"]})
+        self.assertFalse(r["known_cases"][0]["solved"])
+
+    def test_cancelled_meeting_kept_as_event(self):
+        typed = self.typed() + [{"id": "pa-4", "title": "Marketing meeting", "action_type": "calendar_event", "fields": {}}]
+        self.assertEqual(evaluate.score(self.EXPECTED, self.GENERIC, "", typed)["domain"]["cancelled_as_event"], ["marketing"])
+
+    def test_no_domain_stage_no_domain_score(self):
+        self.assertNotIn("domain", evaluate.score(self.EXPECTED, self.GENERIC, ""))
+
+
 class RecordedEvaluationTest(unittest.TestCase):
     def test_recordings_replay_and_rebuild_the_report(self):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             code = evaluate.check_all()
         self.assertEqual(code, 0, out.getvalue())
 
-    def test_production_follow_up_regressions_are_solved(self):
+    def test_production_known_cases_are_solved_or_have_a_follow_up(self):
+        """#25/#46: a defect may stay outstanding only while an issue says who fixes it."""
         report = evaluate.build_report()
         production = report["variants"]["neutral"]
         for session in production["sessions"].values():
             for case in session["known_cases"]:
                 with self.subTest(case=case["id"]):
-                    self.assertTrue(case["solved"], case.get("follow_up"))
+                    self.assertTrue(case["solved"] or case.get("follow_up"), "outstanding with no follow-up issue")
 
     def test_every_session_has_a_person_checked_expectation_file(self):
         for folder in evaluate.sessions():

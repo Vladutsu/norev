@@ -43,6 +43,7 @@ class Bridge:
     def execute(self, session_id, action_id): return self._call(self._executing("execute"), session_id, action_id)
     def retry(self, session_id, action_id): return self._call(self._executing("retry"), session_id, action_id)
     def reconcile(self, session_id, action_id, step, happened): return self._call(self._executing("reconcile"), session_id, action_id, step, happened)
+    def open_draft(self, session_id, action_id): return self._call(self._executing("open_draft"), session_id, action_id)
     def google_status(self): return self._call(self._backend.google_status)
     def google_connect(self): return self._call(self._backend.google_connect)
     def google_disconnect(self): return self._call(self._backend.google_disconnect)

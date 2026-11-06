@@ -11,6 +11,9 @@ Review, edit, preview, approve and reject are DemoBackend's, on the real store. 
 """
 import io
 import logging
+import os
+import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -26,7 +29,8 @@ from norev.adapters.recorder.recorder import Recorder
 from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction, Session, StepState
 from norev.core.ports import Clock, PayloadBuilder, SessionStore
 from norev.processor.payloads import LocalDocumentPayloadBuilder
-from norev.processor.workflow import WorkflowExecutor
+from norev.processor.workflow import ExecutionRefused, WorkflowExecutor
+from norev.ui._live import LiveFeedback, monitor
 from norev.ui.backend import MODES, ROOT, DemoBackend, ModeUnavailable, PromptNotConfirmed, prompt_digest
 from norev.usecases import others_prompt
 from norev.usecases.session_flow import run_session
@@ -51,12 +55,21 @@ def _thread(work: Callable[[], None]) -> None:
     threading.Thread(target=work, daemon=True).start()
 
 
+def open_with_system(path: Path) -> None:
+    """Opens a file with the system's default app for its type (the mail app for .eml)."""
+    if hasattr(os, "startfile"):
+        os.startfile(path)  # Windows
+    else:
+        subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", str(path)])
+
+
 class SessionBackend(DemoBackend):
     """`processor` is the Central Processor (transcriber, diarizer, LLM and Connectors, #22).
     `llm_session()` keeps llama-server running for one block and yields the model alias (#43).
     `record_source()` gives the microphone's PCM blocks; `pick_file()` the audio file the User chose.
     `builder` makes the previews (default: local documents only); `google` is the User's GoogleAccount
-    for connect/disconnect (#45), None when Google Calendar is not set up.
+    for connect/disconnect (#45), None when Google Calendar is not set up. `open_file` opens a saved
+    email draft in the User's mail app (#61).
     """
 
     can_execute = True
@@ -67,9 +80,12 @@ class SessionBackend(DemoBackend):
                  pick_file: Callable[[], str | None] = lambda: None,
                  workers: int = 1, make_extractor=LegacyActionExtractor, clock: Clock | None = None, domains_dir: Path = ROOT / "domains",
                  monotonic=time.monotonic, run_in_background: Callable[[Callable[[], None]], None] = _thread,
-                 builder: PayloadBuilder | None = None, google=None) -> None:
+                 builder: PayloadBuilder | None = None, google=None,
+                 open_file: Callable[[Path], None] = open_with_system, live_feedback=LiveFeedback) -> None:
         super().__init__(store, approved_by=approved_by, clock=clock, domains_dir=domains_dir, monotonic=monotonic)
         self.processor = processor
+        self.export_dir = Path(export_dir)
+        self.open_file = open_file
         self.builder = builder or LocalDocumentPayloadBuilder(export_dir)
         self.google = google
         self.llm_session = llm_session
@@ -77,6 +93,7 @@ class SessionBackend(DemoBackend):
         self.pick_file = pick_file
         self.workers = workers
         self.make_extractor = make_extractor  # (llm, workers=) -> ActionExtractor; tests give a fake
+        self.live_feedback = live_feedback  # (language) -> LiveFeedback (#47); tests give a fake
         self.run_in_background = run_in_background
         self._lock = threading.Lock()
         self._progress: dict[str, dict[str, Any]] = {}
@@ -132,10 +149,11 @@ class SessionBackend(DemoBackend):
         except Exception as e:  # a wrong or missing device; its message names the device only, but stays in the log
             log.error("microphone: %s", e)
             raise MicrophoneUnavailable("microphone") from None
-        recorder = Recorder(buffer, source=_pausable(source, paused))
+        live = self.live_feedback(str(language))
+        recorder = Recorder(buffer, source=monitor(_pausable(source, paused), live))
         state = {"recorder": recorder, "buffer": buffer, "paused": paused, "language": str(language),
                  "started": self.monotonic(), "paused_at": None, "paused_total": 0.0, "error": None,
-                 "session": session}
+                 "session": session, "live": live}
         thread = threading.Thread(target=self._record, args=(state,), daemon=True)
         state["thread"] = thread
         with self._lock:
@@ -154,8 +172,9 @@ class SessionBackend(DemoBackend):
 
     def live(self, session_id: str) -> dict[str, Any]:
         state = self._recording(session_id)
-        # shortcut: no Live Transcript yet (#47); the Recording screen shows the timer only
-        return {"elapsed": int(self._elapsed(state)), "paused": state["paused_at"] is not None, "segments": []}
+        # Live Transcript: feedback only, kept in memory; the Transcript comes from the whole audio after Stop
+        return {"elapsed": int(self._elapsed(state)), "paused": state["paused_at"] is not None,
+                "segments": state["live"].read()}
 
     def pause(self, session_id: str) -> dict[str, Any]:
         state = self._recording(session_id)
@@ -177,6 +196,7 @@ class SessionBackend(DemoBackend):
         if state is not None:
             state["recorder"].stop()  # while paused the source yields b"", so the writer still sees Stop
             state["thread"].join(timeout=10)
+            state["live"].close()
             audio = state["buffer"].getvalue()
             if state["error"] or len(audio) <= 44:  # 44 bytes: a WAV header with no audio
                 self._progress[session_id] = {"stage": "recording", "failed": "no_audio", "untranslated": 0}
@@ -320,7 +340,36 @@ class SessionBackend(DemoBackend):
         steps = self.store.load_steps(action.id) if action.status is ActionStatus.APPROVED else {}
         view["uncertain_step"] = next((name for name, r in steps.items() if r.state is StepState.STARTED), None)
         view["error"] = action.error or ""
+        view["draft"] = self._draft(action) is not None
         return view
+
+    def _draft(self, action: ProposedAction) -> Path | None:
+        """The email draft an executed action saved, if it is still the approved file in the export folder."""
+        if action.status is not ActionStatus.EXECUTED or not action.approved_payload:
+            return None
+        steps = self.store.load_steps(action.id)
+        for step in action.approved_payload.get("steps", []):
+            record = steps.get(step["step"])
+            if step["connector"] != "email_draft" or record is None or record.state is not StepState.DONE:
+                continue
+            path = Path(step["payload"]["destination"])
+            content = step["payload"]["content"].encode("utf-8")
+            if (path.suffix == ".eml" and path.parent.resolve() == self.export_dir.resolve()
+                    and path.is_file() and path.read_bytes() == content):
+                return path
+        return None
+
+    def open_draft(self, session_id: str, action_id: str) -> dict[str, Any]:
+        """"Deschide în mail" (#61): opens the saved draft with the system's mail app, only when the User
+        asks. Only the exact approved file, in the export folder; a moved or changed file is refused."""
+        action = next((a for a in self.store.load_actions(session_id) if a.id == action_id), None)
+        if action is None:
+            raise LookupError("Proposed Action does not exist")
+        path = self._draft(action)
+        if path is None:
+            raise ExecutionRefused("no saved email draft for this action")
+        self.open_file(path)
+        return {"opened": True}
 
     # --- execution (#23), through the Central Processor
 

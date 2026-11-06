@@ -13,7 +13,7 @@ from pathlib import Path
 DOMAINS = Path(__file__).resolve().parent.parent / "domains"
 
 # shortcut: Connectors are core code that does not exist yet; keep in sync with domains/README.md.
-KNOWN_CONNECTORS = {"google_calendar", "local_document"}
+KNOWN_CONNECTORS = {"email_draft", "google_calendar", "local_document"}
 FIELD_TYPES = {"string", "date", "time"}
 GENERIC_FIELDS = {"title", "description", "owner", "due_date", "transcript_excerpt"}
 PLACEHOLDERS = {"session_date", "roles", "speaker_roles", "action_types", "transcript", "proposed_actions"}

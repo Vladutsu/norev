@@ -11,6 +11,8 @@ Each <session>/ holds the Transcript (or points to one in ../llm), expected.json
 by a person, never copied from the model's answer) and the recordings:
   translation.json        the translate calls and the English Transcript (shared by both variants)
   extract.<variant>.json  the extract calls and the Proposed Actions they gave
+  domain.neutral.json     Corporate only: the Domain stage call on the neutral result, and the typed
+                          Proposed Actions (action_type, fields) it gave (#46)
 and next to them variance.json: the Proposed Actions of extra runs on the same English Transcript.
 
 Variants, on the same English Transcript:
@@ -40,7 +42,12 @@ from LLM.AI_Model.client import build_llm_client  # noqa: E402
 from LLM.AI_Model.settings import DeepSeekSettings  # noqa: E402
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor  # noqa: E402
 from norev.adapters.llm.translator import TurnTranslator  # noqa: E402
+from norev.adapters.domains.loader import load_domain  # noqa: E402
 from norev.core.models import Transcript  # noqa: E402
+from norev.usecases.domain_stage import ask_domain  # noqa: E402
+from norev.usecases.extract import to_proposed_actions  # noqa: E402
+
+DOMAIN_STAGE = ("corporate",)  # Domains whose stage is evaluated; Medical is an example, Others needs the User's prompt
 
 VARIANTS = ("neutral", "speakers")
 _TITLES = re.compile(r"\b(mrs|mr|ms|dr|doamna|domnul|doctor's)\.?\s+", re.I)
@@ -81,6 +88,18 @@ def extract(english: Transcript, variant: str, source: dict, client, settings) -
     client.stage = "extract"
     transcript = with_speakers(english) if variant == "speakers" else english
     return LegacyActionExtractor(client=client, settings=settings).extract(transcript, date.fromisoformat(source["session_date"]))
+
+
+def domain_stage(english: Transcript, result: dict, source: dict, client) -> dict:
+    """The Corporate Domain stage on the neutral generic result, as the Session flow runs it."""
+    domain = load_domain(HERE.parents[2] / "domains" / source["domain"])
+    actions = to_proposed_actions(result, id_prefix="pa")
+    client.stage = "domain"
+    typed, suggestions = ask_domain(domain, client, english, actions, date.fromisoformat(source["session_date"]))
+    return {
+        "actions": [{"id": a.id, "title": a.title, "action_type": a.action_type, "fields": a.fields} for a in typed],
+        "suggestions": [s.text for s in suggestions],
+    }
 
 
 # ── scoring ─────────────────────────────────────────────────────────────────────
@@ -154,8 +173,9 @@ def _number_kept(text: str, english: list[str]) -> bool:
     return False
 
 
-def score(expected: dict, actions: list[dict], english_text: str) -> dict:
-    """Per-Session counts. Expected actions are matched most specific first, each to one produced action."""
+def score(expected: dict, actions: list[dict], english_text: str, typed: list[dict] | None = None) -> dict:
+    """Per-Session counts. Expected actions are matched most specific first, each to one produced action.
+    `typed`: the Domain stage result (ids pa-1, pa-2... in the order of `actions`), when it ran."""
     pool = list(range(len(actions)))
     found: dict[str, dict] = {}
     for exp in sorted(expected["actions"], key=lambda e: -len(e["match"])):
@@ -164,6 +184,7 @@ def score(expected: dict, actions: list[dict], english_text: str) -> dict:
             continue
         pool.remove(hit)
         found[exp["key"]] = {
+            "index": hit,
             "owner": _owner_ok(actions[hit].get("owner"), exp["owner"]),
             "due": _due_ok(actions[hit].get("due_date"), exp["due"]),
             "got": {"title": actions[hit].get("title"), "owner": actions[hit].get("owner"), "due_date": actions[hit].get("due_date")},
@@ -188,17 +209,48 @@ def score(expected: dict, actions: list[dict], english_text: str) -> dict:
         "numbers_changed": sorted(k for k, kept in numbers.items() if not kept),
         "details": found,
     }
+    if typed is not None:
+        result["domain"] = _score_domain(expected, actions, found, typed)
+    typed_keys = {e["key"] for e in expected["actions"] if "action_type" in e}
+
+    def solved(case: dict) -> bool | None:
+        if "number" in case:
+            return case["number"] not in result["numbers_changed"]
+        if case["action"] in typed_keys and "domain" not in result:
+            return None  # a Domain case, and the Domain stage did not run for this variant
+        found_ok = case["action"] in found and found[case["action"]]["owner"] is True and found[case["action"]]["due"] is True
+        return found_ok and case["action"] not in result.get("domain", {}).get("wrong", {})
+
     result["known_cases"] = [
-        {
-            "id": case["id"],
-            "what": case["what"],
-            "follow_up": case.get("follow_up"),
-            "solved": (case["number"] not in result["numbers_changed"]) if "number" in case
-            else (case["action"] in found and found[case["action"]]["owner"] is True and found[case["action"]]["due"] is True),
-        }
+        {"id": case["id"], "what": case["what"], "follow_up": case.get("follow_up"), "solved": solved(case)}
         for case in expected.get("known_cases", [])
     ]
     return result
+
+
+def _score_domain(expected: dict, actions: list[dict], found: dict, typed: list[dict]) -> dict:
+    """Action Type and Domain fields of the expected actions that have them; calendar events said to be
+    cancelled must not come back as calendar_event."""
+    by_id = {t["id"]: t for t in typed}
+    checked, wrong = [], {}
+    for exp in expected["actions"]:
+        if "action_type" not in exp or exp["key"] not in found:
+            continue  # an omission is already counted by the generic stage
+        checked.append(exp["key"])
+        got = by_id.get(f"pa-{found[exp['key']]['index'] + 1}")
+        if got is None:
+            wrong[exp["key"]] = ["dropped by the Domain stage"]
+            continue
+        problems = [] if got["action_type"] == exp["action_type"] else [f"action_type {got['action_type']}"]
+        for field, accepted in exp.get("fields", {}).items():
+            value = (got.get("fields") or {}).get(field)
+            if value not in accepted:
+                problems.append(f"{field} {value}")
+        if problems:
+            wrong[exp["key"]] = problems
+    events = [t for t in typed if t["action_type"] == "calendar_event"]
+    cancelled = [n["key"] for n in expected.get("not_actions", []) if any(_matches(t, n["match"]) for t in events)]
+    return {"checked": len(checked), "wrong": wrong, "cancelled_as_event": cancelled}
 
 
 def totals(per_session: dict[str, dict], names: list[str]) -> dict:
@@ -230,7 +282,9 @@ def build_report() -> dict:
             expected = _json(folder / "expected.json")
             english = _json(folder / "translation.json")["english"]
             actions = _json(folder / f"extract.{variant}.json")["result"].get("proposed_actions", [])
-            per_session[folder.name] = score(expected, actions, " ".join(s["text"] for s in english["segments"]))
+            domain_file = folder / f"domain.{variant}.json"
+            typed = _json(domain_file)["result"]["actions"] if domain_file.exists() else None
+            per_session[folder.name] = score(expected, actions, " ".join(s["text"] for s in english["segments"]), typed)
         names = list(per_session)
         groups = {
             "corporate_others": [n for n in names if not n.startswith("consult_")],
@@ -240,6 +294,14 @@ def build_report() -> dict:
         summary["corporate_others"]["meets_thresholds"] = {
             k: summary["corporate_others"][k] <= v for k, v in thresholds["limits"].items()
         }
+        domain = [r["domain"] for r in per_session.values() if "domain" in r]
+        if domain:
+            summary["domain_stage"] = {
+                "checked": sum(d["checked"] for d in domain),
+                "right": sum(d["checked"] - len(d["wrong"]) for d in domain),
+                "wrong": {n: r["domain"]["wrong"] for n, r in per_session.items() if r.get("domain", {}).get("wrong")},
+                "cancelled_as_event": sum(len(d["cancelled_as_event"]) for d in domain),
+            }
         report["variants"][variant] = {"summary": summary, "sessions": per_session}
     report["variance"] = _variance_summary()
     return report
@@ -283,6 +345,12 @@ def record_all() -> int:
             result = extract(english, variant, source, client, settings)
             _write(folder / f"extract.{variant}.json", {"model": settings.model, "elapsed_seconds": round(time.perf_counter() - started, 1),
                                                         "calls": client.calls, "result": result})
+            if variant == "neutral" and source.get("domain") in DOMAIN_STAGE:
+                client = record.RecordingClient(build_llm_client(settings))
+                started = time.perf_counter()
+                typed = domain_stage(english, result, source, client)
+                _write(folder / "domain.neutral.json", {"model": settings.model, "elapsed_seconds": round(time.perf_counter() - started, 1),
+                                                        "calls": client.calls, "result": typed})
         print(folder.name, "recorded")
     (HERE / "variance.json").unlink(missing_ok=True)  # it was measured on the previous recording
     _write(HERE / "report.json", build_report())
@@ -327,6 +395,13 @@ def check_all(refresh: bool = False) -> int:
                 if refresh:
                     _write(folder / f"extract.{variant}.json", {**rec, "result": result})
                 assert result == rec["result"] or refresh, f"{variant} result differs"
+                domain_file = folder / f"domain.{variant}.json"
+                if domain_file.exists():
+                    rec = _json(domain_file)
+                    client = record.ReplayClient(rec["calls"])
+                    typed = domain_stage(english, result, source, client)  # a changed generic result changes this prompt: record again
+                    assert not client._calls, f"fewer {variant} Domain calls than recorded"
+                    assert typed == rec["result"], f"{variant} Domain result differs"
             print(f"{folder.name}: OK")
         except AssertionError as exc:
             failed += 1
@@ -367,6 +442,8 @@ def print_report() -> int:
     for variant, data in report["variants"].items():
         print(f"== {variant}")
         for group, t in data["summary"].items():
+            if group == "domain_stage":
+                continue
             print(f"  {group}: found {t['found']}/{t['expected']}, produced {t['produced']}, "
                   f"omissions {t['omission_rate']:.0%}, invented {t['invented_rate']:.0%}, "
                   f"owner wrong {t['owner_wrong_rate']:.0%} (+{t['owner_missing']} missing), "
@@ -374,10 +451,15 @@ def print_report() -> int:
                   f"cancelled listed {t['cancelled_listed']}, numbers changed {t['numbers_changed']}/{t['numbers']}")
         failing = [k for k, ok in data["summary"]["corporate_others"]["meets_thresholds"].items() if not ok]
         print(f"  thresholds ({report['thresholds']['status']}): {'all met' if not failing else 'not met: ' + ', '.join(failing)}")
+        d = data["summary"].get("domain_stage")
+        if d:
+            print(f"  Domain stage (Corporate): {d['right']}/{d['checked']} typed right, calendar events said cancelled kept: {d['cancelled_as_event']}"
+                  + "".join(f"\n    {n}: {w}" for n, w in d["wrong"].items()))
         for name, r in data["sessions"].items():
             for case in r["known_cases"]:
                 link = f" ({case['follow_up']})" if case.get("follow_up") and not case["solved"] else ""
-                print(f"  known case {case['id']}: {'solved' if case['solved'] else 'OUTSTANDING'}{link}")
+                state = "not evaluated (no Domain stage)" if case["solved"] is None else "solved" if case["solved"] else "OUTSTANDING"
+                print(f"  known case {case['id']}: {state}{link}")
         seen = report.get("variance", {}).get("values_seen", {}).get(variant, {})
         if report.get("variance"):
             runs = report["variance"]["runs"]

@@ -17,8 +17,11 @@ A work item is any commitment or request to do something that was accepted: "X, 
 
 A calendar event is a meeting or call that was agreed on for a later moment: "let's meet Tuesday at 10", "we'll call the client on the 12th at 3 pm for half an hour".
 
+A follow-up email is an email someone agreed to send after the meeting: "I'll email you the figures", "please send the client a recap", "I'll write to Ana with the answer". Preparing the thing that is sent ("I'll prepare the report") is a work item, not an email.
+
 For each generic Proposed Action:
 - If it is a calendar event, output it with its `id` unchanged, `action_type` "calendar_event" and its `fields`.
+- If it is a follow-up email, output it with its `id` unchanged, `action_type` "follow_up_email" and its `fields`.
 - If it is a work item, output it with its `id` unchanged, `action_type` "work_item" and its `fields`.
 - Leave it out if it was cancelled or dropped later in the Transcript ("we won't do X anymore"), if it is an idea nobody committed to ("maybe we could ..."), or if it is only a decision.
 - If two generic Proposed Actions describe the same work, output it once, with the `id` of the first.
@@ -30,6 +33,9 @@ You do not change the title, description or due date; you set `owner` and fill t
 - `start_time`, `end_time`: HH:MM, 24-hour, only for a clock time that was said ("at 10", "until half past eleven"). `end_time` may follow from a duration that was said ("at 10 for an hour" is 11:00). "In the morning" or no time at all is null.
 - `location`: the room, address or video call, as it was said; otherwise null.
 - `attendees`: always null. A Speaker label (S1, S2) or a name is not an email; the User adds attendees.
+- `recipients`: always null, for the same reason; the User adds the recipients' emails.
+- `subject`: a short subject in the language of the meeting, naming what the email is about ("Cifrele pe Q4"). If it is not clear what the email is about, null.
+- `body`: a short, plain draft of the email in the language of the meeting, with only what was said or agreed: what is sent, what was decided, any date that was said. No greeting names, signature, promises or figures that were not said. If nothing concrete was said about its content, null.
 - A meeting moved to another moment ("let's move Thursday's meeting to Friday at 9") is a new calendar event at the new moment; add a Suggestion that the old event must be removed by the User.
 - A meeting that was cancelled is not a calendar event; add a Suggestion that the User may want to remove it from the calendar.
 - Never guess, estimate or complete a value: if a value was not said, set the field to null. The User fills it before approving.

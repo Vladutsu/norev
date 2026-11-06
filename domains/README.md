@@ -91,6 +91,7 @@ Known Connectors (core code, not part of a Domain):
 | Connector | Does |
 |---|---|
 | `google_calendar` | creates events in the User's Google Calendar |
+| `email_draft` | saves an email draft (.eml) on this machine; the User sends it from their mail app |
 | `local_document` | saves a document on this machine |
 
 A new Connector is added in the core first, then to this table and to `KNOWN_CONNECTORS` in the test.

@@ -67,20 +67,26 @@ class LocalDocumentConnector:
         target = destination(self.export_dir, content)
         if payload["destination"] != str(target):
             raise ValueError("destination is not the one the app chose for this content")
-        data = content.encode("utf-8")
-        self.export_dir.mkdir(parents=True, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=self.export_dir, prefix=".norev-", suffix=".tmp")
+        return {"path": str(target), "created": write_new(target, content.encode("utf-8"))}
+
+
+def write_new(target: Path, data: bytes) -> bool:
+    """Writes `data` to `target` atomically and never replaces an existing file. Returns False when
+    the same bytes are already there (an earlier attempt wrote them); a different file raises
+    ExportConflict and is left untouched. Shared by the local Connectors (#23, #61)."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=".norev-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
         try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(data)
-                f.flush()
-                os.fsync(f.fileno())
-            try:
-                os.link(tmp, target)  # atomic, and never replaces an existing file
-            except FileExistsError:
-                if target.read_bytes() != data:
-                    raise ExportConflict(f"a different file already exists: {target.name}") from None
-                return {"path": str(target), "created": False}
-        finally:
-            os.unlink(tmp)
-        return {"path": str(target), "created": True}
+            os.link(tmp, target)  # atomic, and never replaces an existing file
+        except FileExistsError:
+            if target.read_bytes() != data:
+                raise ExportConflict(f"a different file already exists: {target.name}") from None
+            return False
+    finally:
+        os.unlink(tmp)
+    return True

@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 16.2,
+ "elapsed_seconds": 16.3,
  "calls": [
   {
    "stage": "translate",

@@ -39,3 +39,29 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+
+  # Web demo through ngrok (#63): the UI on synthetic data only, for showing it remotely.
+  #   NGROK_AUTHTOKEN=... NOREV_DEMO_URL=https://<your-domain> docker compose --profile demo up
+  # Put both in a local .env (gitignored), never in the repo. No /data, store, key or profile is mounted:
+  # the server always runs the in-memory demo and listens on 127.0.0.1, shared only with ngrok.
+  demo:
+    profiles: [demo]
+    build:
+      context: .
+      target: dev
+    image: norev-dev
+    entrypoint: ["python", "-m", "norev.ui.web_demo", "--port", "8765"]
+    volumes:
+      - .:/workspace:ro
+      - /workspace/.venv
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+
+  ngrok:
+    profiles: [demo]
+    image: docker.io/ngrok/ngrok:3
+    network_mode: service:demo
+    depends_on: [demo]
+    environment:
+      - NGROK_AUTHTOKEN
+    command: ["http", "--url=${NOREV_DEMO_URL:?set NOREV_DEMO_URL in your local .env}", "8765"]

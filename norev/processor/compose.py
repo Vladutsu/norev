@@ -9,6 +9,7 @@ from pathlib import Path
 
 from LLM.AI_Model.client import build_llm_client
 from LLM.AI_Model.settings import DeepSeekSettings
+from norev.adapters.connectors.email_draft import EmailDraftConnector
 from norev.adapters.connectors.google_calendar import (
     GoogleAuth,
     GoogleCalendarConnector,
@@ -20,7 +21,12 @@ from norev.core.ports import Clock, Connector, Diarizer, PayloadBuilder, Transcr
 from norev.processor.central import CentralProcessor, ExecutionAuditLog
 from norev.processor.google_account import GoogleAccount
 from norev.processor.identity import LocalUser
-from norev.processor.payloads import ConnectorPayloadBuilder, GoogleCalendarPayloadBuilder, LocalDocumentPayloadBuilder
+from norev.processor.payloads import (
+    ConnectorPayloadBuilder,
+    EmailDraftPayloadBuilder,
+    GoogleCalendarPayloadBuilder,
+    LocalDocumentPayloadBuilder,
+)
 
 
 class SystemClock:
@@ -51,20 +57,21 @@ def build_central_processor(
     )
 
 
-# The app's local Workflow steps (#23), by the names Domains use. The document and the event are
-# built at preview time (their exact content is the approved payload) and the executor saves each
+# The app's local Workflow steps (#23), by the names Domains use. The document, the event and the
+# email draft are built at preview time (their exact content is the approved payload) and the executor saves each
 # step and the action's status itself, so none of these steps has more to do.
 LOCAL_STEPS = {"build_document": lambda action: None, "build_event": lambda action: None,
-               "save_result": lambda action: None}
+               "build_email": lambda action: None, "save_result": lambda action: None}
 
 
 def build_desktop_processor(
     store: ExecutionAuditLog, export_dir: Path, *, transcriber: Transcriber | None = None, diarizer: Diarizer | None = None,
     calendar: GoogleCalendarConnector | None = None,
 ) -> CentralProcessor:
-    """The desktop app's processor (#43): the local_document Connector writes into `export_dir`;
-    `calendar` is the Google Calendar Connector when it is set up (build_google_calendar, #45)."""
-    connectors = [LocalDocumentConnector(export_dir)] + ([calendar] if calendar is not None else [])
+    """The desktop app's processor (#43): the local Connectors (document, email draft #61) write into
+    `export_dir`; `calendar` is the Google Calendar Connector when it is set up (build_google_calendar, #45)."""
+    connectors = [LocalDocumentConnector(export_dir), EmailDraftConnector(export_dir)]
+    connectors += [calendar] if calendar is not None else []
     return build_central_processor(store, connectors=connectors, transcriber=transcriber, diarizer=diarizer)
 
 
@@ -72,7 +79,8 @@ def desktop_payload_builder(export_dir: Path, *, calendar: bool) -> PayloadBuild
     """The previews of the desktop app (#18): the builder of each Workflow's Connector. Without Google
     Calendar set up, a calendar Action Type cannot be previewed (UnsupportedWorkflow), so nothing is
     approved that could not be sent."""
-    builders: dict[str, PayloadBuilder] = {"local_document": LocalDocumentPayloadBuilder(export_dir)}
+    builders: dict[str, PayloadBuilder] = {"local_document": LocalDocumentPayloadBuilder(export_dir),
+                                           "email_draft": EmailDraftPayloadBuilder(export_dir)}
     if calendar:
         builders["google_calendar"] = GoogleCalendarPayloadBuilder.from_environment()
     return ConnectorPayloadBuilder(builders)
