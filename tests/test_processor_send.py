@@ -129,6 +129,40 @@ class SendTest(unittest.TestCase):
                     self._processor().send(action, "local_document", PAYLOAD)
         self.assertEqual(self.timeline, [])
 
+    def test_a_step_sends_exactly_its_payload_of_the_approval_plan(self) -> None:
+        step_payload = {"title": "Follow-up", "urgent": True}
+        plan = {"version": 1, "domain": "test", "domain_digest": "d", "action_type": "minutes", "steps": [
+            {"step": "export", "connector": "local_document", "payload": step_payload},
+            {"step": "invite", "connector": "google_calendar", "payload": {"title": "Follow-up"}},
+        ]}
+        processor = self._processor()
+        processor.send(_approved(plan), "local_document", {"urgent": True, "title": "Follow-up"}, step="export")
+        self.assertEqual(self.audit.events[0].payload, step_payload)
+        self.assertEqual(_approved(plan).approved_payload["steps"][0]["payload"], step_payload)
+        for payload, step in (
+            ({"title": "Other", "urgent": True}, "export"),  # changed
+            ({"title": "Follow-up"}, "export"),  # field left out
+            ({"title": "Follow-up"}, "invite"),  # step of another Connector
+            (step_payload, "missing"),  # not in the plan
+            (plan, None),  # the whole plan only without a step
+        ):
+            with self.subTest(step=step), self.assertRaises(SendRefused):
+                processor.send(_approved(plan), "local_document", payload, step=step if step else "export")
+        broken = {**plan, "steps": [plan["steps"][0], plan["steps"][0]]}  # a step twice is ambiguous
+        with self.assertRaises(SendRefused):
+            processor.send(_approved(broken), "local_document", step_payload, step="export")
+        self.assertEqual(len(self.connector.sent), 1)
+
+    def test_audit_names_who_approved_the_action(self) -> None:
+        action = _approved()
+        action.approved_by = "local:ion"  # set by approve_action (#18)
+        self._processor().send(action, "local_document", PAYLOAD)
+        self.assertEqual(self.audit.events[0].approved_by, "local:ion")
+        action.approved_by = "ion\nforged audit line"
+        with self.assertRaises(SendRefused):
+            self._processor().send(action, "local_document", PAYLOAD)
+        self.assertEqual(len(self.audit.events), 1)
+
     def test_unknown_connector_is_refused(self) -> None:
         with self.assertRaises(SendRefused):
             self._processor().send(_approved(), "google_calendar", PAYLOAD)
