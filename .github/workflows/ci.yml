@@ -1,0 +1,28 @@
+name: CI
+
+# Runs on every push to main. To run it on a branch: Actions tab -> CI -> Run workflow.
+# Locally, before pushing: ./check.sh (same checks).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # CUDA runtime wheels are only needed on a GPU machine
+      - name: Install dependencies (no CUDA)
+        run: |
+          grep -v '^nvidia-' requirements.txt > "$RUNNER_TEMP/requirements-ci.txt"
+          pip install -r "$RUNNER_TEMP/requirements-ci.txt"
+
+      - name: Checks
+        run: bash check.sh
