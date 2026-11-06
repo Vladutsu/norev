@@ -1,12 +1,40 @@
 import json
+import os
+import re
+import unicodedata
+from concurrent.futures import ThreadPoolExecutor
+from difflib import SequenceMatcher
 from pathlib import Path
 from queue import Queue
 from threading import Thread
 from typing import Any
 
 from LLM.AI_Model.client import LLMClient, OllamaTimeoutError, build_llm_client
-from LLM.AI_Model.prompt import DeepSeekPromptBuilder
+from LLM.AI_Model.prompt import (
+    GAP_SCHEMA,
+    PM_TASK_SCHEMA,
+    SUMMARY_PROMPT,
+    SUMMARY_SCHEMA,
+    DeepSeekPromptBuilder,
+)
 from LLM.AI_Model.settings import DeepSeekSettings
+
+# Words that do not tell two tasks apart ("Fix the iOS issue" == "Fix iOS")
+_TITLE_STOPWORDS = {
+    "the", "and", "for", "with", "from", "into", "onto", "about", "all", "any", "new",
+    "issue", "issues", "problem", "problems", "task", "tasks", "item", "items",
+}
+# Extra filler in decisions/risks ("Decide to...", "Risk of ... could lead to ...")
+_STATEMENT_STOPWORDS = _TITLE_STOPWORDS | {
+    "decide", "decided", "decision", "risk", "main", "could", "would", "may", "might", "lead",
+    "leading", "result", "only", "after", "until", "not", "will", "that", "this", "than", "which",
+    "need", "needed", "there", "their", "being",
+}
+# Owners that mean "whoever was speaking": compatible with any owner when de-duplicating
+_ANONYMOUS_OWNERS = {
+    "", "-", "i", "me", "we", "us", "speaker", "the speaker", "organizer", "moderator",
+    "none", "null", "n/a", "unknown", "tbd",
+}
 
 
 class RealtimeTaskExtractor:
@@ -66,6 +94,103 @@ class RealtimeTaskExtractor:
             self._persist(self._latest_json)
         return self._latest_json
 
+    def extract_batch(self, segments: list[str], workers: int = 1) -> str:
+        """Process a finished transcript: chunk it like the realtime worker, generate the chunks
+        concurrently (llama-server --parallel batches them on the GPU), merge in transcript order.
+
+        Concurrency needs chunk-local prompts; with LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT on, each
+        chunk depends on the previous result, so this falls back to one chunk at a time.
+        """
+        chunks: list[str] = []
+        buffer: list[str] = []
+        char_count = 0
+        for segment in (s.strip() for s in segments):
+            if not segment:
+                continue
+            buffer.append(segment)
+            char_count += len(segment)
+            if char_count >= self._settings.chunk_char_threshold:
+                chunks.append(" ".join(buffer))
+                buffer, char_count = [], 0
+        if buffer:
+            chunks.append(" ".join(buffer))
+
+        include_previous = os.getenv("LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT", "1").strip().lower() not in {
+            "0", "false", "no", "off",
+        }
+        # The realtime worker thread is not used in batch mode
+        self._queue.put(None)
+        self._thread.join()
+        self._closed = True
+
+        if include_previous:
+            for chunk in chunks:
+                self._process_chunk(chunk)
+        else:
+            with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+                results = list(pool.map(self._generate_chunk, chunks))
+                summaries = [
+                    s for s in (self._parse_json_object(r).get("meeting_summary") for rs in results for r in rs)
+                    if isinstance(s, str) and s.strip()
+                ]
+                for chunk_results in results:
+                    for generated_json in chunk_results:
+                        self._latest_json = self._merge_results(self._latest_json, generated_json)
+
+                if os.getenv("LLM_SECOND_PASS", "0").strip().lower() not in {"0", "false", "no", "off"}:
+                    existing = self._parse_json_object(self._latest_json).get("tasks", [])
+                    for found in pool.map(lambda c: self._find_missed_tasks(c, existing), chunks):
+                        self._latest_json = self._merge_results(self._latest_json, found)
+
+            if len(summaries) > 1:
+                self._summarize(summaries)
+
+        if self._latest_json.strip():
+            self._persist(self._latest_json)
+        return self._latest_json
+
+    def _find_missed_tasks(self, chunk_text: str, existing_tasks: list[dict[str, Any]]) -> str:
+        """Second pass: the model sees what was found and looks only for what is missing."""
+        prompt = self._prompt_builder.build_gap(chunk_text, existing_tasks)
+        try:
+            raw = self._client.generate_json(prompt, model=self._settings.model, json_schema=GAP_SCHEMA)
+        except Exception:
+            return "{}"  # the first pass already produced a result; a failed check adds nothing
+        tasks = self._parse_json_object(raw).get("tasks", [])
+        # Found only on a second look: more likely to have the wrong owner, so flag for review.
+        # A task that duplicates a first-pass task merges into it and keeps that task's flag.
+        for task in tasks if isinstance(tasks, list) else []:
+            if isinstance(task, dict):
+                task["needs_review"] = True
+        return json.dumps({"tasks": tasks}, ensure_ascii=False)
+
+    def _summarize(self, summaries: list[str]) -> None:
+        """Each chunk summarises only its own part; merging keeps the last one. Rewrite it from all."""
+        merged = self._parse_json_object(self._latest_json)
+        decisions = merged.get("decisions", [])
+        prompt = SUMMARY_PROMPT.replace(
+            "{{SUMMARIES}}", "\n".join(f"{i}. {s}" for i, s in enumerate(summaries, start=1))
+        ).replace("{{DECISIONS}}", "\n".join(f"- {d}" for d in decisions) or "-")
+        try:
+            raw = self._client.generate_json(prompt, model=self._settings.model, json_schema=SUMMARY_SCHEMA)
+            summary = self._parse_json_object(raw).get("meeting_summary")
+        except Exception:
+            summary = None
+        merged["meeting_summary"] = summary.strip() if isinstance(summary, str) and summary.strip() else " ".join(summaries)
+        self._latest_json = json.dumps(merged, ensure_ascii=False, indent=2)
+
+    def _generate_chunk(self, chunk_text: str) -> list[str]:
+        """Chunk-local generation; splits the chunk and retries like _process_chunk."""
+        prompt = self._prompt_builder.build("", chunk_text)
+        try:
+            return [self._client.generate_json(prompt, model=self._settings.model, json_schema=PM_TASK_SCHEMA)]
+        except Exception as exc:
+            if self._should_split_chunk(chunk_text, exc):
+                left, right = self._split_chunk(chunk_text)
+                if left and right:
+                    return self._generate_chunk(left) + self._generate_chunk(right)
+            raise
+
     def _persist(self, content: str) -> None:
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         with self.output_path.open("w", encoding="utf-8") as handle:
@@ -81,7 +206,9 @@ class RealtimeTaskExtractor:
     def _process_chunk(self, chunk_text: str) -> None:
         prompt = self._prompt_builder.build(self._latest_json, chunk_text)
         try:
-            generated_json = self._client.generate_json(prompt, model=self._settings.model)
+            generated_json = self._client.generate_json(
+                prompt, model=self._settings.model, json_schema=PM_TASK_SCHEMA
+            )
             self._latest_json = self._merge_results(self._latest_json, generated_json)
             self._persist(self._latest_json)
         except Exception as exc:
@@ -207,6 +334,8 @@ class RealtimeTaskExtractor:
             return None
 
         owner = self._normalize_nullable_text(item.get("owner"))
+        if owner and owner.strip().lower() in _ANONYMOUS_OWNERS:
+            owner = None  # "I"/"me": the speaker, whose name the transcript does not give
         due_date = self._normalize_nullable_text(item.get("due_date"))
         priority = self._normalize_text(item.get("priority")).lower() or "medium"
         if priority not in {"high", "medium", "low"}:
@@ -243,6 +372,7 @@ class RealtimeTaskExtractor:
             "dependencies": dependencies,
             "confidence": confidence_value,
             "evidence_quote": self._normalize_text(item.get("evidence_quote")),
+            "needs_review": bool(item.get("needs_review")),
         }
 
     def _normalize_text(self, value: Any) -> str:
@@ -278,32 +408,68 @@ class RealtimeTaskExtractor:
         return deduped
 
     def _merge_text_lists(self, left: Any, right: Any) -> list[str]:
-        return self._normalize_text_list(
-            self._normalize_text_list(left) + self._normalize_text_list(right),
-        )
+        """Decisions/risks are reworded in every chunk too; drop near-duplicates, keep the first."""
+        merged: list[str] = []
+        kept_words: list[set[str]] = []
+        for text in self._normalize_text_list(left) + self._normalize_text_list(right):
+            # 5-letter stems: "integration"/"integrate", "approving"/"approval" compare equal
+            words = {
+                w[:5] for w in re.findall(r"[^\W_]+", text.lower())
+                if len(w) > 2 and w not in _STATEMENT_STOPWORDS
+            }
+            if any(words and other and len(words & other) / len(words | other) >= 0.4 for other in kept_words):
+                continue
+            merged.append(text)
+            kept_words.append(words)
+        return merged
 
     def _merge_tasks(self, previous_tasks_raw: Any, current_tasks_raw: Any) -> list[dict[str, Any]]:
         previous_tasks = self._normalize_tasks_for_merge(previous_tasks_raw)
         current_tasks = self._normalize_tasks_for_merge(current_tasks_raw)
 
         merged = previous_tasks.copy()
-        key_to_index = {
-            self._task_key(task): index
-            for index, task in enumerate(merged)
-            if self._task_key(task)
-        }
-
         for current_task in current_tasks:
-            key = self._task_key(current_task)
-            if key and key in key_to_index:
-                idx = key_to_index[key]
-                merged[idx] = self._merge_single_task(merged[idx], current_task)
-            else:
+            idx = self._find_same_task(merged, current_task)
+            if idx is None:
                 merged.append(current_task)
-                if key:
-                    key_to_index[key] = len(merged) - 1
+            else:
+                merged[idx] = self._merge_single_task(merged[idx], current_task)
 
         return self._assign_task_ids(merged)
+
+    def _find_same_task(self, tasks: list[dict[str, Any]], candidate: dict[str, Any]) -> int | None:
+        """The same action is often worded differently in each chunk (or each time a long meeting
+        comes back to it): "Implement export of invoices in PDF" vs "Implement invoice export in PDF".
+        Match on compatible owners plus overlapping title words rather than on exact text."""
+        owner = self._owner_key(candidate)
+        words = self._title_words(candidate)
+        title = " ".join(sorted(words))
+        best_idx, best_score = None, 0.0
+        for idx, task in enumerate(tasks):
+            other_owner = self._owner_key(task)
+            if owner not in _ANONYMOUS_OWNERS and other_owner not in _ANONYMOUS_OWNERS and owner != other_owner:
+                continue
+            other_words = self._title_words(task)
+            if not words or not other_words:
+                continue
+            jaccard = len(words & other_words) / len(words | other_words)
+            ratio = SequenceMatcher(None, title, " ".join(sorted(other_words))).ratio()
+            score = max(jaccard, ratio - 0.25)
+            if score >= 0.5 and score > best_score:
+                best_idx, best_score = idx, score
+        return best_idx
+
+    def _owner_key(self, task: dict[str, Any]) -> str:
+        """"Ionuț" and "Ionut" are the same person (speech recognition and translation drop diacritics)."""
+        owner = unicodedata.normalize("NFKD", self._normalize_text(task.get("owner")).lower())
+        return "".join(ch for ch in owner if not unicodedata.combining(ch))
+
+    def _title_words(self, task: dict[str, Any]) -> set[str]:
+        title = self._normalize_text(task.get("title")).lower()
+        words = re.findall(r"[^\W_]+", title)
+        # crude singular form so "invoices"/"invoice" and "tests"/"test" compare equal
+        return {w[:-1] if w.endswith("s") and len(w) > 3 else w for w in words
+                if len(w) > 2 and w not in _TITLE_STOPWORDS}
 
     def _normalize_tasks_for_merge(self, value: Any) -> list[dict[str, Any]]:
         if not isinstance(value, list):
@@ -339,15 +505,6 @@ class RealtimeTaskExtractor:
         if not merged.get("id"):
             merged["id"] = current.get("id", "")
         return merged
-
-    def _task_key(self, task: dict[str, Any]) -> str:
-        title = self._normalize_text(task.get("title")).lower()
-        description = self._normalize_text(task.get("description")).lower()
-        owner = self._normalize_text(task.get("owner")).lower()
-        due_date = self._normalize_text(task.get("due_date")).lower()
-        if not title and not description:
-            return ""
-        return "|".join([title, description, owner, due_date])
 
     def _assign_task_ids(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         assigned: list[dict[str, Any]] = []

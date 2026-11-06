@@ -1,9 +1,10 @@
 import inspect
+import os
 import sys
 import threading
 from typing import Optional
 
-from faster_whisper import BatchedInferencePipeline, WhisperModel
+from faster_whisper import BatchedInferencePipeline, WhisperModel, decode_audio
 
 from LLM.Whisper.cuda_runtime import CudaRuntimeLoader
 from LLM.Whisper.settings import WhisperSettings
@@ -56,6 +57,7 @@ class WhisperModelManager:
     ) -> tuple[object, object]:
         self.get_model()
         with self._transcribe_lock:
+            language = language or self._detect_allowed_language(file_path)
             while True:
                 try:
                     segments, info = self._transcribe_with_runtime(file_path, language)
@@ -68,6 +70,22 @@ class WhisperModelManager:
                         self.get_model()
                         continue
                     raise
+
+    def _detect_allowed_language(self, file_path: str) -> str:
+        """With WHISPER_LANGUAGES=ro,en,de pick the most likely of those languages, so detection can
+        never land on a language the user does not speak. Empty: Whisper's own auto-detection."""
+        allowed = [c.strip().lower() for c in os.getenv("WHISPER_LANGUAGES", "").split(",") if c.strip()]
+        if not allowed:
+            return ""
+        if len(allowed) == 1:
+            return allowed[0]
+        audio = decode_audio(file_path, sampling_rate=16000)
+        _, _, all_probs = self.get_model().detect_language(audio=audio, language_detection_segments=3)
+        probs = dict(all_probs)
+        best = max(allowed, key=lambda code: probs.get(code, 0.0))
+        print(f"[INFO] Language detected among {','.join(allowed)}: {best} "
+              f"(p={probs.get(best, 0.0):.2f})", file=sys.stderr)
+        return best
 
     def _transcribe_with_runtime(self, file_path: str, language: str) -> tuple[object, object]:
         kwargs = {
