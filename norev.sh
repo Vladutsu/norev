@@ -9,7 +9,6 @@
 # needs the GPU memory of its own model; consecutive stages with the same model share one server.
 #
 # Usage: ./norev.sh <audio_or_video_file> [language]
-#        ./norev.sh --record [language]          record from the microphone (Enter stops), then run
 #        NOREV_LANGUAGES=ro,en,de ./norev.sh session.mp4
 #        ./norev.sh --list-llm-models
 set -euo pipefail
@@ -22,7 +21,7 @@ log()  { echo -e "${GREEN}[norev]${NC} $*" >&2; }
 warn() { echo -e "${YELLOW}[norev]${NC} $*" >&2; }
 die()  { echo -e "${RED}[norev] ERROR:${NC} $*" >&2; exit 1; }
 
-[[ $# -ge 1 ]] || die "Usage: ./norev.sh <audio_or_video_file> [language]  |  ./norev.sh --record [language]"
+[[ $# -ge 1 ]] || die "Usage: ./norev.sh <audio_or_video_file> [language]"
 
 # ── config (override from the environment) ────────────────────────────────────
 
@@ -116,17 +115,6 @@ use_model() {
     done
     die "llama-server did not become ready. See $log_file"
 }
-
-# ── 0. Recording (optional) ────────────────────────────────────────────────────
-
-# --record: capture the Session from the microphone first, then run the pipeline on that WAV.
-# Done before llama-server starts, so nothing else holds the GPU or the CPU while recording.
-if [[ "$1" == --record ]]; then
-    shift
-    log "[0/3] Recording the Session (device: ${NOREV_INPUT_DEVICE:-system default})"
-    RECORDING="$("$PYTHON" -m LLM.Recorder.record)"
-    set -- "$RECORDING" "$@"
-fi
 
 if [[ "$1" == --* ]]; then
     use_model "$NOREV_EXTRACT_MODEL"
