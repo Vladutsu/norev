@@ -40,7 +40,7 @@ _ANONYMOUS_OWNERS = {
 class RealtimeActionExtractor:
     def __init__(
         self,
-        output_path: Path,
+        output_path: Path | None,
         settings: DeepSeekSettings | None = None,
         client: LLMClient | None = None,
         prompt_builder: DeepSeekPromptBuilder | None = None,
@@ -192,6 +192,8 @@ class RealtimeActionExtractor:
             raise
 
     def _persist(self, content: str) -> None:
+        if self.output_path is None:  # the caller keeps the result (e.g. in the encrypted SessionStore)
+            return
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         with self.output_path.open("w", encoding="utf-8") as handle:
             handle.write(content.strip() + "\n")
