@@ -15,12 +15,10 @@ import logging
 import threading
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
-from norev.core.models import ActionStatus, AuditEvent, ProposedAction, SpeakerTurn, Transcript
-from norev.core.ports import Clock, Connector, Diarizer, LlmClient, Transcriber
+from norev.core.models import ActionStatus, AuditEvent, ProposedAction, SendResult, SpeakerTurn, Transcript
+from norev.core.ports import Clock, Connector, Diarizer, ExecutionAuditLog, LlmClient, Transcriber
 from norev.processor.identity import LocalUser
 
 # Ids, Connector names and error types only: never payload, prompt or Transcript text
@@ -44,28 +42,9 @@ class ConnectorFailed(RuntimeError):
         self.cause = cause
 
 
-@dataclass(frozen=True)
-class SendResult:
-    """What happened to one attempt; written after the Connector answers or raises."""
-
-    at: datetime
-    action_id: str
-    connector: str
-    ok: bool
-    error_type: str | None = None  # exception class name only, never its message
-
-
-@runtime_checkable
-class ExecutionAuditLog(Protocol):
-    """AuditLog plus the result of each attempt. An attempt with no result is an uncertain send:
-    it is shown for reconciliation, never retried automatically (#23).
-
-    # shortcut: defined here, not in core/ports, until the contract is confirmed with #18/#26
-    """
-
-    def record(self, event: AuditEvent) -> None: ...
-
-    def record_result(self, result: SendResult) -> None: ...
+class ResultNotRecorded(RuntimeError):
+    """The Connector was called but its result could not be written: the send may have happened.
+    The step stays uncertain for the User to reconcile; it is never retried automatically (#23, #51)."""
 
 
 def _canonical(payload: Any) -> str:
@@ -212,7 +191,8 @@ class CentralProcessor:
         """Send `payload` through `connector` if it is exactly the payload the User approved (ADR 0002).
 
         Order: checks -> audit attempt -> Connector -> audit result. Raises SendRefused or AuditFailed
-        without calling the Connector, ConnectorFailed if it raised. Returns the Connector's answer.
+        without calling the Connector, ConnectorFailed if it raised, ResultNotRecorded if the result
+        could not be written after the call (uncertain). Returns the Connector's answer.
         """
         sent = self.check_send(action, connector, payload, step=step)
         target = self._connectors[connector]
@@ -229,10 +209,15 @@ class CentralProcessor:
         except Exception as exc:  # any Connector error is a failed send
             error = exc
         # outside the except block, so a failing record_result does not chain the Connector error
-        self._audit.record_result(
-            SendResult(self._clock.now(), action.id, connector, ok=error is None,
-                       error_type=type(error).__name__ if error else None)
-        )
+        try:
+            self._audit.record_result(
+                SendResult(self._clock.now(), action.id, connector, ok=error is None,
+                           error_type=type(error).__name__ if error else None)
+            )
+        except Exception as exc:
+            log.error("result not recorded: action=%s connector=%s error=%s send_error=%s", action.id, connector,
+                      type(exc).__name__, type(error).__name__ if error else None)
+            raise ResultNotRecorded(f"result of action {action.id} via {connector} not recorded; reconcile it") from None
         if error is not None:
             log.warning("send failed: action=%s connector=%s error=%s", action.id, connector, type(error).__name__)
             raise ConnectorFailed(action.id, connector, error) from None

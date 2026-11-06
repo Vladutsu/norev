@@ -317,3 +317,33 @@ class AuditEvent:
             f"AuditEvent(at={self.at.isoformat()}, action_id={self.action_id}, "
             f"connector={self.connector}, payload_keys={sorted(self.payload)})"
         )
+
+
+@dataclass(frozen=True)
+class SendResult:
+    """What happened to one attempt; written after the Connector answers or raises."""
+
+    at: datetime
+    action_id: str
+    connector: str
+    ok: bool
+    error_type: str | None = None  # exception class name only, never its message
+
+
+class StepState(str, Enum):
+    STARTED = "started"
+    DONE = "done"
+    FAILED = "failed"
+
+
+@dataclass(frozen=True)
+class StepRecord:
+    """The state of one Workflow step of an action (#23)."""
+
+    step: str
+    state: StepState
+    result: dict[str, Any] | None = None  # what the step answered, e.g. the path of the document
+    error_type: str | None = None  # exception class name only, never its message
+
+    def __repr__(self) -> str:
+        return f"StepRecord({self.step}, {self.state.value}, result_keys={sorted(self.result or {})}, error={self.error_type})"

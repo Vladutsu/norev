@@ -24,14 +24,17 @@ from norev.core.models import (
     AuditEvent,
     ProposedAction,
     Segment,
+    SendResult,
     Session,
     Speaker,
     StaleRevision,
+    StepRecord,
+    StepState,
     Suggestion,
     Transcript,
 )
-from norev.core.ports import AuditLog, SessionStore
-from norev.testing.fakes import InMemoryAuditLog, InMemorySessionStore
+from norev.core.ports import AuditLog, ExecutionAuditLog, ExecutionStore, SessionStore
+from norev.testing.fakes import InMemoryAuditLog, InMemoryExecutionStore, InMemorySessionStore
 
 SENTINEL = "SENTINEL-Ionescu-amlodipina-7f3a"
 AT = datetime(2026, 11, 6, 10, 24)
@@ -70,8 +73,13 @@ def an_event() -> AuditEvent:
     return AuditEvent(at=AT, action_id="s1-1", connector="local_document", payload={"text": SENTINEL}, approved_by="user")
 
 
+def a_done_step() -> StepRecord:
+    return StepRecord("export", StepState.DONE, result={"path": f"/exports/{SENTINEL}.md"})
+
+
 class StoreContract:
-    """Same behaviour for every SessionStore + AuditLog. Subclasses set up self.store, self.audit."""
+    """Same behaviour for every SessionStore + ExecutionAuditLog + ExecutionStore.
+    Subclasses set up self.store, self.audit and self.steps."""
 
     def events(self) -> list[AuditEvent]:
         raise NotImplementedError
@@ -79,6 +87,8 @@ class StoreContract:
     def test_implements_the_ports(self):
         self.assertIsInstance(self.store, SessionStore)
         self.assertIsInstance(self.audit, AuditLog)
+        self.assertIsInstance(self.audit, ExecutionAuditLog)
+        self.assertIsInstance(self.steps, ExecutionStore)
 
     def test_session_round_trip_and_missing(self):
         self.store.save_session(a_session())
@@ -249,6 +259,12 @@ class StoreContract:
         self.store.save_speakers("s1", [Speaker("S1", "caregiver", role_confirmed=True)])  # a new User correction wins
         self.assertEqual(self.store.load_speakers("s1"), [Speaker("S1", "caregiver", True)])
 
+    def test_audit_keeps_events_in_order(self):
+        first, second = an_event(), AuditEvent(AT, "s1-2", "local_document", {"n": 2}, "user")
+        self.audit.record(first)
+        self.audit.record(second)
+        self.assertEqual(self.events(), [first, second])
+
     def test_who_approved_and_when_round_trip(self):
         action = approved_action()
         action.approved_by, action.approved_at = "local:ana", datetime(2026, 11, 6, 9, 30, tzinfo=timezone.utc)
@@ -257,17 +273,39 @@ class StoreContract:
         [loaded] = self.store.load_actions("s1")
         self.assertEqual((loaded.approved_by, loaded.approved_at), ("local:ana", action.approved_at))
 
-    def test_audit_keeps_events_in_order(self):
-        first, second = an_event(), AuditEvent(AT, "s1-2", "local_document", {"n": 2}, "user")
-        self.audit.record(first)
-        self.audit.record(second)
-        self.assertEqual(self.events(), [first, second])
+    def test_results_read_back_in_order(self):
+        first = SendResult(AT, "s1-1", "local_document", ok=True)
+        second = SendResult(AT, "s1-2", "google_calendar", ok=False, error_type="TimeoutError")
+        self.assertEqual(self.audit.load_results(), [])
+        self.audit.record_result(first)
+        self.audit.record_result(second)
+        self.assertEqual(self.audit.load_results(), [first, second])
+
+    def test_no_steps_for_an_unknown_action(self):
+        self.assertEqual(self.steps.load_steps("s1-9"), {})
+
+    def test_the_last_saved_state_of_a_step_replaces_the_earlier_one(self):
+        self.steps.save_step("s1-1", StepRecord("prepare", StepState.DONE))
+        self.steps.save_step("s1-1", StepRecord("export", StepState.STARTED))
+        self.steps.save_step("s1-1", a_done_step())
+        self.steps.save_step("s1-2", StepRecord("export", StepState.FAILED, error_type="OSError"))
+        self.assertEqual(self.steps.load_steps("s1-1"), {
+            "prepare": StepRecord("prepare", StepState.DONE),
+            "export": a_done_step(),
+        })
+        self.assertEqual(self.steps.load_steps("s1-2"), {"export": StepRecord("export", StepState.FAILED, error_type="OSError")})
+
+    def test_loaded_steps_are_copies(self):
+        self.steps.save_step("s1-1", a_done_step())
+        self.steps.load_steps("s1-1")["export"].result["path"] = "changed"
+        self.assertEqual(self.steps.load_steps("s1-1"), {"export": a_done_step()})
 
 
 class InMemoryStoreContractTest(StoreContract, unittest.TestCase):
     def setUp(self):
         self.store = InMemorySessionStore()
         self.audit = InMemoryAuditLog()
+        self.steps = InMemoryExecutionStore()
 
     def events(self):
         return self.audit.events
@@ -286,6 +324,7 @@ class TempStoreCase(unittest.TestCase):
         self.db = self.data_dir / "norev.db"
         self.store = self.open()
         self.audit = self.store
+        self.steps = self.store
 
     def open(self) -> EncryptedStore:
         store = open_store(StoreSettings(path=self.db, key_file=self.key_file))
@@ -308,6 +347,9 @@ class EncryptedStoreTest(TempStoreCase):
         self.store.save_actions("s1", [approved_action()], expected_revision=0)
         self.store.save_suggestions("s1", [Suggestion(f"Verifică {SENTINEL}", SENTINEL)], expected_revision=1)
         self.store.record(an_event())
+        self.store.record_result(SendResult(AT, "s1-1", "local_document", ok=True))
+        self.store.save_step("s1-1", a_done_step())
+        self.store.save_step("s1-2", StepRecord("export", StepState.STARTED))
         self.audio_ref = self.store.save_audio("s1", f"audio {SENTINEL}".encode())
         self.store.save_speakers("s1", [Speaker("S1", "doctor", role_confirmed=True)])
         return ref
@@ -320,6 +362,9 @@ class EncryptedStoreTest(TempStoreCase):
         self.assertEqual(again.load_transcript(ref), a_transcript())
         self.assertEqual(again.load_actions("s1")[0].approved_payload, approved_action().approved_payload)
         self.assertEqual(again.load_events(), [an_event()])
+        self.assertEqual(again.load_results(), [SendResult(AT, "s1-1", "local_document", ok=True)])
+        self.assertEqual(again.load_steps("s1-1"), {"export": a_done_step()})
+        self.assertEqual(again.load_steps("s1-2"), {"export": StepRecord("export", StepState.STARTED)})  # still uncertain
         self.assertEqual(again.load_actions_snapshot("s1").revision, 2)
         self.assertEqual(again.load_audio(self.audio_ref), f"audio {SENTINEL}".encode())
         self.assertEqual(again.load_speakers("s1"), [Speaker("S1", "doctor", role_confirmed=True)])
@@ -384,6 +429,50 @@ class EncryptedStoreTest(TempStoreCase):
         [loaded] = self.store.load_actions("s1")
         self.assertIsNone(loaded.approved_at)
         self.assertEqual(loaded.approved_payload, approved_action().approved_payload)
+
+    def test_tampered_steps_and_results_are_reported_without_content(self):
+        self.fill()
+        with closing(sqlite3.connect(self.db)) as db, db:
+            db.execute("UPDATE records SET blob = substr(blob, 1, 20) || x'00' || substr(blob, 22) WHERE kind = 'steps'")
+            db.execute("UPDATE results SET blob = substr(blob, 1, 20) || x'00' || substr(blob, 22)")
+        for load in (lambda: self.store.load_steps("s1-1"), self.store.load_results):
+            with self.assertRaises(StoreCorrupted) as caught:
+                load()
+            self.assertNotIn(SENTINEL, str(caught.exception))
+
+    def test_steps_moved_to_another_action_are_refused(self):
+        self.store.save_step("s1-1", a_done_step())
+        with closing(sqlite3.connect(self.db)) as db, db:
+            db.execute("UPDATE records SET id = 's1-2' WHERE kind = 'steps' AND id = 's1-1'")
+        with self.assertRaises(StoreCorrupted):
+            self.store.load_steps("s1-2")
+
+    def test_a_result_moved_to_another_seq_is_refused(self):
+        self.store.record_result(SendResult(AT, "s1-1", "local_document", ok=True))
+        with closing(sqlite3.connect(self.db)) as db, db:
+            db.execute("UPDATE results SET seq = 2")
+        with self.assertRaises(StoreCorrupted):
+            self.store.load_results()
+
+    def test_step_result_that_is_not_json_is_refused_and_nothing_is_saved(self):
+        self.store.save_step("s1-1", StepRecord("export", StepState.STARTED))
+        with self.assertRaises(TypeError):
+            self.store.save_step("s1-1", StepRecord("export", StepState.DONE, result={"at": datetime(2026, 11, 20)}))
+        self.assertEqual(self.store.load_steps("s1-1"), {"export": StepRecord("export", StepState.STARTED)})
+
+    def test_a_store_created_before_results_existed_gets_the_table(self):
+        self.store.record(an_event())
+        self.store.close()
+        with closing(sqlite3.connect(self.db)) as db, db:
+            db.execute("DROP TABLE results")
+        again = self.open()
+        self.assertEqual(again.load_results(), [])
+        again.record_result(SendResult(AT, "s1-1", "local_document", ok=True))
+        self.assertEqual(len(again.load_results()), 1)
+        self.assertEqual(again.load_events(), [an_event()])
+
+    def test_writes_are_fully_synchronous(self):
+        self.assertEqual(self.store._db.execute("PRAGMA synchronous").fetchone()[0], 2)  # FULL
 
     def test_a_record_moved_to_another_id_is_refused(self):
         self.store.save_session(a_session("s1"))

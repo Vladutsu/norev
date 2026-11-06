@@ -19,44 +19,14 @@ import threading
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
-from enum import Enum
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
-from norev.core.models import ActionStatus, Domain, ProposedAction, StaleRevision, WorkflowStep
-from norev.core.ports import SessionStore
-from norev.processor.central import CentralProcessor, ConnectorFailed
+from norev.core.models import ActionStatus, Domain, ProposedAction, StaleRevision, StepRecord, StepState, WorkflowStep
+from norev.core.ports import ExecutionStore, SessionStore
+from norev.processor.central import CentralProcessor, ConnectorFailed, ResultNotRecorded
 from norev.usecases.approve import domain_digest
 
 MAX_SAVE_ATTEMPTS = 5  # revision conflicts with other writers of the Session before giving up
-
-
-class StepState(str, Enum):
-    STARTED = "started"
-    DONE = "done"
-    FAILED = "failed"
-
-
-@dataclass(frozen=True)
-class StepRecord:
-    step: str
-    state: StepState
-    result: dict[str, Any] | None = None  # what the step answered, e.g. the path of the document
-    error_type: str | None = None  # exception class name only, never its message
-
-    def __repr__(self) -> str:
-        return f"StepRecord({self.step}, {self.state.value}, result_keys={sorted(self.result or {})}, error={self.error_type})"
-
-
-@runtime_checkable
-class ExecutionStore(Protocol):
-    """Step states of each action's Workflow; must survive a restart.
-
-    # shortcut: defined here, not in core/ports, until the contract is confirmed with #26, which stores it
-    """
-
-    def load_steps(self, action_id: str) -> dict[str, StepRecord]: ...
-
-    def save_step(self, action_id: str, record: StepRecord) -> None: ...
 
 
 class ExecutionRefused(ValueError):
@@ -119,6 +89,8 @@ class WorkflowExecutor:
                         result = self._processor.send(action, step.connector, payloads[step.name], step=step.name)
                     else:
                         result = self._local[step.name](copy.deepcopy(action))
+                except ResultNotRecorded:  # the send may have happened: left started, so uncertain
+                    return ExecutionOutcome(action_id, "uncertain", records, step.name)
                 except ConnectorFailed as exc:
                     error_type = type(exc.cause).__name__
                 except Exception as exc:  # any step error fails the step; its message may quote Session data

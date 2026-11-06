@@ -31,7 +31,7 @@ from norev.processor.workflow import (
     StepState,
     WorkflowExecutor,
 )
-from norev.testing.fakes import FakeLlmClient, FixedClock, InMemorySessionStore
+from norev.testing.fakes import FakeLlmClient, FixedClock, InMemoryExecutionStore, InMemorySessionStore
 from norev.usecases.approve import approve_action, preview_action
 from test_processor_send import RecordingAuditLog
 
@@ -59,17 +59,6 @@ DOMAIN = Domain(
     prompt_template="",
     answer_schema={},
 )
-
-
-class InMemoryExecutionStore:
-    def __init__(self) -> None:
-        self.steps: dict[str, dict[str, StepRecord]] = {}
-
-    def load_steps(self, action_id: str) -> dict[str, StepRecord]:
-        return dict(self.steps.get(action_id, {}))
-
-    def save_step(self, action_id: str, record: StepRecord) -> None:
-        self.steps.setdefault(action_id, {})[record.step] = record
 
 
 class WorkflowTest(unittest.TestCase):
@@ -197,6 +186,22 @@ class WorkflowTest(unittest.TestCase):
         with self.assertRaises(SendRefused):
             self._executor().execute("s1", "s1-1")
         self._assert_nothing_ran()  # not even the local step before the export
+
+    def test_a_result_that_cannot_be_recorded_leaves_the_step_uncertain(self) -> None:
+        def no_result(result) -> None:
+            raise OSError("disk full")
+
+        self.audit.record_result = no_result
+        executor = self._executor()
+        outcome = executor.execute("s1", "s1-1")
+
+        self.assertEqual((outcome.status, outcome.uncertain_step), ("uncertain", "export"))
+        self.assertEqual(self.steps.load_steps("s1-1")["export"].state, StepState.STARTED)
+        self.assertEqual(self._action().status, ActionStatus.APPROVED)
+        self.assertEqual(len(self._documents()), 1)  # the send did happen
+        self.assertEqual(executor.execute("s1", "s1-1").status, "uncertain")  # and is not sent again
+        self.assertEqual(len(self._documents()), 1)
+        self.assertEqual(self.calls, ["prepare"])
 
     def test_failed_step_marks_failed_without_its_text(self) -> None:
         self.notify_error = RuntimeError(f"could not notify {SECRET}")
