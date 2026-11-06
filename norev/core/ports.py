@@ -27,6 +27,19 @@ class LlmClient(Protocol):
 
 
 @runtime_checkable
+class Translator(Protocol):
+    """Transcript in `source_language` -> English Transcript, one Segment per Speaker turn.
+
+    A turn is a run of consecutive Segments with the same `speaker_id`. Each English Segment keeps
+    the turn's `speaker_id`, the `start` of its first Segment and the `end` of its last, so later
+    stages still know who said what. A turn that could not be translated keeps its original text
+    and has `untranslated=True`; no turn is dropped or reordered.
+    """
+
+    def translate(self, transcript: Transcript, source_language: str) -> Transcript: ...
+
+
+@runtime_checkable
 class ActionExtractor(Protocol):
     """The generic extraction stage (ADR 0005): Transcript -> raw result of the extraction model.
 

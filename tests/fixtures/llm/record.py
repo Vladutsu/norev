@@ -3,22 +3,24 @@
     python tests/fixtures/llm/record.py           # needs llama-server (GPU laptop); rewrites the fixtures
     python tests/fixtures/llm/record.py --check   # no model: replays the recorded responses
 
-For each consult_*/transcript.json it runs the existing pipeline the way norev.sh does
-(translate to English, then generic Proposed Action extraction) and writes:
+For each consult_*/transcript.json it runs the core pipeline: translation per Speaker turn
+(norev.adapters.llm.translator, decision #13), then generic Proposed Action extraction
+(norev.adapters.llm.legacy_extractor), and writes:
   responses.json         every LLM call in order: stage, prompt, JSON schema, response text
+  transcript.en.json     the English Transcript, one Segment per Speaker turn, with speaker_id
   proposed_actions.json  what the extractor produced from those responses
 
---check replays responses.json through the current code and fails if a prompt or the result
+--check replays responses.json through the current code and fails if a prompt or a result
 changed, so a prompt change shows up as a fixture that needs re-recording.
 Run from the repo root.
 """
 import json
 import os
 import sys
-import tempfile
+from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # repo root, for the LLM package
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # repo root, for the LLM and norev packages
 
 # Same settings as norev.sh, so the recording matches a real run. One request at a time keeps
 # the call order deterministic for replay.
@@ -28,10 +30,11 @@ os.environ.setdefault("LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT", "0")
 os.environ.setdefault("LLM_TEMPERATURE", "0")
 os.environ.setdefault("LLM_SECOND_PASS", "0")
 
-from LLM.AI_Model import deepseek  # noqa: E402
 from LLM.AI_Model.client import build_llm_client  # noqa: E402
 from LLM.AI_Model.settings import DeepSeekSettings  # noqa: E402
-from LLM.AI_Model.translate import TranscriptTranslator, split_sentences  # noqa: E402
+from norev.adapters.llm.legacy_extractor import LegacyActionExtractor  # noqa: E402
+from norev.adapters.llm.translator import TurnTranslator  # noqa: E402
+from norev.core.models import Segment, Transcript  # noqa: E402
 
 HERE = Path(__file__).parent
 
@@ -64,50 +67,73 @@ class ReplayClient:
         return call["response"]
 
 
-def run(transcript: dict, client) -> dict:
-    os.environ["LLM_SESSION_DATE"] = transcript["session_date"]
-    settings = DeepSeekSettings.from_environment()
-    text = " ".join(s["text"] for s in transcript["segments"])
-
-    client.stage = "translate"
-    english, _ = TranscriptTranslator(settings=settings, client=client).translate(
-        text, source=transcript["language"], workers=1
+def load_transcript(data: dict) -> Transcript:
+    """transcript.json or transcript.en.json -> core Transcript."""
+    segments = tuple(
+        Segment(s["start"], s["end"], s["text"], s["speaker_id"], untranslated=s.get("untranslated", False))
+        for s in data["segments"]
     )
+    return Transcript(segments=segments, language=data["language"])
+
+
+def english_json(source: dict, english: Transcript) -> dict:
+    return {
+        "synthetic": source["synthetic"],
+        "session_date": source["session_date"],
+        "language": english.language,
+        "source_language": source["language"],
+        "speakers": source["speakers"],
+        "segments": [
+            {"start": s.start, "end": s.end, "speaker_id": s.speaker_id, "text": s.text, "untranslated": s.untranslated}
+            for s in english.segments
+        ],
+    }
+
+
+def run(source: dict, client, settings: DeepSeekSettings) -> tuple[dict, dict]:
+    client.stage = "translate"
+    english = TurnTranslator(client, model=settings.model).translate(load_transcript(source), source["language"])
 
     client.stage = "extract"
-    with tempfile.TemporaryDirectory() as tmp:
-        extractor = deepseek.RealtimeActionExtractor(
-            output_path=Path(tmp) / "out.json", settings=settings, client=client
-        )
-        result = extractor.extract_batch(split_sentences(english), workers=1)
-    return json.loads(result)
+    actions = LegacyActionExtractor(client=client, settings=settings).extract(
+        english, date.fromisoformat(source["session_date"])
+    )
+    return english_json(source, english), actions
 
 
 def main(check: bool) -> int:
     failed = 0
+    settings = DeepSeekSettings.from_environment()
     for folder in sorted(HERE.glob("consult_*")):
-        transcript = json.loads((folder / "transcript.json").read_text(encoding="utf-8"))
+        source = json.loads((folder / "transcript.json").read_text(encoding="utf-8"))
         if check:
             recorded = json.loads((folder / "responses.json").read_text(encoding="utf-8"))
             client = ReplayClient(recorded["calls"])
             try:
-                result = run(transcript, client)
-                expected = json.loads((folder / "proposed_actions.json").read_text(encoding="utf-8"))
+                english, actions = run(source, client, settings.with_overrides(model=recorded["model"]))
                 assert not client._calls, "fewer LLM calls than recorded"
-                assert result == expected, "result differs from proposed_actions.json"
+                assert english == json.loads((folder / "transcript.en.json").read_text(encoding="utf-8")), \
+                    "result differs from transcript.en.json"
+                assert actions == json.loads((folder / "proposed_actions.json").read_text(encoding="utf-8")), \
+                    "result differs from proposed_actions.json"
                 print(f"{folder.name}: OK")
             except AssertionError as exc:
                 failed += 1
                 print(f"{folder.name}: FAILED: {exc}")
             continue
 
-        settings = DeepSeekSettings.from_environment()
         client = RecordingClient(build_llm_client(settings))
-        result = run(transcript, client)
-        recorded = {"model": settings.model, "session_date": transcript["session_date"], "calls": client.calls}
-        (folder / "responses.json").write_text(json.dumps(recorded, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        (folder / "proposed_actions.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"{folder.name}: {len(client.calls)} calls, {len(result.get('proposed_actions', []))} Proposed Actions")
+        english, actions = run(source, client, settings)
+        recorded = {"model": settings.model, "session_date": source["session_date"], "calls": client.calls}
+        for name, data in (("responses.json", recorded), ("transcript.en.json", english), ("proposed_actions.json", actions)):
+            (folder / name).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        stages = [c["stage"] for c in client.calls]
+        untranslated = sum(s["untranslated"] for s in english["segments"])
+        print(
+            f"{folder.name}: {stages.count('translate')} translate + {stages.count('extract')} extract calls, "
+            f"{len(english['segments'])} turns ({untranslated} untranslated), "
+            f"{len(actions.get('proposed_actions', []))} Proposed Actions"
+        )
     return 1 if failed else 0
 
 

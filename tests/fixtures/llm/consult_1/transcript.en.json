@@ -1,0 +1,179 @@
+{
+  "synthetic": "Written for tests. No real patient, no real person.",
+  "session_date": "2026-11-06",
+  "language": "en",
+  "source_language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "doctor"
+    },
+    {
+      "id": "S2",
+      "role": "patient"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.8,
+      "end": 5.544,
+      "speaker_id": "S1",
+      "text": "Good day, Mrs. Ionescu. Please take a seat. What brings you here today?",
+      "untranslated": false
+    },
+    {
+      "start": 6.193,
+      "end": 14.152,
+      "speaker_id": "S2",
+      "text": "Good day, Doctor. For about two weeks, I've had a headache almost every morning, and sometimes I feel dizzy when I get up from bed.",
+      "untranslated": false
+    },
+    {
+      "start": 14.735,
+      "end": 16.515,
+      "speaker_id": "S1",
+      "text": "Have you measured your blood pressure at home?",
+      "untranslated": false
+    },
+    {
+      "start": 16.86,
+      "end": 21.988,
+      "speaker_id": "S2",
+      "text": "Yes, I have a device from my daughter. Yesterday morning I had 160 with 95.",
+      "untranslated": false
+    },
+    {
+      "start": 22.317,
+      "end": 26.412,
+      "speaker_id": "S1",
+      "text": "It's quite high. I'll measure it now. Please stay still for a few seconds.",
+      "untranslated": false
+    },
+    {
+      "start": 26.956,
+      "end": 31.565,
+      "speaker_id": "S2",
+      "text": "Alright. Let me tell you that I also have palpitations in the evening, especially after I drink coffee.",
+      "untranslated": false
+    },
+    {
+      "start": 32.364,
+      "end": 37.546,
+      "speaker_id": "S1",
+      "text": "Now you have 155 with 92. How many coffees do you drink a day?",
+      "untranslated": false
+    },
+    {
+      "start": 38.42,
+      "end": 42.955,
+      "speaker_id": "S2",
+      "text": "Three, sometimes four. And I sleep quite poorly, about five hours a night.",
+      "untranslated": false
+    },
+    {
+      "start": 43.31,
+      "end": 48.929,
+      "speaker_id": "S1",
+      "text": "Please reduce your coffee to at most one a day, in the morning. Salt as little as possible.",
+      "untranslated": false
+    },
+    {
+      "start": 49.629,
+      "end": 52.261,
+      "speaker_id": "S2",
+      "text": "I understand. Do I need to take pills?",
+      "untranslated": false
+    },
+    {
+      "start": 52.898,
+      "end": 59.061,
+      "speaker_id": "S1",
+      "text": "Yes. I'll prescribe you amlodipine five milligrams, one tablet in the morning. I'll give you the prescription now.",
+      "untranslated": false
+    },
+    {
+      "start": 59.597,
+      "end": 61.022,
+      "speaker_id": "S2",
+      "text": "And for how long do I take it?",
+      "untranslated": false
+    },
+    {
+      "start": 61.455,
+      "end": 69.457,
+      "speaker_id": "S1",
+      "text": "For now, you'll continue. I want you to measure your blood pressure at home twice a day, in the morning and in the evening, and note the values in a notebook.",
+      "untranslated": false
+    },
+    {
+      "start": 70.353,
+      "end": 72.904,
+      "speaker_id": "S2",
+      "text": "Alright, I'll note them all.",
+      "untranslated": false
+    },
+    {
+      "start": 73.397,
+      "end": 83.46,
+      "speaker_id": "S1",
+      "text": "I'll also give you a referral for blood tests: cholesterol, blood sugar, creatinine, and ionogram. Please do them by Wednesday, on the spot.",
+      "untranslated": false
+    },
+    {
+      "start": 83.893,
+      "end": 86.328,
+      "speaker_id": "S2",
+      "text": "Can I do them at the lab next to the polyclinic?",
+      "untranslated": false
+    },
+    {
+      "start": 86.662,
+      "end": 94.288,
+      "speaker_id": "S1",
+      "text": "Yes, they have a contract with the insurance company. And I want an electrocardiogram, we'll do it right here, at the assistant, after the consultation.",
+      "untranslated": false
+    },
+    {
+      "start": 94.766,
+      "end": 96.757,
+      "speaker_id": "S2",
+      "text": "Perfect. When should I come back?",
+      "untranslated": false
+    },
+    {
+      "start": 97.075,
+      "end": 103.97,
+      "speaker_id": "S1",
+      "text": "Come back on Friday, on the 13th of November, at ten o'clock, with the blood pressure notebook and the results of the tests.",
+      "untranslated": false
+    },
+    {
+      "start": 104.578,
+      "end": 107.552,
+      "speaker_id": "S2",
+      "text": "I'll note that. If my headache gets very bad in the meantime?",
+      "untranslated": false
+    },
+    {
+      "start": 107.946,
+      "end": 116.418,
+      "speaker_id": "S1",
+      "text": "If your blood pressure goes over 180 or you have numbness, blurred vision, or chest pain, call 122 immediately.",
+      "untranslated": false
+    },
+    {
+      "start": 116.705,
+      "end": 120.345,
+      "speaker_id": "S2",
+      "text": "I understand. Thank you very much, Doctor.",
+      "untranslated": false
+    },
+    {
+      "start": 120.694,
+      "end": 126.549,
+      "speaker_id": "S1",
+      "text": "You're welcome. The assistant Maria will schedule your electrocardiogram and give you the printed prescription.",
+      "untranslated": false
+    }
+  ]
+}

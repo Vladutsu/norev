@@ -1,0 +1,197 @@
+{
+  "synthetic": "Written for tests. No real patient, no real person.",
+  "session_date": "2026-11-06",
+  "language": "en",
+  "source_language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "doctor"
+    },
+    {
+      "id": "S2",
+      "role": "patient"
+    },
+    {
+      "id": "S3",
+      "role": "family member"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.8,
+      "end": 4.947,
+      "speaker_id": "S1",
+      "text": "Good day, Mrs. Georgescu. I see you came with your daughter.",
+      "untranslated": false
+    },
+    {
+      "start": 5.751,
+      "end": 11.175,
+      "speaker_id": "S2",
+      "text": "Good day, Doctor. Yes, Ana brought me, because I don't remember everything I need anymore.",
+      "untranslated": false
+    },
+    {
+      "start": 11.752,
+      "end": 17.677,
+      "speaker_id": "S3",
+      "text": "Good day. Mom lost her diabetes tablets again last week and her blood sugar was high.",
+      "untranslated": false
+    },
+    {
+      "start": 18.361,
+      "end": 18.932,
+      "speaker_id": "S1",
+      "text": "How high was it?",
+      "untranslated": false
+    },
+    {
+      "start": 19.555,
+      "end": 24.461,
+      "speaker_id": "S3",
+      "text": "In the morning two hundred ten, last night one hundred eighty. I measured it with her device.",
+      "untranslated": false
+    },
+    {
+      "start": 24.789,
+      "end": 27.359,
+      "speaker_id": "S1",
+      "text": "Mrs. Georgescu, what tablets are you taking now?",
+      "untranslated": false
+    },
+    {
+      "start": 28.231,
+      "end": 33.618,
+      "speaker_id": "S2",
+      "text": "Metformin, I think of a thousand, in the morning and evening. But sometimes I forget the evening one.",
+      "untranslated": false
+    },
+    {
+      "start": 34.516,
+      "end": 38.816,
+      "speaker_id": "S1",
+      "text": "And how is the left foot? Last time you had a small wound on the heel.",
+      "untranslated": false
+    },
+    {
+      "start": 39.389,
+      "end": 41.876,
+      "speaker_id": "S2",
+      "text": "It still hurts me and it turns red in the evening.",
+      "untranslated": false
+    },
+    {
+      "start": 42.266,
+      "end": 47.724,
+      "speaker_id": "S1",
+      "text": "Let me check. The wound hasn't closed and the skin around it is red. You need to see a surgeon.",
+      "untranslated": false
+    },
+    {
+      "start": 48.462,
+      "end": 49.457,
+      "speaker_id": "S3",
+      "text": "Where do we go?",
+      "untranslated": false
+    },
+    {
+      "start": 50.232,
+      "end": 58.279,
+      "speaker_id": "S1",
+      "text": "I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.",
+      "untranslated": false
+    },
+    {
+      "start": 58.623,
+      "end": 61.921,
+      "speaker_id": "S3",
+      "text": "I will take care of the appointment, I'll call tomorrow morning.",
+      "untranslated": false
+    },
+    {
+      "start": 62.599,
+      "end": 71.502,
+      "speaker_id": "S1",
+      "text": "Very well. Until then, daily dressing with physiological serum and betadine. The community assistant can come to your home to show you how to do it.",
+      "untranslated": false
+    },
+    {
+      "start": 72.063,
+      "end": 75.09,
+      "speaker_id": "S3",
+      "text": "That would be a great help, I work until five.",
+      "untranslated": false
+    },
+    {
+      "start": 75.953,
+      "end": 81.261,
+      "speaker_id": "S1",
+      "text": "I will inform the community assistant, Mrs. Ioana, to visit you on Monday afternoon.",
+      "untranslated": false
+    },
+    {
+      "start": 81.711,
+      "end": 84.367,
+      "speaker_id": "S2",
+      "text": "And what about the tablets, what do I do, because I keep forgetting them?",
+      "untranslated": false
+    },
+    {
+      "start": 84.881,
+      "end": 92.004,
+      "speaker_id": "S1",
+      "text": "I recommend a box of pills for the days of the week. Ana, please prepare it for the whole week on Sunday evening.",
+      "untranslated": false
+    },
+    {
+      "start": 92.47,
+      "end": 95.02,
+      "speaker_id": "S3",
+      "text": "Sure, I will buy them from the pharmacy today.",
+      "untranslated": false
+    },
+    {
+      "start": 95.586,
+      "end": 101.409,
+      "speaker_id": "S1",
+      "text": "I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.",
+      "untranslated": false
+    },
+    {
+      "start": 102.283,
+      "end": 104.0,
+      "speaker_id": "S3",
+      "text": "We will do them on Thursday, because I have free time.",
+      "untranslated": false
+    },
+    {
+      "start": 104.697,
+      "end": 111.985,
+      "speaker_id": "S1",
+      "text": "Come back then on twenty November, at eleven o'clock, with the results and with the medical letter from the surgeon.",
+      "untranslated": false
+    },
+    {
+      "start": 112.726,
+      "end": 116.805,
+      "speaker_id": "S2",
+      "text": "Twenty November, at eleven. Ana, please write it down, please.",
+      "untranslated": false
+    },
+    {
+      "start": 117.186,
+      "end": 120.375,
+      "speaker_id": "S3",
+      "text": "I noted it down. Thank you very much, Doctor.",
+      "untranslated": false
+    },
+    {
+      "start": 120.935,
+      "end": 125.172,
+      "speaker_id": "S1",
+      "text": "You're welcome. If fever appears or the foot swells, come immediately.",
+      "untranslated": false
+    }
+  ]
+}

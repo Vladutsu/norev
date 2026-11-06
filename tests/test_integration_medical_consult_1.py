@@ -1,7 +1,8 @@
 """consult_1 end to end through the new core, with recorded and handwritten LLM answers (no model).
 
-English Transcript (recorded "translate" answer) -> generic stage (LegacyActionExtractor replaying
-the recorded "extract" answer) -> Domain stage (medical Domain, one handwritten answer).
+English Transcript per Speaker turn (transcript.en.json, from the recorded "translate" answer) ->
+generic stage (LegacyActionExtractor replaying the recorded "extract" answer) -> Domain stage
+(medical Domain, one handwritten answer).
 """
 import json
 import os
@@ -31,30 +32,29 @@ def _read_json(name: str):
 
 
 RECORDED_CALLS = _read_json("responses.json")["calls"]
-[TRANSLATE_CALL] = [c for c in RECORDED_CALLS if c["stage"] == "translate"]
 EXTRACT_CALLS = [c for c in RECORDED_CALLS if c["stage"] == "extract"]
 EXPECTED_GENERIC = _read_json("proposed_actions.json")["proposed_actions"]
-TRANSLATION = json.loads(TRANSLATE_CALL["response"])["translation"]
+ENGLISH = _read_json("transcript.en.json")
 
 # Generic ids after re-numbering by extract_session_actions (order of proposed_actions.json):
-COFFEE, MONITOR_BP, BLOOD_TESTS, ECG, FOLLOW_UP, MEDICATION = (f"{SESSION_ID}-{n}" for n in range(1, 7))
+MEASURE_BP, BLOOD_TESTS, ECG, MEDICATION, COFFEE, SALT = (f"{SESSION_ID}-{n}" for n in range(1, 7))
 
 SUGGESTION = {
     "text": "The patient reports evening palpitations after coffee; check whether they need follow-up.",
-    "transcript_excerpt": "I also have palpitations in the evening, especially after drinking coffee.",
+    "transcript_excerpt": "I also have palpitations in the evening, especially after I drink coffee.",
 }
 # Handwritten Domain answer, as a model following domains/medical/prompts/domain_stage.md would give
-# it: the Transcript says "Friday, November 13th, at 10 o'clock"; what was not said stays null.
+# it: "by Wednesday" is a deadline, not a visit date, so what was not said stays null.
 DOMAIN_ANSWER = {
     "proposed_actions": [
         {
-            "id": FOLLOW_UP,
+            "id": BLOOD_TESTS,
             "action_type": "schedule_visit",
             "fields": {
-                "reason": "Follow-up for blood pressure, with the notebook and the test results",
-                "visit_date": "2026-11-13",
-                "visit_time": "10:00",
-                "location": None,
+                "reason": "Blood tests: cholesterol, blood sugar, creatinine and ionogram",
+                "visit_date": None,
+                "visit_time": None,
+                "location": "the lab next to the polyclinic",
             },
         },
         {
@@ -62,7 +62,7 @@ DOMAIN_ANSWER = {
             "action_type": "medication_reminder",
             "fields": {
                 "medication": "amlodipine",
-                "dose": "5 milligrams, one tablet",
+                "dose": "five milligrams, one tablet",
                 "frequency": "once a day, in the morning",
                 "times": None,
                 "start_date": None,
@@ -76,12 +76,12 @@ DOMAIN_ANSWER = {
 
 class MedicalConsult1IntegrationTest(unittest.TestCase):
     def setUp(self):
-        # Pin the env vars the legacy extractor reads (as tests/test_adapters_legacy_extractor.py);
-        # the translation (~2.1k chars) fits one chunk, like the recording.
+        # Pin the env vars the legacy extractor reads (as tests/test_adapters_legacy_extractor.py),
+        # with the chunk size of the recording: the translation (~2.1k chars) is one chunk.
         env = patch.dict(os.environ, {
             "LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT": "0",
             "LLM_SECOND_PASS": "0",
-            "LLM_CHUNK_CHARS": "8000",
+            "LLM_CHUNK_CHARS": "4000",
             "LLM_PROVIDER": "llamacpp",
         }, clear=False)
         env.start()
@@ -93,7 +93,10 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
         os.chdir(self.workdir)
         self.addCleanup(os.chdir, cwd)
 
-        self.transcript = Transcript(segments=(Segment(0.0, 0.0, TRANSLATION),), language="en")
+        self.transcript = Transcript(
+            segments=tuple(Segment(s["start"], s["end"], s["text"], s["speaker_id"]) for s in ENGLISH["segments"]),
+            language=ENGLISH["language"],
+        )
         self.store = InMemorySessionStore()
         session = Session(id=SESSION_ID, started_at=datetime(2026, 11, 6, 9, 0), domain="medical")
         session.transcript_ref = self.store.save_transcript(SESSION_ID, self.transcript)
@@ -138,7 +141,14 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
             self.assertIn(action_type.name, prompt)
         for action in self.generic:
             self.assertIn(action.id, prompt)
-        self.assertIn("November 13th, at 10 o'clock", prompt)
+        self.assertIn("[S2] Can I do them at the lab next to the polyclinic?", prompt)
+
+    def test_domain_prompt_shows_who_said_each_turn(self):
+        [(prompt, _model, _schema)] = self.domain_llm.calls
+        self.assertNotIn("[?]", prompt)
+        lines = [line for line in prompt.splitlines() if re.match(r"\[S\d\] ", line)]
+        self.assertEqual(lines, [f"[{s.speaker_id}] {s.text}" for s in self.transcript.segments])
+        self.assertIn("[S1] Yes. I'll prescribe you amlodipine five milligrams", prompt)
 
     def test_domain_stage_uses_the_medical_model_and_schema(self):
         [(_prompt, model, schema)] = self.domain_llm.calls
@@ -150,21 +160,21 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
 
     def test_saved_actions_are_exactly_the_typed_ones(self):
         saved = {a.id: a for a in self.store.load_actions(SESSION_ID)}
-        self.assertEqual(list(saved), [FOLLOW_UP, MEDICATION])
+        self.assertEqual(list(saved), [BLOOD_TESTS, MEDICATION])
         self.assertEqual(self.store.load_actions(SESSION_ID), self.typed)
 
-        visit, pill = saved[FOLLOW_UP], saved[MEDICATION]
+        visit, pill = saved[BLOOD_TESTS], saved[MEDICATION]
         self.assertEqual(visit.action_type, "schedule_visit")
         self.assertEqual(visit.fields, {
-            "reason": "Follow-up for blood pressure, with the notebook and the test results",
-            "visit_date": "2026-11-13",
-            "visit_time": "10:00",
-            "location": None,
+            "reason": "Blood tests: cholesterol, blood sugar, creatinine and ionogram",
+            "visit_date": None,
+            "visit_time": None,
+            "location": "the lab next to the polyclinic",
         })
         self.assertEqual(pill.action_type, "medication_reminder")
         self.assertEqual(pill.fields, {
             "medication": "amlodipine",
-            "dose": "5 milligrams, one tablet",
+            "dose": "five milligrams, one tablet",
             "frequency": "once a day, in the morning",
             "times": None,
             "start_date": None,
@@ -187,7 +197,10 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
     def test_lifestyle_advice_is_dropped(self):
         saved_ids = [a.id for a in self.store.load_actions(SESSION_ID)]
         self.assertNotIn(COFFEE, saved_ids)
-        self.assertNotIn("Reduce Coffee Intake", [a.title for a in self.store.load_actions(SESSION_ID)])
+        self.assertNotIn(SALT, saved_ids)
+        titles = [a.title for a in self.store.load_actions(SESSION_ID)]
+        self.assertNotIn("Reduce Coffee Intake", titles)
+        self.assertNotIn("Limit Salt Intake", titles)
 
     def test_suggestion_is_saved(self):
         expected = [Suggestion(SUGGESTION["text"], SUGGESTION["transcript_excerpt"])]

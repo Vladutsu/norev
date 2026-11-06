@@ -1,0 +1,186 @@
+{
+  "synthetic": "Written for tests. No real patient, no real person.",
+  "session_date": "2026-11-06",
+  "language": "en",
+  "source_language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "doctor"
+    },
+    {
+      "id": "S2",
+      "role": "patient"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.8,
+      "end": 4.361,
+      "speaker_id": "S1",
+      "text": "Good day, Mr. Popa. How are you feeling now compared to last time?",
+      "untranslated": false
+    },
+    {
+      "start": 4.799,
+      "end": 12.845,
+      "speaker_id": "S2",
+      "text": "Good day. Not very well, Mr. doctor. The cough hasn't gone away and for three days I've had a fever, thirty-eight and something in the evening.",
+      "untranslated": false
+    },
+    {
+      "start": 13.426,
+      "end": 14.479,
+      "speaker_id": "S1",
+      "text": "Are you coughing up phlegm?",
+      "untranslated": false
+    },
+    {
+      "start": 15.041,
+      "end": 21.577,
+      "speaker_id": "S2",
+      "text": "Yes, mostly in the morning, it's green. And I get very tired, barely make it to the second floor.",
+      "untranslated": false
+    },
+    {
+      "start": 22.32,
+      "end": 23.465,
+      "speaker_id": "S1",
+      "text": "Do you still smoke?",
+      "untranslated": false
+    },
+    {
+      "start": 23.929,
+      "end": 27.525,
+      "speaker_id": "S2",
+      "text": "I've reduced to ten cigarettes a day, but I haven't quit altogether.",
+      "untranslated": false
+    },
+    {
+      "start": 28.234,
+      "end": 32.263,
+      "speaker_id": "S1",
+      "text": "Let me listen to your lungs. Breathe deeply through your mouth. One more time.",
+      "untranslated": false
+    },
+    {
+      "start": 33.136,
+      "end": 36.05,
+      "speaker_id": "S2",
+      "text": "It hurts a bit on the right side when I breathe deeply.",
+      "untranslated": false
+    },
+    {
+      "start": 36.583,
+      "end": 42.834,
+      "speaker_id": "S1",
+      "text": "I hear some crackles at the base of the right lung. I want a chest X-ray today or at the latest tomorrow.",
+      "untranslated": false
+    },
+    {
+      "start": 43.13,
+      "end": 43.913,
+      "speaker_id": "S2",
+      "text": "Where do I get it done?",
+      "untranslated": false
+    },
+    {
+      "start": 44.716,
+      "end": 51.017,
+      "speaker_id": "S1",
+      "text": "At the county hospital, radiology. I'll give you the referral form now and you call to schedule an appointment.",
+      "untranslated": false
+    },
+    {
+      "start": 51.331,
+      "end": 53.451,
+      "speaker_id": "S2",
+      "text": "Okay. And what about the fever?",
+      "untranslated": false
+    },
+    {
+      "start": 53.712,
+      "end": 64.2,
+      "speaker_id": "S1",
+      "text": "I'll prescribe amoxicillin with clavulanic acid, one thousand milligrams, twice a day, for seven days. For the fever take paracetamol, no more than four tablets a day.",
+      "untranslated": false
+    },
+    {
+      "start": 64.584,
+      "end": 67.76,
+      "speaker_id": "S2",
+      "text": "Can I go to work? I work on a construction site.",
+      "untranslated": false
+    },
+    {
+      "start": 68.26,
+      "end": 73.861,
+      "speaker_id": "S1",
+      "text": "No. I'll give you a sick leave for five days, up to Tuesday inclusive. Rest and plenty of fluids.",
+      "untranslated": false
+    },
+    {
+      "start": 74.154,
+      "end": 76.564,
+      "speaker_id": "S2",
+      "text": "I need a certificate for my employer.",
+      "untranslated": false
+    },
+    {
+      "start": 77.058,
+      "end": 82.187,
+      "speaker_id": "S1",
+      "text": "I'll issue the medical leave certificate now, you take it to human resources.",
+      "untranslated": false
+    },
+    {
+      "start": 82.78,
+      "end": 85.032,
+      "speaker_id": "S2",
+      "text": "Thank you. And the tests?",
+      "untranslated": false
+    },
+    {
+      "start": 85.918,
+      "end": 91.102,
+      "speaker_id": "S1",
+      "text": "You'll also do a hematology panel and C-reactive protein test, tomorrow morning, on an empty stomach.",
+      "untranslated": false
+    },
+    {
+      "start": 91.372,
+      "end": 93.661,
+      "speaker_id": "S2",
+      "text": "I'll do them tomorrow. When should I come back?",
+      "untranslated": false
+    },
+    {
+      "start": 94.135,
+      "end": 106.2,
+      "speaker_id": "S1",
+      "text": "I'll be waiting on Tuesday, November 10th, at half past eight, with the X-ray and test results. If you have trouble breathing or the fever goes above thirty-nine, come immediately or call the emergency department.",
+      "untranslated": false
+    },
+    {
+      "start": 106.974,
+      "end": 109.222,
+      "speaker_id": "S2",
+      "text": "I understand. And about smoking?",
+      "untranslated": false
+    },
+    {
+      "start": 109.842,
+      "end": 117.758,
+      "speaker_id": "S1",
+      "text": "I recommend the smoking cessation program at the clinic. I'll put you on the list and the assistant, Mrs. Elena, will call you next week.",
+      "untranslated": false
+    },
+    {
+      "start": 118.066,
+      "end": 122.22,
+      "speaker_id": "S2",
+      "text": "Okay, I'll try. Thank you, Mr. doctor.",
+      "untranslated": false
+    }
+  ]
+}
