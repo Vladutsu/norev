@@ -1,4 +1,4 @@
-# agent.md — norev
+# AGENTS.md — norev
 
 Rules for any AI agent working in this project. Read this first, every session.
 This file lives at the repo root (remote `Vladutsu/norev`, branch `main`); it is committed so everyone on the repo works the same way.
@@ -99,6 +99,17 @@ depends on one, stop and ask; don't silently pick the recommendation.
   code and docs (docs/ADRs win unless the owner says otherwise).
 - Touch only what the task needs. No drive-by refactors.
 - Verify with evidence (run it, test it) before saying done.
+
+## graphify (optional, local only)
+
+Some machines have a knowledge graph of the repo at `graphify-out/` (gitignored, never commit it).
+Skip this section if that folder doesn't exist.
+
+- Read `graphify-out/GRAPH_REPORT.md` before reading source files, grepping, or answering codebase questions.
+- For "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`
+  or `graphify explain "<concept>"` over grep.
+- After modifying code, run `graphify update .` (AST only, no LLM). The local post-commit hook also does it.
+- INFERRED edges are model guesses: confirm them in the code before relying on them.
 
 ## Gotchas
 
