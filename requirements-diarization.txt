@@ -1,0 +1,9 @@
+# diarization (candidate from the wave 1 spike, #5; not picked by the team yet)
+# Install on top of the main requirements, in one command so pip keeps their pins:
+#   .venv/bin/pip install -r requirements.txt -r requirements-diarization.txt
+# Pulls torch with CUDA (~6 GB of wheels). Installed alone, NeMo pulls av 19, which breaks
+# faster-whisper's decode_audio; requirements.txt pins av==17.0.0, which NeMo also accepts.
+nemo_toolkit[asr]==3.0.0
+
+# CPU-only alternative measured in the spike (no torch, ~130 MB, worse speaker error):
+# sherpa-onnx==2.0.1

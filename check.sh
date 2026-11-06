@@ -16,19 +16,20 @@ step "bash syntax"
 for f in *.sh; do bash -n "$f"; done
 
 step "python compiles"
-"$PY" -m compileall -q LLM
+"$PY" -m compileall -q LLM norev
 
 step "every module imports"
 "$PY" - <<'PY'
 import importlib, pkgutil, sys
-import LLM
+import LLM, norev
 
 failed = []
-for mod in pkgutil.walk_packages(LLM.__path__, "LLM."):
-    try:
-        importlib.import_module(mod.name)
-    except Exception as exc:
-        failed.append(f"  {mod.name}: {exc!r}")
+for pkg in (LLM, norev):
+    for mod in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + "."):
+        try:
+            importlib.import_module(mod.name)
+        except Exception as exc:
+            failed.append(f"  {mod.name}: {exc!r}")
 if failed:
     print("import failed:\n" + "\n".join(failed))
     sys.exit(1)
