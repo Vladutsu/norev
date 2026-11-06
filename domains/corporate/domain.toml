@@ -105,3 +105,45 @@ sends = ["title", "description", "event_date", "start_time", "end_time", "locati
 [[action_types.workflow]]
 name = "save_result"
 label = "Salvează în Sesiune"
+
+[[action_types]]
+name = "follow_up_email"
+label = "Email de follow-up"
+description = "An email someone agreed to send after the meeting (a recap, an answer, figures), drafted for the User to send."
+
+# Filled only by the User: a Speaker label (S1) or a name is not an email, so the model always answers null.
+[[action_types.fields]]
+name = "recipients"
+label = "Destinatari (emailuri)"
+type = "string"
+required = true
+description = "Always null: the User adds the recipients' emails, separated by commas."
+
+[[action_types.fields]]
+name = "subject"
+label = "Subiect"
+type = "string"
+required = true
+description = "A short subject naming what the email is about, from what was said."
+
+[[action_types.fields]]
+name = "body"
+label = "Text"
+type = "string"
+required = true
+description = "A short draft of the email, only with what was said or agreed in the meeting."
+
+[[action_types.workflow]]
+name = "build_email"
+label = "Pregătește draftul"
+
+# The draft is saved as an .eml file the User opens and sends from their own mail app; norev sends nothing.
+[[action_types.workflow]]
+name = "save_email"
+label = "Salvează draftul de email"
+connector = "email_draft"
+sends = ["recipients", "subject", "body"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"

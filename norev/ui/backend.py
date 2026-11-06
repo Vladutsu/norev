@@ -17,6 +17,7 @@ from typing import Any
 from norev.adapters.domains.loader import load_domain
 from norev.core.models import ActionStatus, Domain, ProposedAction, Segment, Session, Suggestion, Transcript
 from norev.core.ports import Clock, SessionStore
+from norev.processor.payloads import email_preview
 from norev.usecases.approve import approve_action, domain_digest, edit_action, preview_action, reject_action
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -28,7 +29,8 @@ MODES = (
     ("medical", "Medical", "Exemplu"),
     ("others", "Others", "Prompt propriu"),
 )
-CONNECTOR_LABELS = {"google_calendar": "Google Calendar", "local_document": "Document local"}
+CONNECTOR_LABELS = {"google_calendar": "Google Calendar", "local_document": "Document local",
+                    "email_draft": "Draft de email"}
 GENERIC_FIELDS = ("title", "description", "owner", "due_date", "transcript_excerpt")
 
 
@@ -276,7 +278,10 @@ class DemoBackend:
             "missing": [f["label"] for f in fields if f["missing"]],
             "plan": [{"step": s["step"], "connector": s["connector"],
                       "connector_label": CONNECTOR_LABELS.get(s["connector"], s["connector"]),
-                      "payload": s["payload"]} for s in (plan or {}).get("steps", [])],
+                      "payload": s["payload"],
+                      # an email draft is also shown decoded (To, Subject, body) above the exact file (#61)
+                      "readable": email_preview(s["payload"].get("content")) if s["connector"] == "email_draft" else None,
+                      } for s in (plan or {}).get("steps", [])],
             "prepared": action.prepared_payload is not None,
         }
 
