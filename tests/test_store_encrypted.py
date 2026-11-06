@@ -265,6 +265,55 @@ class StoreContract:
         self.store.save_actions("s1", [action], expected_revision=0)
         self.assertEqual(self.store.load_actions("s1"), [action])
 
+    def test_summary_round_trip_and_unknown_session(self):
+        self.assertRaises(LookupError, self.store.save_summary, "s1", "x")
+        self.store.save_session(a_session())
+        self.assertEqual(self.store.load_summary("s1"), "")
+        self.store.save_summary("s1", f"Ședință despre {SENTINEL}")
+        self.store.save_summary("s1", "A doua analiză")
+        self.assertEqual(self.store.load_summary("s1"), "A doua analiză")
+
+    def _filled_session(self) -> tuple[Session, list[ProposedAction]]:
+        session = a_session()
+        session.audio_ref = self.store.save_audio("s1", b"audio")
+        session.transcript_ref = self.store.save_transcript("s1", a_transcript())
+        session.source_transcript_ref = self.store.save_transcript("s1", a_transcript())
+        self.store.save_session(session)
+        proposed = ProposedAction("s1-1", "Raport", "Trimite raportul", "Trimit raportul.")
+        self.store.save_actions("s1", [proposed], expected_revision=0, suggestions=[Suggestion("Verifică", "x")])
+        self.store.save_speakers("s1", [Speaker("S1")])
+        self.store.save_summary("s1", "rezumat")
+        self.store.save_step("s1-1", StepRecord("build_document", StepState.DONE))
+        return session, [proposed]
+
+    def test_delete_session_removes_everything_of_it_and_keeps_the_audit(self):
+        session, _ = self._filled_session()
+        self.store.save_session(a_session("s2"))
+        self.audit.record(an_event())
+
+        self.store.delete_session("s1")
+
+        self.assertIsNone(self.store.get_session("s1"))
+        self.assertEqual([s.id for s in self.store.list_sessions()], ["s2"])
+        for ref in (session.transcript_ref, session.source_transcript_ref):
+            self.assertRaises(KeyError, self.store.load_transcript, ref)
+        self.assertRaises(KeyError, self.store.load_audio, session.audio_ref)
+        self.assertEqual((self.store.load_actions("s1"), self.store.load_suggestions("s1"), self.store.load_speakers("s1"),
+                          self.store.load_summary("s1"), self.store.load_steps("s1-1")), ([], [], [], "", {}))
+        self.assertEqual(len(self.events()), 1)
+        self.assertRaises(LookupError, self.store.delete_session, "s1")
+        # a new Session with the same id starts clean
+        self.store.save_session(a_session())
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 0)
+
+    def test_delete_is_refused_while_an_approved_action_waits(self):
+        self._filled_session()
+        self.store.save_actions("s1", [approved_action()], expected_revision=1)
+        with self.assertRaises(ValueError):
+            self.store.delete_session("s1")
+        self.assertIsNotNone(self.store.get_session("s1"))
+        self.assertEqual(self.store.load_summary("s1"), "rezumat")
+
     def test_list_sessions_newest_first(self):
         self.assertEqual(self.store.list_sessions(), [])
         older, newer = a_session("s1"), a_session("s2")
@@ -365,6 +414,13 @@ class EncryptedStoreTest(TempStoreCase):
             t.join()
         self.assertEqual(errors, [])
         self.assertEqual([len(self.store.load_steps(f"a{n}")) for n in range(4)], [20] * 4)
+
+    def test_deleted_session_leaves_no_sentinel_on_disk(self):
+        self.store.save_session(a_session())
+        self.store.save_summary("s1", f"rezumat {SENTINEL}")
+        self.store.delete_session("s1")
+        self.store.close()
+        self.assertNotIn(SENTINEL.encode(), self.data_bytes())
 
     def test_steps_survive_a_restart_and_stay_encrypted(self):
         self.store.save_step("s1-1", StepRecord("save_document", StepState.STARTED, result={"note": SENTINEL}))

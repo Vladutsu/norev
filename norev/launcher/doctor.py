@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping
 
-from norev.adapters.store.encrypted import KEY_BYTES
+from norev.adapters.store.encrypted import StoreKeyError, read_key_file
 from norev.launcher.paths import AppPaths
 
 DIARIZATION_MODEL = "nvidia/diar_streaming_sortformer_4spk-v2"  # same as norev.adapters.diarization.sortformer
@@ -156,16 +156,25 @@ def _key(paths, env, probes):
     key = Path(env.get("NOREV_STORE_KEY_FILE") or paths.key)
     store = Path(env.get("NOREV_STORE_PATH") or paths.store)
     if key.is_file():
-        size = key.stat().st_size
-        ok = size == KEY_BYTES
-        yield Check("Cheia store-ului", ok, str(key) if ok else f"{key}: {size} bytes, trebuie {KEY_BYTES}",
-                    "" if ok else "Fișierul cheii e deteriorat. Pune înapoi copia de siguranță a cheii.")
+        try:
+            read_key_file(key)
+        except StoreKeyError:
+            sealed = key.suffix == ".dpapi"
+            yield Check("Cheia store-ului", False,
+                        f"{key}: {'contul Windows curent nu o poate deschide' if sealed else 'fișier deteriorat'}",
+                        "Pune înapoi backup-ul cheii: norev.cmd import-key <fișierul de backup>.")
+            return
+        sealed = key.suffix == ".dpapi"
+        yield Check("Cheia store-ului", True, f"{key}" + (" (protejată de contul Windows)" if sealed else ""))
+        if paths.windows and not sealed:
+            yield Check("Protecția cheii", False, "cheia e un fișier neprotejat",
+                        "Rulează: norev.cmd protect-key (o singură dată; păstrează datele).", required=False)
     elif store.is_file():
         yield Check("Cheia store-ului", False, f"lipsește {key}, dar există date în {store}",
-                    "Pune înapoi copia de siguranță a cheii. O cheie nouă NU poate citi datele existente.")
+                    "Pune înapoi backup-ul cheii: norev.cmd import-key <fișier>. O cheie nouă NU poate citi datele existente.")
     else:
         yield Check("Cheia store-ului", False, f"lipsește {key}",
-                    "Rulează: norev.cmd new-key (apoi fă o copie a cheii pe un stick USB).")
+                    "Rulează: norev.cmd new-key, apoi norev.cmd export-key <stick USB> pentru backup.")
 
 
 def report(checks: list[Check]) -> str:

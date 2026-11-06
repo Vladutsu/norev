@@ -13,7 +13,9 @@ from norev.adapters.store.encrypted import StoreSettings, create_key_file
 from norev.launcher import __main__ as launcher
 from norev.launcher.doctor import Check, Probes, ready, report, run_checks
 from norev.launcher.llama import LlamaError, LlamaServer
+from norev.launcher.keys import create_protected_key
 from norev.launcher.paths import AppPaths, apply_defaults, cuda_dll_dirs
+from norev.testing.fakes import fake_dpapi
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -23,7 +25,8 @@ class PathsTest(unittest.TestCase):
         paths = AppPaths.from_environment({"LOCALAPPDATA": r"C:\Users\ana\AppData\Local"}, windows=True)
         root = Path(r"C:\Users\ana\AppData\Local") / "norev"
         self.assertEqual(paths.root, root)
-        self.assertEqual(paths.key, root / "keys" / "norev.key")
+        self.assertEqual(paths.key, root / "keys" / "norev.key.dpapi")
+        self.assertEqual(paths.plain_key, root / "keys" / "norev.key")
         self.assertEqual(paths.llama_server, root / "llama.cpp" / "llama-server.exe")
         self.assertEqual(paths.hf_home, root / "models" / "hf")
         self.assertNotEqual(paths.key.parent, paths.store.parent)
@@ -47,7 +50,12 @@ class PathsTest(unittest.TestCase):
             self.assertEqual(env["LLAMA_SERVER"], "D:/llama/llama-server.exe")
             self.assertEqual((env["HF_HUB_OFFLINE"], env["HF_HOME"]), ("1", str(paths.hf_home)))
             self.assertNotIn("NOREV_STORE_KEY_FILE", env)
-            create_key_file(paths.key)
+            create_key_file(paths.plain_key)
+            env = {}
+            apply_defaults(paths, env, offline=False)
+            self.assertEqual(env["NOREV_STORE_KEY_FILE"], str(paths.plain_key))
+            with fake_dpapi():
+                create_protected_key(paths.key)
             env = {}
             apply_defaults(paths, env, offline=False)
             self.assertEqual(env["NOREV_STORE_KEY_FILE"], str(paths.key))
@@ -75,13 +83,16 @@ class DoctorTest(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.paths = AppPaths(Path(tmp.name), windows=True)
+        dpapi = fake_dpapi()
+        dpapi.__enter__()
+        self.addCleanup(dpapi.__exit__, None, None, None)
 
     def install_everything(self):
         self.paths.llama_server.parent.mkdir(parents=True)
         self.paths.llama_server.write_bytes(b"exe")
         self.paths.models.mkdir(parents=True)
         self.paths.gguf.write_bytes(b"gguf")
-        create_key_file(self.paths.key)
+        create_protected_key(self.paths.key)
 
     def by_name(self, checks):
         return {c.name: c for c in checks}
@@ -113,10 +124,19 @@ class DoctorTest(unittest.TestCase):
         self.assertFalse(key.ok)
         self.assertIn("NU poate citi", key.fix)
 
-    def test_a_damaged_key_is_reported(self):
+    def test_a_key_this_account_cannot_open_is_reported_with_the_backup_fix(self):
         self.paths.key.parent.mkdir(parents=True)
-        self.paths.key.write_bytes(b"short")
-        self.assertIn("5 bytes", self.by_name(run_checks(self.paths, {}, fake_probes()))["Cheia store-ului"].detail)
+        self.paths.key.write_bytes(b"sealed by another account")
+        key = self.by_name(run_checks(self.paths, {}, fake_probes()))["Cheia store-ului"]
+        self.assertIn("contul Windows curent nu o poate deschide", key.detail)
+        self.assertIn("import-key", key.fix)
+
+    def test_a_plain_key_on_windows_asks_for_protect_key(self):
+        create_key_file(self.paths.plain_key)
+        checks = self.by_name(run_checks(self.paths, {"NOREV_STORE_KEY_FILE": str(self.paths.plain_key)}, fake_probes()))
+        self.assertTrue(checks["Cheia store-ului"].ok)
+        self.assertIn("protect-key", checks["Protecția cheii"].fix)
+        self.assertFalse(checks["Protecția cheii"].required)
 
     def test_other_gguf_files_are_suggested(self):
         self.paths.models.mkdir(parents=True)
@@ -229,7 +249,7 @@ class LauncherTest(unittest.TestCase):
         self.assertIn("llama-server", out.getvalue())
 
     def test_new_key_creates_once_and_never_overwrites(self):
-        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()) as out:
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()) as out, fake_dpapi():
             paths = AppPaths(Path(tmp), windows=True)
             launcher.new_key(paths)
             first = paths.key.read_bytes()

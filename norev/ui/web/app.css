@@ -159,6 +159,11 @@ blockquote{margin:0;display:flex;gap:.75rem;font-size:.875rem;line-height:1.55;c
 .suggestion strong{font-size:.875rem}
 .suggestion em{font-size:.8rem;color:var(--text-3)}
 .list{display:flex;flex-direction:column;gap:1rem}
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:.75rem;margin-bottom:1.25rem}
+@media (max-width:900px){.filters{grid-template-columns:1fr 1fr}}
+.listrow{display:flex;align-items:center;gap:.6rem}
+.listrow .listitem{flex:1}
+.btn.danger{color:var(--attention-text)}
 .listitem{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.1rem 1.4rem;border-radius:1.25rem;border:0;cursor:pointer;text-align:left;width:100%;background:var(--bg);box-shadow:var(--raised-sm)}
 .listitem strong{display:block;font:700 1.05rem var(--display)}
 .steps{display:flex;flex-direction:column;gap:.85rem;padding:.25rem .4rem}

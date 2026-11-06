@@ -1,4 +1,5 @@
 """Handwritten fakes for the ports in norev.core.ports, so tests run without a model or GPU."""
+import contextlib
 import copy
 import dataclasses
 from datetime import date, datetime
@@ -6,7 +7,7 @@ from threading import RLock
 from typing import Any
 
 from norev.core.models import (
-    ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, SendResult, Session, Speaker, SpeakerTurn, StaleRevision,
+    ActionStatus, ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, SendResult, Session, Speaker, SpeakerTurn, StaleRevision,
     StepRecord, Suggestion, Transcript,
 )
 from norev.core.models import check_decisions_kept
@@ -70,6 +71,7 @@ class InMemorySessionStore:
         self._audio: dict[str, bytes] = {}
         self._speakers: dict[str, list[Speaker]] = {}
         self._steps: dict[str, dict[str, StepRecord]] = {}
+        self._summaries: dict[str, str] = {}
 
     def save_session(self, session: Session) -> None:
         with self._lock:
@@ -194,6 +196,32 @@ class InMemorySessionStore:
         with self._lock:
             return list(self._speakers.get(session_id, []))
 
+    def save_summary(self, session_id: str, summary: str) -> None:
+        with self._lock:
+            if session_id not in self._sessions:
+                raise LookupError("Session does not exist")
+            self._summaries[session_id] = str(summary)
+
+    def load_summary(self, session_id: str) -> str:
+        with self._lock:
+            return self._summaries.get(session_id, "")
+
+    def delete_session(self, session_id: str) -> None:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise LookupError("Session does not exist")
+            actions = self._actions.get(session_id, [])
+            if any(a.status is ActionStatus.APPROVED for a in actions):
+                raise ValueError("an approved Proposed Action is waiting to execute")
+            for ref in (session.transcript_ref, session.source_transcript_ref):
+                self._transcripts.pop(ref, None)
+            self._audio.pop(session.audio_ref, None)
+            for a in actions:
+                self._steps.pop(a.id, None)
+            for table in (self._sessions, self._revisions, self._actions, self._suggestions, self._speakers, self._summaries):
+                table.pop(session_id, None)
+
     # ExecutionStore
     def load_steps(self, action_id: str) -> dict[str, StepRecord]:
         with self._lock:
@@ -247,3 +275,22 @@ class FakePayloadBuilder:
     def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
         self.calls.append(copy.deepcopy((action, domain, options)))
         return copy.deepcopy(self.plan)
+
+
+@contextlib.contextmanager
+def fake_dpapi():
+    """Windows DPAPI stand-in for tests on any OS (#63): a sealed blob opens only through it."""
+    from unittest import mock
+
+    from norev.adapters.store import dpapi
+
+    def protect(data: bytes) -> bytes:
+        return b"FAKE-DPAPI" + bytes(reversed(data))
+
+    def unprotect(blob: bytes) -> bytes:
+        if not blob.startswith(b"FAKE-DPAPI"):
+            raise dpapi.DpapiError("not sealed by this account")
+        return bytes(reversed(blob[len(b"FAKE-DPAPI"):]))
+
+    with mock.patch.object(dpapi, "protect", protect), mock.patch.object(dpapi, "unprotect", unprotect):
+        yield

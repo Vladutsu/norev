@@ -42,6 +42,10 @@ log = logging.getLogger(__name__)
 STAGES = ("recording", "transcribing", "starting_llm", "analysing", "ready")
 
 
+class SessionBusy(ValueError):
+    """The Session is recording or being analysed; it cannot be deleted now."""
+
+
 class MicrophoneUnavailable(ValueError):
     """No input device could be opened. Nothing was recorded or saved."""
 
@@ -272,13 +276,30 @@ class SessionBackend(DemoBackend):
     # --- review
 
     def sessions(self) -> list[dict[str, Any]]:
-        return [{
-            "session_id": s.id, "contact": s.contact_id or "", "domain": s.domain, "started_at": s.started_at.isoformat(),
-            "pending": sum(a.status is ActionStatus.PROPOSED for a in self.store.load_actions(s.id)),
-        } for s in self.store.list_sessions() if s.transcript_ref]
+        """Every saved Session (#59), also the ones whose analysis failed or never finished."""
+        listed = []
+        for s in self.store.list_sessions():
+            ready = bool(s.source_transcript_ref)
+            listed.append({
+                "session_id": s.id, "contact": s.contact_id or "", "domain": s.domain, "started_at": s.started_at.isoformat(),
+                "pending": sum(a.status is ActionStatus.PROPOSED for a in self.store.load_actions(s.id)) if ready else 0,
+                "ready": ready,
+            })
+        return listed
 
     def _summary(self, session_id: str) -> str:
-        return ""  # the analysis keeps no Session summary yet
+        return self.store.load_summary(session_id)
+
+    def delete(self, session_id: str) -> dict[str, Any]:
+        """Only while nothing runs on the Session (recording or analysis)."""
+        with self._lock:
+            progress = self._progress.get(session_id)
+            if session_id in self._recordings or (progress and progress["stage"] != "ready" and not progress["failed"]):
+                raise SessionBusy("session")
+        super().delete(session_id)
+        with self._lock:
+            self._progress.pop(session_id, None)
+        return {"deleted": session_id}
 
     def _speakers(self, session_id: str, transcript) -> list[dict[str, Any]]:
         return [{"id": s.id, "role": s.role} for s in self.store.load_speakers(session_id)]

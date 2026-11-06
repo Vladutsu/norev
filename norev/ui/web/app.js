@@ -14,6 +14,8 @@ const ERRORS = {
   not_found: "Sesiunea nu mai există.",
   invalid: "Datele nu sunt valide.",
   internal: "Ceva n-a mers. Încearcă din nou.",
+  session_busy: "Sesiunea se înregistrează sau se analizează acum; încearcă după ce se termină.",
+  execution_pending: "O acțiune aprobată așteaptă să fie executată. Execut-o sau rezolv-o înainte de ștergere.",
   unsupported_workflow: "Acest tip de acțiune are nevoie de un Connector care nu e încă disponibil.",
   already_running: "Acțiunea se execută deja.",
   not_executable: "Acțiunea nu poate fi executată acum.",
@@ -64,6 +66,7 @@ const state = {
   modes: [], mode: null, lang: "ro",
   others: { context: "", prompt: "", digest: null },
   sessionId: null, review: null, poll: null,
+  list: { kind: "recent", sessions: [], confirming: null },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -293,13 +296,14 @@ function initRecording() {
 }
 
 // Stop and import return at once; the analysis runs in the backend and reports its stage.
-async function waitAnalysis(sessionId) {
+// start=false only shows where the analysis is (a Session reopened from the list); it never starts it
+async function waitAnalysis(sessionId, start = true) {
   const line = $("analysis");
   line.hidden = false;
   const busy = (text) => line.replaceChildren(h("span", { class: "recdot pulse", "aria-hidden": "true" }), `${text}…`);
   busy(STAGES.transcribing);
   try {
-    await api("stop", sessionId);
+    if (start) await api("stop", sessionId);
     for (;;) {
       const p = await api("progress", sessionId);
       if (p.failed) {
@@ -476,16 +480,63 @@ async function refreshPending() {
 }
 
 async function showList(kind) {
-  const sessions = await refreshPending();
-  const shown = kind === "pending" ? sessions.filter((s) => s.pending > 0) : sessions;
+  state.list = { kind, sessions: await refreshPending(), confirming: null };
   $("list-title").textContent = kind === "pending" ? "De verificat" : "Sesiuni recente";
-  $("session-list").replaceChildren(...(shown.length ? shown.map((s) => h("button", {
-    type: "button", class: "listitem", onclick: () => openReview(s.session_id).catch(fail),
-  }, h("span", {}, h("strong", {}, s.contact || "Sesiune fără contact"),
-      h("span", { class: "small muted" }, new Date(s.started_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }))),
-    h("span", { class: "badge", "aria-label": `${s.pending} de verificat` }, String(s.pending))))
-    : [h("p", { class: "muted" }, kind === "pending" ? "Nimic de verificat." : "Nicio sesiune încă.")]));
+  const domain = $("f-domain");
+  if (domain.options.length === 1) {
+    domain.append(...state.modes.map((m) => h("option", { value: m.id }, m.label)));
+  }
+  renderList();
   show("list");
+}
+
+// Search and filters run here, on the list the backend already returned: nothing is indexed (#59)
+function renderList() {
+  const { kind, sessions, confirming } = state.list;
+  const text = $("f-text").value.trim().toLocaleLowerCase("ro-RO");
+  const domain = $("f-domain").value, from = $("f-from").value, to = $("f-to").value;
+  const day = (s) => new Date(s.started_at).toLocaleDateString("sv-SE"); // YYYY-MM-DD, local time
+  const shown = sessions.filter((s) => (kind !== "pending" || s.pending > 0)
+    && (!text || (s.contact || "").toLocaleLowerCase("ro-RO").includes(text))
+    && (!domain || s.domain === domain) && (!from || day(s) >= from) && (!to || day(s) <= to));
+  const filtered = text || domain || from || to;
+  $("session-list").replaceChildren(...(shown.length ? shown.map(sessionRow)
+    : [h("p", { class: "muted" }, filtered ? "Nicio sesiune nu se potrivește filtrelor."
+      : kind === "pending" ? "Nimic de verificat." : "Nicio sesiune încă.")]));
+
+  function sessionRow(s) {
+    const name = s.contact || "Sesiune fără contact";
+    const open = () => (s.ready ? openReview(s.session_id) : openAnalysis(s)).catch(fail);
+    const status = s.ready ? h("span", { class: "badge", "aria-label": `${s.pending} de verificat` }, String(s.pending))
+      : h("span", { class: "chip" }, "Neanalizată");
+    const remove = confirming === s.session_id
+      ? [h("button", { type: "button", class: "btn", onclick: () => { state.list.confirming = null; renderList(); } }, "Renunță"),
+         h("button", { type: "button", class: "btn danger", onclick: (e) => guarded(e.currentTarget, async () => {
+           await api("delete", s.session_id);
+           await showList(kind);
+           toast("Sesiunea a fost ștearsă.");
+         }) }, "Confirmă ștergerea")]
+      : [h("button", { type: "button", class: "btn", "aria-label": `Șterge ${name}`,
+          onclick: () => { state.list.confirming = s.session_id; renderList(); } }, "Șterge")];
+    return h("div", { class: "listrow" },
+      h("button", { type: "button", class: "listitem", onclick: open },
+        h("span", {}, h("strong", {}, name),
+          h("span", { class: "small muted" }, new Date(s.started_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }))),
+        status),
+      ...remove);
+  }
+}
+
+// A Session reopened before its analysis finished: show where it stopped; retrying is the User's choice
+async function openAnalysis(s) {
+  state.sessionId = s.session_id;
+  $("rec-title").textContent = s.contact || "Fără contact";
+  $("rec-meta").textContent = new Date(s.started_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  $("live").replaceChildren();
+  $("rec-controls").hidden = true;
+  setNav(null);
+  show("recording");
+  await waitAnalysis(s.session_id, false);
 }
 
 // ---------- Google Calendar (#45): shown only when it is set up on this machine
@@ -521,6 +572,10 @@ async function googleButton(button) {
   }
 }
 
+function initList() {
+  for (const id of ["f-text", "f-domain", "f-from", "f-to"]) $(id).addEventListener("input", () => renderList());
+}
+
 function initNav() {
   for (const b of document.querySelectorAll(".navbtn")) {
     b.addEventListener("click", () => {
@@ -535,6 +590,7 @@ async function init() {
   initNew();
   initRecording();
   initNav();
+  initList();
   $("main").setAttribute("tabindex", "-1");
   try {
     state.modes = await api("modes");
