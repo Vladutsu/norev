@@ -6,7 +6,7 @@ from threading import RLock
 from typing import Any
 
 from norev.core.models import (
-    ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, SendResult, Session, Speaker, SpeakerTurn, StaleRevision,
+    ActionStatus, ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, SendResult, Session, Speaker, SpeakerTurn, StaleRevision,
     StepRecord, Suggestion, Transcript,
 )
 from norev.core.models import check_decisions_kept
@@ -70,6 +70,7 @@ class InMemorySessionStore:
         self._audio: dict[str, bytes] = {}
         self._speakers: dict[str, list[Speaker]] = {}
         self._steps: dict[str, dict[str, StepRecord]] = {}
+        self._summaries: dict[str, str] = {}
 
     def save_session(self, session: Session) -> None:
         with self._lock:
@@ -193,6 +194,32 @@ class InMemorySessionStore:
     def load_speakers(self, session_id: str) -> list[Speaker]:
         with self._lock:
             return list(self._speakers.get(session_id, []))
+
+    def save_summary(self, session_id: str, summary: str) -> None:
+        with self._lock:
+            if session_id not in self._sessions:
+                raise LookupError("Session does not exist")
+            self._summaries[session_id] = str(summary)
+
+    def load_summary(self, session_id: str) -> str:
+        with self._lock:
+            return self._summaries.get(session_id, "")
+
+    def delete_session(self, session_id: str) -> None:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise LookupError("Session does not exist")
+            actions = self._actions.get(session_id, [])
+            if any(a.status is ActionStatus.APPROVED for a in actions):
+                raise ValueError("an approved Proposed Action is waiting to execute")
+            for ref in (session.transcript_ref, session.source_transcript_ref):
+                self._transcripts.pop(ref, None)
+            self._audio.pop(session.audio_ref, None)
+            for a in actions:
+                self._steps.pop(a.id, None)
+            for table in (self._sessions, self._revisions, self._actions, self._suggestions, self._speakers, self._summaries):
+                table.pop(session_id, None)
 
     # ExecutionStore
     def load_steps(self, action_id: str) -> dict[str, StepRecord]:

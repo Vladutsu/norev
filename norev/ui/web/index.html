@@ -175,7 +175,13 @@
 
   <section id="view-list" aria-labelledby="list-title" hidden>
     <h1 class="title" id="list-title"></h1>
-    <div class="list" id="session-list"></div>
+    <div class="filters" role="search">
+      <label for="f-text"><span class="field-label">Caută după Contact</span><input id="f-text" class="field" type="search" autocomplete="off"></label>
+      <label for="f-domain"><span class="field-label">Mod</span><select id="f-domain" class="field"><option value="">Toate</option></select></label>
+      <label for="f-from"><span class="field-label">De la</span><input id="f-from" class="field" type="date"></label>
+      <label for="f-to"><span class="field-label">Până la</span><input id="f-to" class="field" type="date"></label>
+    </div>
+    <div class="list" id="session-list" aria-live="polite"></div>
   </section>
 
 </main>

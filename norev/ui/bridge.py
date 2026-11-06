@@ -11,8 +11,8 @@ from typing import Any, Callable
 from norev.core.models import InvalidTransition, StaleRevision, UnsupportedWorkflow, ValidationError
 from norev.launcher.llama import LlamaError
 from norev.processor.workflow import AlreadyRunning, ExecutionRefused
-from norev.ui.backend import DemoBackend, ModeUnavailable, PromptNotConfirmed
-from norev.ui.session_backend import MicrophoneUnavailable
+from norev.ui.backend import DemoBackend, ExecutionPending, ModeUnavailable, PromptNotConfirmed
+from norev.ui.session_backend import MicrophoneUnavailable, SessionBusy
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ class Bridge:
     def import_example(self, mode, language, contact, others=None): return self._call(self._backend.import_example, mode, language, contact, others)
     def import_file(self, mode, language, contact, others=None): return self._call(self._backend.import_file, mode, language, contact, others)
     def progress(self, session_id): return self._call(self._backend.progress, session_id)
+    def delete(self, session_id): return self._call(self._backend.delete, session_id)
     def live(self, session_id): return self._call(self._backend.live, session_id)
     def pause(self, session_id): return self._call(self._backend.pause, session_id)
     def stop(self, session_id): return self._call(self._backend.stop, session_id)
@@ -69,6 +70,10 @@ class Bridge:
             return _error("mode_unavailable", "mode")
         except UnsupportedWorkflow:
             return _error("unsupported_workflow", "workflow")
+        except SessionBusy:
+            return _error("session_busy", "session")
+        except ExecutionPending:
+            return _error("execution_pending", "session")
         except MicrophoneUnavailable:
             return _error("no_microphone", "device")
         except AlreadyRunning:
