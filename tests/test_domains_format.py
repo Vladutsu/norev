@@ -106,7 +106,7 @@ def check_domain(folder: Path) -> None:
     assert prompt_path.is_file() and prompt_path != folder, "prompts.domain_stage file missing"
     assert schema_path.is_file() and schema_path != folder, "prompts.domain_stage_schema file missing"
 
-    used = set(re.findall(r"\{\{(\w+)\}\}", prompt_path.read_text(encoding="utf-8")))
+    used = set(re.findall(r"\{\{(.*?)\}\}", prompt_path.read_text(encoding="utf-8")))  # as norev/usecases/domain_stage.py
     assert used <= PLACEHOLDERS, f"unknown placeholders {sorted(used - PLACEHOLDERS)}"
     assert REQUIRED_PLACEHOLDERS <= used, f"prompt must use {sorted(REQUIRED_PLACEHOLDERS - used)}"
 
