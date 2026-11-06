@@ -105,7 +105,8 @@ def run_session(
     session_date = (started.astimezone() if started.tzinfo else started).date()  # local day of the Session
     # A regeneration numbers its actions by revision, so new ids never collide with kept ones
     prefix = f"{session_id}-r{snapshot.revision}" if regenerate else session_id
-    generic = to_proposed_actions(extractor.extract(transcript, session_date), id_prefix=prefix)
+    raw = extractor.extract(transcript, session_date)
+    generic = to_proposed_actions(raw, id_prefix=prefix)
     actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date)
     if regenerate:
         store.regenerate_actions(session_id, decided + actions, domain=domain.name,
@@ -113,6 +114,8 @@ def run_session(
                                  others_prompt=others_prompt)
     else:
         store.save_actions(session_id, actions, expected_revision=snapshot.revision, suggestions=suggestions)
+    summary = raw.get("session_summary") if isinstance(raw, dict) else None
+    store.save_summary(session_id, summary.strip() if isinstance(summary, str) else "")  # the last analysis's (#59)
     return SessionResult(actions, suggestions, tuple(s for s in transcript.segments if s.untranslated))
 
 

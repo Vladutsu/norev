@@ -147,6 +147,21 @@ class SessionStore(Protocol):
 
     def load_speakers(self, session_id: str) -> list[Speaker]: ...
 
+    def save_summary(self, session_id: str, summary: str) -> None:
+        """Replace the Session summary of the last analysis (#59). Unknown Session raises LookupError."""
+        ...
+
+    def load_summary(self, session_id: str) -> str:
+        """"" when the Session has none."""
+        ...
+
+    def delete_session(self, session_id: str) -> None:
+        """The User's explicit deletion (#59): the Session, its audio, Transcripts, Proposed Actions,
+        Suggestions, Speakers, summary and Workflow steps, in one write. The audit log is kept.
+        Unknown Session raises LookupError; an Approved action still waiting to execute raises
+        ValueError and nothing is deleted."""
+        ...
+
 
 @runtime_checkable
 class ExecutionStore(Protocol):

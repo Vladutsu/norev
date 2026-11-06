@@ -36,6 +36,10 @@ class ModeUnavailable(ValueError):
     """The mode's Domain is not in domains/ yet (Corporate: #20) or its analysis is not built (Others: #21)."""
 
 
+class ExecutionPending(ValueError):
+    """An approved Proposed Action still waits to execute: the Session is not deleted."""
+
+
 class PromptNotConfirmed(ValueError):
     """Others needs the exact context and prompt the User confirmed."""
 
@@ -218,7 +222,7 @@ class DemoBackend:
             listed.append({
                 "session_id": session_id, "contact": session.contact_id or "", "domain": session.domain,
                 "started_at": session.started_at.isoformat(),
-                "pending": sum(a.status is ActionStatus.PROPOSED for a in actions),
+                "pending": sum(a.status is ActionStatus.PROPOSED for a in actions), "ready": True,
             })
         return sorted(listed, key=lambda s: s["started_at"], reverse=True)
 
@@ -279,6 +283,15 @@ class DemoBackend:
                       "payload": s["payload"]} for s in (plan or {}).get("steps", [])],
             "prepared": action.prepared_payload is not None,
         }
+
+    def delete(self, session_id: str) -> dict[str, Any]:
+        """The User's confirmed deletion (#59); the audit log of executed actions is kept."""
+        try:
+            self.store.delete_session(session_id)
+        except ValueError:  # an approved action waits to execute; LookupError (unknown Session) passes through
+            raise ExecutionPending("session") from None
+        self._sessions.pop(session_id, None)
+        return {"deleted": session_id}
 
     def set_role(self, session_id: str, speaker_id: str, role: str) -> dict[str, Any]:
         state = self._state(session_id)

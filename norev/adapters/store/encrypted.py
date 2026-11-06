@@ -286,6 +286,33 @@ class EncryptedStore:
     def load_speakers(self, session_id: str) -> list[Speaker]:
         return [Speaker(**d) for d in self._get("speakers", session_id) or []]
 
+    def save_summary(self, session_id: str, summary: str) -> None:
+        plaintext = _encode(str(summary))
+        with self._transaction():
+            if not self._exists("session", session_id):
+                raise LookupError("Session does not exist")
+            self._write("summary", session_id, plaintext)
+
+    def load_summary(self, session_id: str) -> str:
+        return self._get("summary", session_id) or ""
+
+    def delete_session(self, session_id: str) -> None:
+        """One transaction; secure_delete overwrites the freed pages. Audit and send results stay."""
+        with self._transaction():
+            session = self._get("session", session_id)
+            if session is None:
+                raise LookupError("Session does not exist")
+            actions = self.load_actions(session_id)
+            if any(a.status is ActionStatus.APPROVED for a in actions):
+                raise ValueError("an approved Proposed Action is waiting to execute")
+            records = [("transcript", session.get("transcript_ref")), ("transcript", session.get("source_transcript_ref")),
+                       ("audio", session.get("audio_ref"))]
+            records += [("steps", a.id) for a in actions]
+            records += [(kind, session_id) for kind in ("session", "revision", "actions", "suggestions", "speakers", "summary")]
+            for kind, record_id in records:
+                if record_id:
+                    self._db.execute("DELETE FROM records WHERE kind = ? AND id = ?", (kind, record_id))
+
     # --- ExecutionStore (#23): one record per action, holding each step's state
 
     def load_steps(self, action_id: str) -> dict[str, StepRecord]:
