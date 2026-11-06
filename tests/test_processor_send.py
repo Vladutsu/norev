@@ -129,6 +129,21 @@ class SendTest(unittest.TestCase):
                     self._processor().send(action, "local_document", PAYLOAD)
         self.assertEqual(self.timeline, [])
 
+    def test_a_step_sends_only_its_fields_of_the_snapshot(self) -> None:
+        processor = self._processor()
+        processor.send(_approved(), "local_document", {"urgent": True, "title": "Follow-up"}, fields=("title", "urgent"))
+        self.assertEqual(self.connector.sent[0], {"title": "changed by the Connector", "urgent": True})  # (changed after the send)
+        self.assertEqual(self.audit.events[0].payload, {"title": "Follow-up", "urgent": True})
+        for payload, fields in (
+            ({"title": "Other"}, ("title",)),
+            ({"title": "Follow-up"}, ("title", "urgent")),  # field left out
+            ({"title": "Follow-up", "missing": None}, ("title", "missing")),  # not in the snapshot
+            ({}, ()),
+        ):
+            with self.subTest(fields=fields), self.assertRaises(SendRefused):
+                processor.send(_approved(), "local_document", payload, fields=fields)
+        self.assertEqual(len(self.connector.sent), 1)
+
     def test_unknown_connector_is_refused(self) -> None:
         with self.assertRaises(SendRefused):
             self._processor().send(_approved(), "google_calendar", PAYLOAD)
