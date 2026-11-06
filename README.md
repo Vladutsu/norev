@@ -175,4 +175,3 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `LLM_PROVIDER` | `llamacpp` | `llamacpp` or `ollama` |
 | `NOREV_EXPORT_DIR` | `~/Documents/norev` | desktop app: where approved Proposed Actions are exported (`local_document`) |
 | `NOREV_INPUT_DEVICE` | system default | desktop app: microphone name, or its number in `python -m norev.adapters.recorder --list-devices` |
-| `NOREV_LLAMA_LOG` | `~/.norev/llama-server.log` | desktop app: llama-server log |

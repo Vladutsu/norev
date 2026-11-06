@@ -9,7 +9,7 @@ import logging
 from typing import Any, Callable
 
 from norev.core.models import InvalidTransition, StaleRevision, UnsupportedWorkflow, ValidationError
-from norev.processor.llama_server import LlamaServerError
+from norev.launcher.llama import LlamaError
 from norev.processor.workflow import AlreadyRunning, ExecutionRefused
 from norev.ui.backend import DemoBackend, ModeUnavailable, PromptNotConfirmed
 from norev.ui.session_backend import MicrophoneUnavailable
@@ -72,7 +72,7 @@ class Bridge:
             return _error("already_running", "action")
         except ExecutionRefused:
             return _error("not_executable", "action")
-        except LlamaServerError:
+        except LlamaError:
             return _error("llm_unavailable", "")
         except LookupError:
             return _error("not_found", "session")

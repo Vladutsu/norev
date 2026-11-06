@@ -85,22 +85,14 @@ def setup_models(paths: AppPaths) -> int:
 
 
 def process(paths: AppPaths, media: str, language: str | None) -> int:
-    from norev.launcher.llama import LlamaError, LlamaServer
+    from norev.launcher.llama import LlamaError, server_from_environment
 
     if not os.environ.get("NOREV_STORE_KEY_FILE"):
         print("Lipsește cheia store-ului. Rulează: norev.cmd new-key")
         return 1
     for name, value in LLM_DEFAULTS.items():
         os.environ.setdefault(name, value)
-    server = LlamaServer(
-        binary=Path(os.environ["LLAMA_SERVER"]),
-        model=Path(os.environ["NOREV_EXTRACT_MODEL"]),
-        log_file=paths.logs / "llama-server.log",
-        port=int(os.environ.get("LLAMACPP_PORT", "8080")),
-        ctx=int(os.environ.get("LLAMACPP_CTX", "4096")),
-        parallel=int(os.environ["LLM_PARALLEL"]),
-        gpu_layers=int(os.environ.get("LLAMACPP_GPU_LAYERS", "99")),
-    )
+    server = server_from_environment(paths.logs / "llama-server.log")
     os.environ.setdefault("LLAMACPP_URL", server.url)
     os.environ["LLM_MODEL"] = server.alias
     session = [sys.executable, "-m", "norev.session"]

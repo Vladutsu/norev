@@ -5,13 +5,14 @@
 
 With NOREV_STORE_KEY_FILE set, Sessions go to the encrypted store (#26); otherwise they stay in
 memory and are gone when the window closes. Approved Proposed Actions are exported to
-NOREV_EXPORT_DIR (default: Documents/norev). llama-server starts for the analysis only, with the
-same variables as norev.sh (README.md). Needs `pip install -r requirements-ui.txt`.
+NOREV_EXPORT_DIR (default: Documents/norev). llama-server starts for the analysis only, as
+`norev.cmd process` starts it (#48), with the same variables. Needs `pip install -r requirements-ui.txt`.
 """
 import argparse
 import logging
 import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 from norev.adapters.store.encrypted import StoreKeyError, StoreSettings, open_store
@@ -25,16 +26,22 @@ AUDIO_TYPES = ("Audio și video (*.wav;*.mp3;*.m4a;*.flac;*.ogg;*.opus;*.aac;*.w
 
 
 def session_backend(store, approved_by: str, pick_file):
-    """The real backend, built here so the GPU libraries load only outside --demo."""
+    """The real backend, built here so the GPU libraries load only outside --demo. main() ran prepare()."""
     from norev.adapters.recorder.recorder import capture, resolve_device
     from norev.adapters.whisper.transcriber import WhisperTranscriber
+    from norev.launcher.__main__ import LLM_DEFAULTS
+    from norev.launcher.llama import server_from_environment
+    from norev.launcher.paths import AppPaths
     from norev.processor.compose import build_desktop_processor
-    from norev.processor.llama_server import LlamaServerSettings, llama_server
     from norev.session import WORKERS, _NoSpeakers
     from norev.ui.session_backend import SessionBackend
 
-    llama = LlamaServerSettings.from_environment()
-    os.environ.setdefault("LLM_MODEL", llama.model_name)  # the alias llama-server answers to
+    paths = AppPaths.from_environment()
+    for name, value in LLM_DEFAULTS.items():
+        os.environ.setdefault(name, value)
+    llama = server_from_environment(paths.logs / "llama-server.log")
+    os.environ.setdefault("LLAMACPP_URL", llama.url)
+    os.environ.setdefault("LLM_MODEL", llama.alias)  # the alias llama-server answers to
     try:
         from norev.adapters.diarization.sortformer import SortformerDiarizer
 
@@ -46,10 +53,16 @@ def session_backend(store, approved_by: str, pick_file):
     processor = build_desktop_processor(store, export_dir, transcriber=WhisperTranscriber(store), diarizer=diarizer)
     return SessionBackend(
         store, approved_by=approved_by, processor=processor, export_dir=export_dir,
-        llm_session=lambda: llama_server(llama),
+        llm_session=lambda: _alias(llama),
         record_source=lambda: capture(resolve_device(os.environ.get("NOREV_INPUT_DEVICE"))),
         pick_file=pick_file, workers=WORKERS,
     )
+
+
+@contextmanager
+def _alias(server):
+    with server:
+        yield server.alias
 
 
 def main(argv: list[str]) -> int:
@@ -57,6 +70,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--demo", action="store_true", help="the synthetic examples instead of real Sessions")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO)
+    if not args.demo:  # store, key, model, llama-server and CUDA DLL paths, as norev.cmd sets them (#48)
+        from norev.launcher.__main__ import prepare
+        from norev.launcher.paths import AppPaths
+
+        prepare(AppPaths.from_environment())
     try:
         import webview
     except ImportError:

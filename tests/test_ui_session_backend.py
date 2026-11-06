@@ -16,7 +16,7 @@ from norev.adapters.store.encrypted import KEY_BYTES, EncryptedStore
 from norev.core.models import ActionStatus, StepRecord, StepState
 from norev.processor.central import CentralProcessor
 from norev.processor.identity import LocalUser
-from norev.processor.llama_server import LlamaServerError
+from norev.launcher.llama import LlamaError
 from norev.testing.fakes import FakeActionExtractor, FakeLlmClient, FixedClock
 from norev.ui.backend import DemoBackend
 from norev.ui.bridge import Bridge
@@ -182,9 +182,9 @@ class RecordAndAnalyseTest(Case):
         self.assertEqual(self.ok(self.bridge.progress(session_id))["stage"], "ready")
 
     def test_llama_server_not_starting_stops_at_its_stage(self):
-        self.llm_error = LlamaServerError("llama-server not found")
+        self.llm_error = LlamaError("llama-server nu există")
         session_id = self.recorded()
-        self.assertEqual(self.ok(self.bridge.progress(session_id)), {"stage": "starting_llm", "failed": "LlamaServerError"})
+        self.assertEqual(self.ok(self.bridge.progress(session_id)), {"stage": "starting_llm", "failed": "LlamaError"})
         # the Transcript is kept: a retry starts at the LLM stages
         self.llm_error = None
         self.ok(self.bridge.stop(session_id))
