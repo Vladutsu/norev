@@ -271,8 +271,10 @@ class Session:
     domain: str
     contact_id: str | None = None
     audio_ref: str | None = None
-    transcript_ref: str | None = None  # the Transcript extraction runs on (English, unless not translated)
-    source_transcript_ref: str | None = None  # the Transcript as spoken, before any translation
+    # After transcription: the Transcript as spoken. After the first analysis (#19): the one
+    # extraction runs on (English, unless not translated), and source_transcript_ref the spoken one.
+    transcript_ref: str | None = None
+    source_transcript_ref: str | None = None
 
 
 @dataclass(frozen=True)

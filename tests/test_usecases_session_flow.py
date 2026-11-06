@@ -6,7 +6,6 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from norev.adapters.diarization.attributed import SpeakerTranscriber
 from norev.adapters.domains.loader import load_domain
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.store.encrypted import KEY_BYTES, EncryptedStore
@@ -14,8 +13,9 @@ from norev.core.models import (
     ActionStatus, ActionType, Domain, DomainField, Role, Segment, Session, SpeakerTurn, Transcript, Workflow,
     WorkflowStep,
 )
-from norev.testing.fakes import FakeActionExtractor, FakeLlmClient, FakeTranscriber, InMemorySessionStore
-from norev.usecases.session_flow import run_session, select_domain, transcribe_session
+from norev.testing.fakes import FakeActionExtractor, FakeDiarizer, FakeLlmClient, FakeTranscriber, InMemorySessionStore
+from norev.usecases.session_flow import run_session, select_domain
+from norev.usecases.transcribe import transcribe_session
 
 DOMAINS = Path(__file__).resolve().parents[1] / "domains"
 CORPORATE = load_domain(DOMAINS / "corporate")
@@ -37,10 +37,11 @@ SPOKEN = Transcript(
     ),
     language="ro",
 )
-TURNS = [SpeakerTurn(0.0, 2.1, "speaker_0"), SpeakerTurn(2.1, 3.5, "speaker_1")]
+# Diarizer labels; attach_speakers (#24) renames them S1, S2 in order of first appearance
+TURNS = [SpeakerTurn(0.0, 2.1, "spk_7"), SpeakerTurn(2.1, 3.5, "spk_3")]
 TRANSLATION = {"turns": [{"id": "1", "text": "I will send the report on Friday."}, {"id": "2", "text": "Fine, thanks."}]}
 GENERIC = {"session_summary": "", "proposed_actions": [
-    {"title": "Send the report", "description": "Send the report on Friday.", "owner": "speaker_0",
+    {"title": "Send the report", "description": "Send the report on Friday.", "owner": None,
      "due_date": None, "transcript_excerpt": "I will send the report on Friday."},
 ]}
 ANSWERS = {
@@ -50,28 +51,21 @@ ANSWERS = {
 }
 
 
-class FakeDiarizer:
-    def __init__(self, turns) -> None:
-        self.turns = turns
-
-    def diarize(self, audio_ref: str):
-        return list(self.turns)
-
-
 class Flow:
-    """One Session wired to fakes; `llm` answers the translation first, then the Domain stage."""
+    """One Session transcribed with Speakers by #24's use case; `llm` answers the translation
+    first, then the Domain stage."""
 
-    def __init__(self, domain: Domain, llm_answers: list, spoken: Transcript = SPOKEN) -> None:
+    def __init__(self, domain: Domain, llm_answers: list, spoken: Transcript = SPOKEN, store=None) -> None:
         self.domain = domain
-        self.store = InMemorySessionStore()
+        self.store = store or InMemorySessionStore()
         self.store.save_session(Session("s1", datetime(2026, 11, 6, 10, tzinfo=timezone.utc), domain.name, audio_ref=AUDIO))
-        self.transcriber = SpeakerTranscriber(FakeTranscriber({AUDIO: spoken}), FakeDiarizer(TURNS))
+        transcribe_session("s1", self.store, FakeTranscriber({AUDIO: spoken}), FakeDiarizer({AUDIO: TURNS}))
         self.llm = FakeLlmClient([a if isinstance(a, str) else json.dumps(a) for a in llm_answers])
         self.extractor = FakeActionExtractor(GENERIC)
 
     def run(self, domain: Domain | None = None):
         return run_session(
-            "s1", store=self.store, transcriber=self.transcriber, translator=TurnTranslator(self.llm),
+            "s1", store=self.store, translator=TurnTranslator(self.llm),
             extractor=self.extractor, domain=domain or self.domain, llm=self.llm,
         )
 
@@ -104,11 +98,11 @@ class RunSessionTest(unittest.TestCase):
                 # Speakers and times reach extraction and the Domain stage; extraction sees English only
                 english, _ = flow.extractor.calls[0]
                 self.assertEqual([(s.start, s.end, s.speaker_id) for s in english.segments],
-                                 [(0.0, 2.0, "speaker_0"), (2.0, 3.5, "speaker_1")])
+                                 [(0.0, 2.0, "S1"), (2.0, 3.5, "S2")])
                 self.assertEqual(english.language, "en")
                 domain_prompt = flow.llm.calls[-1][0]
-                self.assertIn("[speaker_0] I will send the report on Friday.", domain_prompt)
-                self.assertIn("[speaker_1] Fine, thanks.", domain_prompt)
+                self.assertIn("[S1] I will send the report on Friday.", domain_prompt)
+                self.assertIn("[S2] Fine, thanks.", domain_prompt)
 
     def test_both_transcripts_are_saved_in_the_store(self):
         flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
@@ -117,7 +111,7 @@ class RunSessionTest(unittest.TestCase):
         self.assertEqual(flow.store.load_transcript(session.transcript_ref).language, "en")
         spoken = flow.store.load_transcript(session.source_transcript_ref)
         self.assertEqual((spoken.language, spoken.segments[0].text), ("ro", "Trimit raportul vineri."))
-        self.assertEqual(spoken.segments[0].speaker_id, "speaker_0")
+        self.assertEqual(spoken.segments[0].speaker_id, "S1")
 
     def test_english_session_is_not_translated(self):
         english = Transcript((Segment(0.0, 2.0, "I will send the report."),), language="en")
@@ -129,31 +123,32 @@ class RunSessionTest(unittest.TestCase):
 
     def test_translation_can_be_turned_off(self):
         flow = Flow(CORPORATE, [ANSWERS["corporate"]])
-        run_session("s1", store=flow.store, transcriber=flow.transcriber, translator=TurnTranslator(flow.llm),
+        run_session("s1", store=flow.store, translator=TurnTranslator(flow.llm),
                     extractor=flow.extractor, domain=CORPORATE, llm=flow.llm, translate=False)
         self.assertEqual(flow.extractor.calls[0][0].language, "ro")
         self.assertEqual(len(flow.llm.calls), 1)
 
-    def test_transcription_alone_then_analysis_transcribes_once(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
-        spoken = transcribe_session("s1", store=flow.store, transcriber=flow.transcriber)
-        self.assertEqual(spoken.segments[0].speaker_id, "speaker_0")
-        self.assertIsNone(flow.store.get_session("s1").transcript_ref)
-        flow.transcriber = None  # analysis must reuse the saved Transcript
-        self.assertEqual([a.action_type for a in flow.run().actions], ["work_item"])
+    def test_not_transcribed_session_is_refused(self):
+        store = InMemorySessionStore()
+        store.save_session(Session("s2", datetime(2026, 11, 6, tzinfo=timezone.utc), "corporate", audio_ref=AUDIO))
+        llm = FakeLlmClient([])
+        with self.assertRaisesRegex(LookupError, "not transcribed"):
+            run_session("s2", store=store, translator=TurnTranslator(llm), extractor=FakeActionExtractor(GENERIC),
+                        domain=CORPORATE, llm=llm)
+        self.assertEqual(llm.calls, [])
 
     def test_untranslated_turn_makes_the_result_partial(self):
         only_first = {"turns": [TRANSLATION["turns"][0]]}
         flow = Flow(CORPORATE, [only_first, {"turns": []}, ANSWERS["corporate"]])  # the retry also misses it
         result = flow.run()
         self.assertTrue(result.partial)
-        self.assertEqual([(s.speaker_id, s.text) for s in result.untranslated], [("speaker_1", "Bine, mulțumesc.")])
+        self.assertEqual([(s.speaker_id, s.text) for s in result.untranslated], [("S2", "Bine, mulțumesc.")])
 
     def test_other_domain_than_the_sessions_is_refused(self):
         flow = Flow(CORPORATE, [])
         with self.assertRaises(ValueError):
             flow.run(MEDICAL)
-        self.assertIsNone(flow.store.get_session("s1").transcript_ref)
+        self.assertIsNone(flow.store.get_session("s1").source_transcript_ref)
         self.assertEqual(flow.llm.calls, [])
 
     def test_failed_domain_stage_saves_nothing_and_executes_nothing(self):
@@ -174,8 +169,7 @@ class RunSessionTest(unittest.TestCase):
     def test_run_again_reuses_the_transcript_and_regenerates(self):
         flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"], ANSWERS["corporate"]])
         flow.run()
-        flow.transcriber = None  # a second transcription would fail
-        result = flow.run()
+        result = flow.run()  # one translation answer only: a second translation would fail
         self.assertEqual([a.action_type for a in result.actions], ["work_item"])
         self.assertEqual(len(flow.extractor.calls), 2)
 
@@ -196,28 +190,18 @@ class EncryptedStoreFlowTest(unittest.TestCase):
     def test_flow_runs_on_the_encrypted_store_with_no_plaintext_on_disk(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "norev.db"
-            flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
-            flow.store = EncryptedStore(path, os.urandom(KEY_BYTES))
-            flow.store.save_session(Session("s1", datetime(2026, 11, 6, 10, tzinfo=timezone.utc), "corporate", audio_ref=AUDIO))
+            store = EncryptedStore(path, os.urandom(KEY_BYTES))
             try:
+                flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]], store=store)
                 result = flow.run()
                 self.assertEqual([a.action_type for a in result.actions], ["work_item"])
                 self.assertIsNotNone(flow.store.get_session("s1").source_transcript_ref)
             finally:
-                flow.store.close()
+                store.close()
             self.assertEqual(os.listdir(folder), ["norev.db"])  # no intermediate files
             raw = path.read_bytes()
-            for text in ("raportul", "report", "speaker_0"):
+            for text in ("raportul", "report", "Bine", "spk_7"):
                 self.assertNotIn(text.encode(), raw)
-
-
-class SpeakerTranscriberTest(unittest.TestCase):
-    def test_gap_gets_no_speaker_and_tuples_are_accepted(self):
-        spoken = Transcript((Segment(0.0, 1.0, "a"), Segment(5.0, 6.0, "b")), language="ro")
-        transcriber = SpeakerTranscriber(FakeTranscriber({AUDIO: spoken}), FakeDiarizer([(0.0, 1.5, "speaker_0")]))
-        result = transcriber.transcribe(AUDIO)
-        self.assertEqual([s.speaker_id for s in result.segments], ["speaker_0", None])
-        self.assertEqual(result.language, "ro")
 
 
 if __name__ == "__main__":

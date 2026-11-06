@@ -47,10 +47,14 @@ class SessionCliTest(unittest.TestCase):
         domain = json.dumps(ANSWERS["corporate"]).replace('"s1-1"', f'"{session_id}-1"')
         self.processor = FakeProcessor([json.dumps(t) for t in translations] + [domain])
 
+    def _fake_processor(self, store, **models):
+        self.models = models  # what the CLI would give the real Central Processor
+        return self.processor
+
     def _main(self, *argv, env=None):
         out, err = io.StringIO(), io.StringIO()
         with patch.dict(os.environ, env if env is not None else self.env, clear=True), \
-                patch.object(cli, "_processor", lambda store, **models: self.processor), \
+                patch.object(cli, "_processor", self._fake_processor), \
                 patch.object(cli, "LegacyActionExtractor", lambda *a, **k: FakeActionExtractor(GENERIC)), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = cli.main(list(argv))
@@ -65,7 +69,7 @@ class SessionCliTest(unittest.TestCase):
         code, out, _ = self._main("show", session_id)
         self.assertEqual(code, 0)
         self.assertIn("Domain: corporate | 2026-11-06", out)
-        self.assertIn("Speakers: speaker_0, speaker_1", out)
+        self.assertIn("Speakers: S1, S2", out)
         self.assertIn("[proposed] work_item: Send the report", out)
         self.assertNotIn("PARTIAL", out)
 
@@ -76,6 +80,7 @@ class SessionCliTest(unittest.TestCase):
         finally:
             store.close()
         self.assertEqual(os.listdir(Path(self.env["NOREV_STORE_PATH"]).parent), ["norev.db"])
+        self.assertNotIn(b"not really audio", Path(self.env["NOREV_STORE_PATH"]).read_bytes())  # audio sealed
 
     def test_untranslated_turns_are_shown_as_partial(self):
         session_id = self._main("transcribe", str(self.audio))[1].strip()
@@ -85,7 +90,7 @@ class SessionCliTest(unittest.TestCase):
         self.assertIn("1 turn(s) not translated; the result is partial", err)
         out = self._main("show", session_id)[1]
         self.assertIn("PARTIAL: 1 turn(s) could not be translated", out)
-        self.assertIn("speaker_1] Bine, mulțumesc.", out)
+        self.assertIn("S2] Bine, mulțumesc.", out)
 
     def test_unknown_domain_and_others_are_refused_before_anything_runs(self):
         for domain, message in (("finance", "unknown Domain"), ("others", "#21")):
@@ -100,6 +105,10 @@ class SessionCliTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("NOREV_STORE_KEY_FILE", err)
         self.assertFalse(Path(self.env["NOREV_STORE_PATH"]).exists())
+
+    def test_no_speakers_skips_diarization(self):
+        self.assertEqual(self._main("transcribe", str(self.audio), "--no-speakers")[0], 0)
+        self.assertEqual(self.models["diarizer"].diarize("any"), [])
 
     def test_missing_audio_file_creates_no_session(self):
         code, out, err = self._main("transcribe", str(self.audio) + ".missing")

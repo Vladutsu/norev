@@ -70,7 +70,8 @@ SESSION=$(.venv/bin/python -m norev.session transcribe session.mp4 [--domain cor
 .venv/bin/python -m norev.session show "$SESSION"
 ```
 
-- `transcribe`: Whisper + diarization, Transcript with Speakers saved in the store; prints the Session id.
+- `transcribe`: the audio is sealed in the store, then Whisper + diarization (decoded in memory);
+  the Transcript with Speakers is saved in the store; prints the Session id.
 - `analyse`: translation per Speaker turn, extraction (only from this final Transcript), Domain stage.
   Running it again regenerates the Proposed Actions; it is refused once any of them was decided.
   Turns that could not be translated are kept in the spoken language and the result is marked partial.
@@ -78,7 +79,7 @@ SESSION=$(.venv/bin/python -m norev.session transcribe session.mp4 [--domain cor
 
 The Domain is `corporate` unless `--domain`/`NOREV_DOMAIN` says otherwise; an unknown name is an
 error. `others` needs a prompt confirmed by the User (#21) and is refused until then. Speaker ids
-(`speaker_0`, ...) are diarization labels, not people: Roles and owners are not guessed from them.
+(`S1`, `S2`, ...) only tell voices apart, they are not people: Roles and owners are not guessed from them.
 
 Nothing is written to `Outputs/` except `llama-server.log`. The old stages
 `python -m LLM.pipeline translate|extract` are deprecated (they write plaintext JSON) and print a warning.

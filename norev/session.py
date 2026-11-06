@@ -16,14 +16,14 @@ import sys
 import uuid
 from datetime import date, datetime, time
 
-from norev.adapters.diarization.attributed import SpeakerTranscriber
 from norev.adapters.domains.loader import DOMAINS, load_domain
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.store.encrypted import StoreKeyError, StoreSettings, open_store
 from norev.core.models import Session
 from norev.processor.compose import build_central_processor
-from norev.usecases.session_flow import run_session, select_domain, transcribe_session
+from norev.usecases.session_flow import run_session, select_domain
+from norev.usecases.transcribe import transcribe_session
 
 # Concurrent LLM requests; must match llama-server --parallel (norev.sh sets both)
 WORKERS = max(1, int(os.getenv("LLM_PARALLEL", "1")))
@@ -35,36 +35,44 @@ def _processor(store, **models):
     return build_central_processor(store, **models)
 
 
+class _NoSpeakers:
+    """Diarizer for --no-speakers: no turns, so every Segment keeps no Speaker."""
+
+    def diarize(self, audio_ref: str) -> list:
+        return []
+
+
 def transcribe(store, audio: str, domain: str, language: str | None, on: date | None, speakers: bool) -> str:
     if not os.path.isfile(audio):
         raise FileNotFoundError(f"no file {audio}")
-    from norev.adapters.transcription.whisper import WhisperTranscriber
+    from norev.adapters.whisper.transcriber import WhisperTranscriber
 
-    diarizer = None
     if speakers:
         from norev.adapters.diarization.sortformer import SortformerDiarizer
 
-        diarizer = SortformerDiarizer()
-    processor = _processor(store, transcriber=WhisperTranscriber(), diarizer=diarizer)
+        diarizer = SortformerDiarizer(store)
+    else:
+        diarizer = _NoSpeakers()
+    processor = _processor(store, transcriber=WhisperTranscriber(store), diarizer=diarizer)
     started = datetime.combine(on, time(12)).astimezone() if on else datetime.now().astimezone()
-    # shortcut: audio_ref is the file path, as SortformerDiarizer expects; opaque refs come with #24
-    session = Session(f"s-{uuid.uuid4().hex[:10]}", started, domain, audio_ref=os.path.abspath(audio))
-    store.save_session(session)
-    transcribe_session(session.id, store=store, language=language,
-                       transcriber=SpeakerTranscriber(processor, processor) if speakers else processor)
-    return session.id
+    session_id = f"s-{uuid.uuid4().hex[:10]}"
+    with open(audio, "rb") as f:  # sealed in the store; Whisper and diarization decode it in memory
+        audio_ref = store.save_audio(session_id, f.read())
+    store.save_session(Session(session_id, started, domain, audio_ref=audio_ref))
+    transcribe_session(session_id, store, processor, processor, language)
+    return session_id
 
 
 def analyse(store, session_id: str, translate: bool):
     session = store.get_session(session_id)
     if session is None:
         raise LookupError(f"no Session {session_id!r}")
-    if not session.source_transcript_ref:  # analyse has no Whisper: say so instead of "no Transcriber"
+    if not session.transcript_ref:
         raise LookupError(f"Session {session_id!r} is not transcribed yet; run `transcribe` first")
     processor = _processor(store)
     model = os.getenv("LLM_MODEL") or None
     return run_session(
-        session_id, store=store, transcriber=processor, domain=load_domain(DOMAINS / select_domain(session.domain)),
+        session_id, store=store, domain=load_domain(DOMAINS / select_domain(session.domain)),
         translator=TurnTranslator(processor, model=model, workers=WORKERS),
         extractor=LegacyActionExtractor(processor, workers=WORKERS), llm=processor, translate=translate,
     )
@@ -84,8 +92,8 @@ def show(store, session_id: str) -> None:
             print(f"PARTIAL: {len(untranslated)} turn(s) could not be translated and are kept in the spoken language:")
             for s in untranslated:
                 print(f"  [{s.start:.1f}-{s.end:.1f} {s.speaker_id or '?'}] {s.text}")
-    elif session.source_transcript_ref:
-        print("Transcribed, not analysed yet: run `python -m norev.session analyse` with llama-server")
+        if not session.source_transcript_ref:
+            print("Transcribed, not analysed yet: run `python -m norev.session analyse` with llama-server")
     actions = store.load_actions(session_id)
     print(f"\nProposed Actions ({len(actions)}), waiting for review:")
     for a in actions:

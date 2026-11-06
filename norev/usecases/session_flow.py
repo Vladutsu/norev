@@ -1,15 +1,15 @@
-"""Session flow (#19): finished audio -> Transcript with Speakers -> English per Speaker turn ->
-generic extraction -> Domain stage -> Proposed Actions waiting for review.
+"""Session flow (#19): finished audio -> Transcript with Speakers (usecases.transcribe, #24) ->
+English per Speaker turn -> generic extraction -> Domain stage -> Proposed Actions waiting for review.
 
 Extraction runs only here, after the final Transcript (no Live Transcript extraction). Every model
-call goes through the `transcriber`, `translator`, `extractor` and `llm` the composition root built
-on the Central Processor; this module only orders the stages and saves through the SessionStore.
+call goes through the `translator`, `extractor` and `llm` the composition root built on the
+Central Processor; this module only orders the stages and saves through the SessionStore.
 """
 import dataclasses
 from dataclasses import dataclass
 
-from norev.core.models import ActionStatus, Domain, ProposedAction, Segment, Session, Suggestion, Transcript
-from norev.core.ports import ActionExtractor, LlmClient, SessionStore, Transcriber, Translator
+from norev.core.models import ActionStatus, Domain, ProposedAction, Segment, Session, Suggestion
+from norev.core.ports import ActionExtractor, LlmClient, SessionStore, Translator
 from norev.usecases.domain_stage import ask_domain
 from norev.usecases.extract import to_proposed_actions
 
@@ -44,59 +44,39 @@ class SessionResult:
         return f"SessionResult(actions={len(self.actions)}, suggestions={len(self.suggestions)}, untranslated={len(self.untranslated)})"
 
 
-def transcribe_session(
-    session_id: str, *, store: SessionStore, transcriber: Transcriber, language: str | None = None
-) -> Transcript:
-    """Transcribe the Session's audio once (no LLM needed) and save it as `source_transcript_ref`.
-
-    A Session that already has its spoken Transcript returns it without transcribing again.
-    """
-    session = _session(session_id, store)
-    if session.source_transcript_ref:
-        return store.load_transcript(session.source_transcript_ref)
-    if not session.audio_ref:
-        raise LookupError(f"Session {session_id!r} has no audio")
-    spoken = transcriber.transcribe(session.audio_ref, language)
-    store.save_session(dataclasses.replace(session, source_transcript_ref=store.save_transcript(session_id, spoken)))
-    return spoken
-
-
 def run_session(
     session_id: str,
     *,
     store: SessionStore,
-    transcriber: Transcriber,
     translator: Translator,
     extractor: ActionExtractor,
     domain: Domain,
     llm: LlmClient,
-    language: str | None = None,
     translate: bool = True,
 ) -> SessionResult:
-    """Run every stage for a recorded Session and save the result for review.
+    """Analyse a Session transcribed by usecases.transcribe.transcribe_session and save the result for review.
 
-    Stages already done are reused (spoken Transcript, then the one extraction runs on: English,
-    or the spoken one when it is English or `translate` is False), so running again regenerates
-    only the Proposed Actions; that is refused once the User decided any of them.
+    The first run translates the spoken Transcript per Speaker turn (unless it is English or
+    `translate` is False), keeps the spoken one as `source_transcript_ref` and points
+    `transcript_ref` at the one extraction runs on. Later runs reuse it and regenerate only the
+    Proposed Actions; that is refused once the User decided any of them.
     The Domain is fixed by the Session: running with another one raises ValueError and changes nothing.
     A failing stage raises and leaves what was saved before it; nothing is ever executed here.
     """
     session = _session(session_id, store)
     if session.domain != domain.name:
         raise ValueError(f"Session {session_id!r} is in Domain {session.domain!r}, not {domain.name!r}")
+    if not session.transcript_ref:
+        raise LookupError(f"Session {session_id!r} is not transcribed yet")
 
-    if session.transcript_ref:
-        transcript = store.load_transcript(session.transcript_ref)
-    else:
-        spoken = transcribe_session(session_id, store=store, transcriber=transcriber, language=language)
-        session = _session(session_id, store)
-        source_language = spoken.language or language or ""
-        if translate and source_language != "en":
-            transcript = translator.translate(spoken, source_language)
+    transcript = store.load_transcript(session.transcript_ref)
+    if not session.source_transcript_ref:  # first analysis: transcript_ref is still the spoken Transcript
+        if translate and transcript.language != "en":
+            transcript = translator.translate(transcript, transcript.language or "")
             ref = store.save_transcript(session_id, transcript)
         else:
-            transcript, ref = spoken, session.source_transcript_ref
-        session = dataclasses.replace(session, transcript_ref=ref)
+            ref = session.transcript_ref
+        session = dataclasses.replace(session, source_transcript_ref=session.transcript_ref, transcript_ref=ref)
         store.save_session(session)
 
     # Both stages run before one compare-and-set write: if either fails, the previous Proposed
