@@ -218,7 +218,7 @@ class SessionBackend(DemoBackend):
             self._progress[session_id] = {"stage": "transcribing", "failed": None, "untranslated": 0, "language": language}
         self.run_in_background(lambda: self._analyse(session_id, language))
 
-    def _analyse(self, session_id: str, language: str) -> None:
+    def _analyse(self, session_id: str, language: str, regenerate: bool = False) -> None:
         stage = "transcribing"
         try:
             session = self.store.get_session(session_id)
@@ -226,7 +226,7 @@ class SessionBackend(DemoBackend):
                 transcribe_session(session_id, self.store, self.processor, self.processor,
                                    None if language in ("", "auto") else language)
                 session = self.store.get_session(session_id)
-            if not session.source_transcript_ref or not self.store.load_actions(session_id):
+            if regenerate or not session.source_transcript_ref or not self.store.load_actions(session_id):
                 stage = self._set_stage(session_id, "starting_llm")
                 self.processor.free_gpu()
                 with self.llm_session() as model:
@@ -234,7 +234,8 @@ class SessionBackend(DemoBackend):
                     result = run_session(
                         session_id, store=self.store, domain=self.domain(session.domain),
                         translator=TurnTranslator(self.processor, model=model, workers=self.workers),
-                        extractor=self.make_extractor(self.processor, workers=self.workers), llm=self.processor)
+                        extractor=self.make_extractor(self.processor, workers=self.workers), llm=self.processor,
+                        regenerate=regenerate)
                 self._progress[session_id]["untranslated"] = len(result.untranslated)
             self._set_stage(session_id, "ready")
         except Exception as e:  # the stage and the error class only: messages can quote Session content
@@ -275,12 +276,30 @@ class SessionBackend(DemoBackend):
     def _summary(self, session_id: str) -> str:
         return self.store.load_summary(session_id)
 
+    def _refuse_if_busy(self, session_id: str) -> None:
+        """Nothing else may start while the Session records or is analysed; the caller holds the lock."""
+        progress = self._progress.get(session_id)
+        if session_id in self._recordings or (progress and progress["stage"] != "ready" and not progress["failed"]):
+            raise SessionBusy("session")
+
+    def regenerate(self, session_id: str) -> dict[str, Any]:
+        """The User's explicit request after correcting a Role (#60): the Proposed actions are replaced,
+        every decided one is kept (run_session's regeneration)."""
+        with self._lock:
+            self._refuse_if_busy(session_id)
+            session = self.store.get_session(session_id)
+            if session is None:
+                raise LookupError("Session does not exist")
+            if not session.source_transcript_ref:
+                raise SessionBusy("session")  # never analysed: the first analysis runs from stop or import
+            self._progress[session_id] = {"stage": "starting_llm", "failed": None, "untranslated": 0}
+        self.run_in_background(lambda: self._analyse(session_id, "", regenerate=True))
+        return {"session_id": session_id}
+
     def delete(self, session_id: str) -> dict[str, Any]:
         """Only while nothing runs on the Session (recording or analysis)."""
         with self._lock:
-            progress = self._progress.get(session_id)
-            if session_id in self._recordings or (progress and progress["stage"] != "ready" and not progress["failed"]):
-                raise SessionBusy("session")
+            self._refuse_if_busy(session_id)
         super().delete(session_id)
         with self._lock:
             self._progress.pop(session_id, None)

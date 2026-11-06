@@ -21,7 +21,7 @@ from norev.testing.fakes import FakeActionExtractor, FakeLlmClient, FixedClock
 from norev.ui.backend import DemoBackend
 from norev.ui.bridge import Bridge
 from norev.ui.session_backend import SessionBackend
-from test_usecases_session_flow import ANSWERS, GENERIC, SPOKEN, TRANSLATION, TURNS
+from test_usecases_session_flow import ANSWERS, GENERIC, ROLES, SPOKEN, TRANSLATION, TURNS
 
 NOW = datetime(2026, 11, 6, 10, 24, tzinfo=timezone.utc)
 USER = "local:test"
@@ -70,7 +70,7 @@ class Case(unittest.TestCase):
         self.export_dir = self.root / "export"
         self.store = self.open_store()
         self.audio = AnyAudio()
-        self.llm = SessionLlm([TRANSLATION, ANSWERS["corporate"]], self.store)
+        self.llm = SessionLlm([TRANSLATION, ROLES, ANSWERS["corporate"]], self.store)
         self.llm_runs = []
         self.llm_error = None
         self.picked = None
@@ -167,6 +167,31 @@ class RecordAndAnalyseTest(Case):
         self.assertEqual(len(list(self.export_dir.iterdir())), 1)  # and the exported document is the User's
         self.assertEqual(self.error(self.bridge.delete(session_id)), "not_found")
 
+    def test_regenerate_after_a_role_correction_keeps_the_decided_action(self):
+        session_id = self.recorded()
+        review = self.ok(self.bridge.review(session_id))
+        self.assertEqual([s["role"] for s in review["speakers"]], [None, None])  # unknown: the UI says so
+        first = review["actions"][0]
+        review = self.ok(self.bridge.reject(session_id, first["id"], review["revision"]))
+        self.ok(self.bridge.set_role(session_id, "S1", "organizer"))
+        new_id = f"{session_id}-r{self.ok(self.bridge.review(session_id))['revision']}-1"
+        self.llm._responses += [json.dumps({"speakers": [{"id": "S2", "role": "participant"}]}), json.dumps(
+            {"proposed_actions": [{"id": new_id, "action_type": "work_item", "owner": "organizer", "fields": {}}]})]
+
+        self.ok(self.bridge.regenerate(session_id))
+
+        self.assertEqual(self.ok(self.bridge.progress(session_id)), {"stage": "ready", "failed": None})
+        review = self.ok(self.bridge.review(session_id))
+        self.assertEqual([(a["id"], a["status"], a["owner"]) for a in review["actions"]],
+                         [(first["id"], "rejected", ""), (new_id, "proposed", "organizer")])
+        self.assertEqual([s["role"] for s in review["speakers"]], ["organizer", "participant"])
+
+    def test_regenerate_is_refused_while_recording_and_in_the_demo(self):
+        session_id = self.ok(self.bridge.start("corporate", "ro", "Echipa"))["session_id"]
+        self.assertEqual(self.error(self.bridge.regenerate(session_id)), "session_busy")
+        self.ok(self.bridge.stop(session_id))
+        self.assertEqual(self.error(Bridge(DemoBackend(self.store, approved_by=USER, clock=FixedClock(NOW))).regenerate("any")), "mode_unavailable")
+
     def test_delete_is_refused_while_recording(self):
         session_id = self.ok(self.bridge.start("corporate", "ro", ""))["session_id"]
         self.assertEqual(self.error(self.bridge.delete(session_id)), "session_busy")
@@ -221,6 +246,8 @@ class RecordAndAnalyseTest(Case):
         self.llm_error = LlamaError("llama-server nu există")
         session_id = self.recorded()
         self.assertEqual(self.ok(self.bridge.progress(session_id)), {"stage": "starting_llm", "failed": "LlamaError"})
+        # never analysed: regenerating is refused, the first analysis runs again from stop
+        self.assertEqual(self.error(self.bridge.regenerate(session_id)), "session_busy")
         # the Transcript is kept: a retry starts at the LLM stages
         self.llm_error = None
         self.ok(self.bridge.stop(session_id))
@@ -293,7 +320,7 @@ class ExecuteTest(Case):
 
 class OthersTest(Case):
     def test_instructions_come_from_the_local_model_and_need_confirmation(self):
-        self.llm = SessionLlm([{"instructions": "- Keep what was agreed, with dates."}, TRANSLATION, ANSWERS["others"]], self.store)
+        self.llm = SessionLlm([{"instructions": "- Keep what was agreed, with dates."}, TRANSLATION, ROLES, ANSWERS["others"]], self.store)
         self.bridge = Bridge(self.backend())
         context = "Ședință cu constructorul despre bucătărie."
         instructions = self.ok(self.bridge.others_generate(context))["prompt"]

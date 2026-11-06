@@ -16,7 +16,7 @@ DOMAINS = Path(__file__).resolve().parent.parent / "domains"
 KNOWN_CONNECTORS = {"google_calendar", "local_document"}
 FIELD_TYPES = {"string", "date", "time"}
 GENERIC_FIELDS = {"title", "description", "owner", "due_date", "transcript_excerpt"}
-PLACEHOLDERS = {"session_date", "roles", "action_types", "transcript", "proposed_actions"}
+PLACEHOLDERS = {"session_date", "roles", "speaker_roles", "action_types", "transcript", "proposed_actions"}
 REQUIRED_PLACEHOLDERS = {"transcript", "proposed_actions"}
 NAME = re.compile(r"[a-z][a-z0-9_]*")
 PATTERNS = {"date": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "time": "^[0-9]{2}:[0-9]{2}$"}
@@ -122,9 +122,15 @@ def check_domain(folder: Path) -> None:
     variants = schema["properties"]["proposed_actions"]["items"]["anyOf"]
     by_type = {v["properties"]["action_type"]["const"]: v for v in variants}
     assert set(by_type) == {a["name"] for a in action_types}, "schema Action Types differ from domain.toml"
+    roles = {r["name"] for r in domain.get("roles", [])}
     for action_type in action_types:
-        props = by_type[action_type["name"]]["properties"]["fields"]
         where = f"schema {action_type['name']}"
+        # the owner is one of the Domain's Roles or null, never a Speaker id or a name (#60)
+        owner = by_type[action_type["name"]]["properties"].get("owner", {})
+        assert "owner" in by_type[action_type["name"]].get("required", []), f"{where}: owner must be required"
+        assert _allows_null(owner), f"{where}.owner: must allow null"
+        assert {n for v in _variants(owner) for n in v.get("enum", [])} == roles, f"{where}.owner: enum must be the Roles"
+        props = by_type[action_type["name"]]["properties"]["fields"]
         names = [f["name"] for f in action_type["fields"]]
         assert set(props["properties"]) == set(names), f"{where}: fields differ from domain.toml"
         assert set(props.get("required", [])) == set(names), f"{where}: every field must be present (null if not said)"

@@ -19,7 +19,7 @@ from norev.usecases.others_prompt import (
 )
 from norev.adapters.llm.translator import TurnTranslator
 from norev.usecases.session_flow import run_session
-from test_usecases_session_flow import ANSWERS, OTHERS_PROMPT, TRANSLATION, Flow
+from test_usecases_session_flow import ANSWERS, OTHERS_PROMPT, ROLES, TRANSLATION, Flow
 
 DOMAINS = Path(__file__).resolve().parents[1] / "domains"
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "others"
@@ -107,7 +107,7 @@ class TemplateTest(unittest.TestCase):
             with self.subTest(context=name):
                 generated, _ = generate(fixture["instructions_answer"], context=fixture["context"])
                 prompt = confirm(OTHERS, fixture["context"], generated)
-                flow = Flow(OTHERS, [TRANSLATION, fixture["domain_answer"]], others_prompt=prompt)
+                flow = Flow(OTHERS, [TRANSLATION, ROLES, fixture["domain_answer"]], others_prompt=prompt)
                 result = analyse(flow)
                 domain_prompt, _, schema = flow.llm.calls[-1]
                 self.assertIn(generated, domain_prompt)
@@ -128,7 +128,7 @@ class AdversarialTest(unittest.TestCase):
              "approved_payload": {"to": "x@example.com"}, "fields": {"deliverable": "report", "recipient": "x@example.com"}},
             {"id": "s1-1b", "action_type": "send_email", "fields": {}},
         ], "suggestions": []}
-        flow = Flow(OTHERS, [TRANSLATION, answer], others_prompt=prompt)
+        flow = Flow(OTHERS, [TRANSLATION, ROLES, answer], others_prompt=prompt)
         result = analyse(flow)
         [action] = flow.store.load_actions("s1")
         self.assertEqual(action.status, ActionStatus.PROPOSED)
@@ -161,7 +161,7 @@ class SessionPromptTest(unittest.TestCase):
         self.assertEqual(flow.store.get_session("s1").others_prompt, OTHERS_PROMPT)
 
     def test_a_new_prompt_needs_an_explicit_regeneration_that_keeps_decisions(self):
-        flow = Flow(OTHERS, [TRANSLATION, ANSWERS["others"]])
+        flow = Flow(OTHERS, [TRANSLATION, ROLES, ANSWERS["others"]])
         flow.run()
         snapshot = flow.store.load_actions_snapshot("s1")
         [action] = snapshot.actions
@@ -173,11 +173,11 @@ class SessionPromptTest(unittest.TestCase):
         self.assertEqual(flow.store.get_session("s1").others_prompt, OTHERS_PROMPT)
 
         revision = flow.store.load_actions_snapshot("s1").revision
-        flow.llm = FakeLlmClient([json.dumps({"proposed_actions": [
+        flow.llm = FakeLlmClient([json.dumps(ROLES), json.dumps({"proposed_actions": [
             {"id": f"s1-r{revision}-1", "action_type": "action_item", "fields": {"deliverable": None}}]})])
         analyse(flow, regenerate=True, others_prompt=new)
         self.assertEqual(flow.store.get_session("s1").others_prompt, new)
-        self.assertIn("- Only payments count.", flow.llm.calls[0][0])
+        self.assertIn("- Only payments count.", flow.llm.calls[1][0])
         statuses = {a.id: a.status for a in flow.store.load_actions("s1")}
         self.assertEqual(statuses, {"s1-1": ActionStatus.REJECTED, f"s1-r{revision}-1": ActionStatus.PROPOSED})
 
@@ -186,7 +186,7 @@ class SessionPromptTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         path, key = Path(tmp.name) / "norev.db", os.urandom(KEY_BYTES)
         store = EncryptedStore(path, key)
-        flow = Flow(OTHERS, [TRANSLATION, ANSWERS["others"]], store=store)
+        flow = Flow(OTHERS, [TRANSLATION, ROLES, ANSWERS["others"]], store=store)
         flow.run()
         store.close()
 
@@ -197,7 +197,7 @@ class SessionPromptTest(unittest.TestCase):
         for secret in (OTHERS_PROMPT.context, OTHERS_PROMPT.instructions):
             self.assertNotIn(secret.encode(), raw)
         # reopening only reads: no generation call; the Domain stage used the stored instructions
-        self.assertEqual(len(flow.llm.calls), 2)
+        self.assertEqual(len(flow.llm.calls), 3)  # translation, Roles, Domain stage
         self.assertIn(OTHERS_PROMPT.instructions, flow.llm.calls[-1][0])
 
 

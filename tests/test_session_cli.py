@@ -14,7 +14,7 @@ from norev import session as cli
 from norev.adapters.store.encrypted import StoreSettings, create_key_file, open_store
 from norev.core.models import Session
 from norev.testing.fakes import FakeActionExtractor, FakeLlmClient
-from test_usecases_session_flow import ANSWERS, GENERIC, SPOKEN, TRANSLATION, TURNS
+from test_usecases_session_flow import ANSWERS, GENERIC, ROLES, SPOKEN, TRANSLATION, TURNS
 
 
 class FakeProcessor(FakeLlmClient):
@@ -43,9 +43,9 @@ class SessionCliTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def _answers(self, session_id, *translations):
-        """Recorded translation answers, then the Domain stage answer for this Session's ids."""
+        """Recorded translation answers, then Roles and the Domain stage answer for this Session's ids."""
         domain = json.dumps(ANSWERS["corporate"]).replace('"s1-1"', f'"{session_id}-1"')
-        self.processor = FakeProcessor([json.dumps(t) for t in translations] + [domain])
+        self.processor = FakeProcessor([json.dumps(t) for t in translations] + [json.dumps(ROLES), domain])
 
     def _fake_processor(self, store, **models):
         self.models = models  # what the CLI would give the real Central Processor
@@ -120,7 +120,7 @@ class SessionCliTest(unittest.TestCase):
             store.close()
         self.assertEqual(self._main("analyse", session_id, "--domain", "medical")[0], 2)  # needs --regenerate
         medical = json.dumps(ANSWERS["medical"]).replace('"s1-1"', f'"{session_id}-r{revision}-1"')
-        self.processor = FakeProcessor([medical])
+        self.processor = FakeProcessor([json.dumps(ROLES), medical])
 
         self.assertEqual(self._main("analyse", session_id, "--regenerate", "--domain", "medical")[0], 0)
 

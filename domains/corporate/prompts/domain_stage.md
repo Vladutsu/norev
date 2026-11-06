@@ -5,6 +5,9 @@ Session date: {{session_date}}
 Speaker Roles:
 {{roles}}
 
+Speakers of this Session and their Roles (unknown when the Role is not known):
+{{speaker_roles}}
+
 Action Types you may use, with their fields:
 {{action_types}}
 
@@ -20,7 +23,8 @@ For each generic Proposed Action:
 - Leave it out if it was cancelled or dropped later in the Transcript ("we won't do X anymore"), if it is an idea nobody committed to ("maybe we could ..."), or if it is only a decision.
 - If two generic Proposed Actions describe the same work, output it once, with the `id` of the first.
 
-You do not change the title, description, owner or due date; you only fill the Domain fields.
+You do not change the title, description or due date; you set `owner` and fill the Domain fields.
+- `owner`: the Role of who will do it, from the Speakers above: the Role of the Speaker who committed, or the Role the Transcript names ("the patient will ..."). Use only a Role name from the Speaker Roles list. If it is not clear, or that Speaker's Role is unknown, use null. Never a Speaker label (S1, S2) or a person's name.
 - `deliverable`: the concrete output, as it was said ("the Q3 report", "the login fix"). If no output was named, null.
 - `event_date`: YYYY-MM-DD. Resolve relative dates ("tomorrow", "next Tuesday") against the Session date; "next week" with no day is null.
 - `start_time`, `end_time`: HH:MM, 24-hour, only for a clock time that was said ("at 10", "until half past eleven"). `end_time` may follow from a duration that was said ("at 10 for an hour" is 11:00). "In the morning" or no time at all is null.

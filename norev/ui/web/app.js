@@ -21,6 +21,7 @@ const ERRORS = {
   not_executable: "Acțiunea nu poate fi executată acum.",
   llm_unavailable: "Modelul local (llama-server) nu a pornit. Verifică LLAMA_SERVER și LLAMACPP_MODEL.",
   no_microphone: "Microfonul nu a putut fi deschis.",
+  regenerate_failed: "Regenerarea nu a reușit. Acțiunile de dinainte au rămas cum erau.",
 };
 // Why connecting Google Calendar did not work (GoogleAccount.connect, #45)
 const GOOGLE_FAILED = {
@@ -59,7 +60,7 @@ const ICON = {
 const state = {
   modes: [], mode: null, lang: "ro",
   others: { context: "", prompt: "", digest: null },
-  sessionId: null, review: null, poll: null,
+  sessionId: null, review: null, poll: null, rolesChanged: null,
   list: { kind: "recent", sessions: [], confirming: null },
 };
 
@@ -335,6 +336,22 @@ async function reloadReview() {
   refreshPending();
 }
 
+// After a Role correction, only on the User's click (#60): runs in the backend like the first analysis
+async function regenerate(button) {
+  await guarded(button, async () => {
+    const sessionId = state.sessionId;
+    await api("regenerate", sessionId);
+    for (;;) {
+      const p = await api("progress", sessionId);
+      if (p.failed) throw Object.assign(new Error("regenerate"), { code: "regenerate_failed" });
+      if (p.stage === "ready") break;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    state.rolesChanged = null;
+    if (state.sessionId === sessionId) await reloadReview();
+  });
+}
+
 // edit, preview, approve, reject: checked against the revision the User saw
 const act = (button, name, ...args) => call(button, name, ...args, state.review.revision);
 
@@ -369,13 +386,20 @@ function renderReview() {
     h("option", { value: "", selected: !current, disabled: true }, "Alege rolul"),
     ...r.roles.map((role) => h("option", { value: role.name, selected: role.name === current }, role.label)),
   ];
-  $("speakers").replaceChildren(...r.speakers.map((s, i) => {
+  // #60: the owner of a Proposed Action comes from these Roles; an unknown one leaves it empty
+  const unknown = r.speakers.some((s) => !s.role) ? h("p", { class: "small muted", role: "note" },
+    "Rolul unor vorbitori nu e cunoscut, așa că responsabilul acțiunilor lor rămâne gol. Alege rolul mai jos.") : null;
+  const again = state.rolesChanged === r.session_id && r.can_execute ? h("div", { class: "actions" },
+    h("span", { class: "hint" }, "Acțiunile deja decise rămân neschimbate."),
+    h("button", { type: "button", class: "btn", onclick: (e) => regenerate(e.currentTarget) }, "Regenerează acțiunile")) : null;
+  $("speakers").replaceChildren(...[unknown, ...r.speakers.map((s, i) => {
     const select = h("select", { id: `role-${s.id}`, onchange: (e) => guarded(e.target, async () => {
       state.review = await api("set_role", state.sessionId, s.id, e.target.value);
+      state.rolesChanged = state.sessionId;
       renderReview();
     }) }, roleOptions(s.role));
     return h("label", { for: `role-${s.id}` }, h("span", {}, `Vorbitor ${i + 1}`), select);
-  }));
+  }), again].filter(Boolean));
   $("suggestions").replaceChildren(...(r.suggestions.length ? r.suggestions.map((s) => h("div", { class: "well inset suggestion" },
     h("strong", {}, s.text), s.transcript_excerpt ? h("em", {}, `„${s.transcript_excerpt}”`) : null))
     : [h("p", { class: "small muted" }, "Nimic de semnalat.")]));

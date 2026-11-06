@@ -5,13 +5,17 @@ Session date: {{session_date}}
 Speaker Roles:
 {{roles}}
 
+Speakers of this Session and their Roles (unknown when the Role is not known):
+{{speaker_roles}}
+
 Action Types you may use, with their fields:
 {{action_types}}
 
 ## Proposed Actions
 
 For each generic Proposed Action:
-- If it is one of the Action Types above, output it with its `id` unchanged, its `action_type` and every one of that Action Type's `fields`.
+- If it is one of the Action Types above, output it with its `id` unchanged, its `action_type`, its `owner` and every one of that Action Type's `fields`.
+- `owner`: the Role of who will do it, from the Speakers above: the Role of the Speaker who committed, or the Role the Transcript names ("the patient will ..."). Use only a Role name from the Speaker Roles list. If it is not clear, or that Speaker's Role is unknown, use null. Never a Speaker label (S1, S2) or a person's name.
 - If it fits none of them (lifestyle advice, a sick-leave note, anything else), leave it out.
 - If two generic Proposed Actions describe the same thing, output it once, with the `id` of the first.
 
