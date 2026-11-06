@@ -1,0 +1,94 @@
+{
+  "session_summary": "A patient visited the doctor for persistent headaches, high blood pressure, and dizziness. The doctor prescribed medication, recommended lifestyle changes, and scheduled follow-up tests and appointments.",
+  "proposed_actions": [
+    {
+      "id": "A1",
+      "title": "Reduce Coffee Intake",
+      "description": "Reduce coffee consumption to at most one cup per day in the morning.",
+      "owner": "Mrs. Ionescu",
+      "due_date": "2026-11-06",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "Please reduce your coffee to at most one a day, in the morning.",
+      "needs_review": false
+    },
+    {
+      "id": "A2",
+      "title": "Monitor Blood Pressure",
+      "description": "Measure blood pressure twice daily, in the morning and evening, and record the values in a notebook.",
+      "owner": "Mrs. Ionescu",
+      "due_date": "2026-11-06",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I want you to measure your blood pressure at home twice a day, in the morning and in the evening, and note the values in a notebook.",
+      "needs_review": false
+    },
+    {
+      "id": "A3",
+      "title": "Schedule Blood Tests",
+      "description": "Complete blood tests (cholesterol, blood sugar, creatinine, and electrolyte panel) by Wednesday.",
+      "owner": "Mrs. Ionescu",
+      "due_date": "2026-11-11",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "Please do them by Wednesday, without fail.",
+      "needs_review": false
+    },
+    {
+      "id": "A4",
+      "title": "Schedule Electrocardiogram",
+      "description": "Undergo an electrocardiogram at the outpatient clinic with the assistant.",
+      "owner": "Mrs. Ionescu",
+      "due_date": "2026-11-06",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "we'll do it right here, with the assistant, after the consultation.",
+      "needs_review": false
+    },
+    {
+      "id": "A5",
+      "title": "Follow-Up Appointment",
+      "description": "Attend a follow-up appointment on Friday, November 13th, at 10 o'clock.",
+      "owner": "Mrs. Ionescu",
+      "due_date": "2026-11-13",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "Please come back on Friday, November 13th, at 10 o'clock",
+      "needs_review": false
+    },
+    {
+      "id": "A6",
+      "title": "Take Prescribed Medication",
+      "description": "Take amlodipine 5 milligrams once daily in the morning as prescribed.",
+      "owner": "Mrs. Ionescu",
+      "due_date": "2026-11-06",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I'll prescribe you amlodipine 5 milligrams, one tablet in the morning.",
+      "needs_review": false
+    }
+  ],
+  "decisions": [
+    "The patient will continue taking the medication for now.",
+    "The patient will be referred for blood tests and an electrocardiogram."
+  ],
+  "risks": [
+    "If the patient's blood pressure exceeds 180 or symptoms like numbness, blurred vision, or chest pain occur, they must call 122 immediately."
+  ],
+  "follow_up_questions": [
+    "Is there a specific time frame for the follow-up appointment?",
+    "Are there any additional lifestyle changes the patient should consider?"
+  ]
+}

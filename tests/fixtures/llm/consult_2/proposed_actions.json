@@ -1,0 +1,83 @@
+{
+  "session_summary": "A patient visited the doctor with symptoms of cough, fever, and fatigue. The doctor prescribed medication, recommended a chest X-ray, and issued a medical leave. Additional tests were scheduled, and the patient was advised to quit smoking.",
+  "proposed_actions": [
+    {
+      "id": "A1",
+      "title": "Schedule Chest X-ray",
+      "description": "Patient needs to schedule a chest X-ray at the county hospital.",
+      "owner": "Patient",
+      "due_date": "2026-11-07",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I want a chest X-ray today or at the latest tomorrow.",
+      "needs_review": false
+    },
+    {
+      "id": "A2",
+      "title": "Get Medical Leave Certificate",
+      "description": "Patient needs to collect the medical leave certificate from the doctor.",
+      "owner": "Doctor",
+      "due_date": "2026-11-06",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I'll issue the medical leave certificate now, you take it to human resources.",
+      "needs_review": false
+    },
+    {
+      "id": "A3",
+      "title": "Perform Complete Blood Count and C-Reactive Protein Test",
+      "description": "Patient needs to undergo blood tests on an empty stomach tomorrow morning.",
+      "owner": "Patient",
+      "due_date": "2026-11-07",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "Do a complete blood count and C-reactive protein, tomorrow morning, on an empty stomach.",
+      "needs_review": false
+    },
+    {
+      "id": "A4",
+      "title": "Attend Follow-up Appointment",
+      "description": "Patient needs to return on Tuesday, November tenth, at half past ten, with the X-ray and tests.",
+      "owner": "Patient",
+      "due_date": "2026-11-10",
+      "priority": "high",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "When should I come back? I'll be waiting on Tuesday, November tenth, at half past ten, with the X-ray and the tests.",
+      "needs_review": false
+    },
+    {
+      "id": "A5",
+      "title": "Enroll in Smoking Cessation Program",
+      "description": "Patient needs to be enrolled in the smoking cessation program at the clinic.",
+      "owner": "Doctor",
+      "due_date": "2026-11-17",
+      "priority": "medium",
+      "status": "proposed",
+      "dependencies": [],
+      "confidence": 0.0,
+      "transcript_excerpt": "I recommend the smoking cessation program at the clinic. I'll put you on the list and the assistant, Mrs. Elena, will call you next week.",
+      "needs_review": false
+    }
+  ],
+  "decisions": [
+    "Doctor prescribed amoxicillin with clavulanic acid for seven days.",
+    "Patient was given a medical leave of absence for five days, up to Tuesday inclusive.",
+    "Patient was advised to take paracetamol for fever."
+  ],
+  "risks": [
+    "Patient may experience difficulty breathing or fever above thirty-nine, requiring immediate attention.",
+    "Patient may not follow through with the smoking cessation program."
+  ],
+  "follow_up_questions": [
+    "Will the assistant, Mrs. Elena, be available to call the patient next week?",
+    "Is there a specific time the patient needs to return for the follow-up appointment?"
+  ]
+}
