@@ -1,10 +1,10 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 16.2,
+ "elapsed_seconds": 16.5,
  "calls": [
   {
    "stage": "translate",
-   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună ziua, doamna Ionescu. Luați loc, vă rog. Ce vă aduce astăzi la cabinet?\"}\n{\"id\": \"2\", \"text\": \"Bună ziua, domnule doctor. De vreo două săptămâni mă doare capul aproape în fiecare dimineață și uneori am amețeli când mă ridic din pat.\"}\n{\"id\": \"3\", \"text\": \"Ați măsurat tensiunea acasă?\"}\n{\"id\": \"4\", \"text\": \"Da, am un aparat de la fiica mea. Ieri dimineață am avut o sută șaizeci cu nouăzeci și cinci.\"}\n{\"id\": \"5\", \"text\": \"E cam mare. Vă măsor și eu acum. Stați liniștită câteva secunde.\"}\n{\"id\": \"6\", \"text\": \"Bine. Să știți că mai am și palpitații seara, mai ales după ce beau cafea.\"}\n{\"id\": \"7\", \"text\": \"Acum aveți o sută cincizeci și cinci cu nouăzeci și două. Câte cafele beți pe zi?\"}\n{\"id\": \"8\", \"text\": \"Trei, uneori patru. Și dorm destul de prost, cam cinci ore pe noapte.\"}\n{\"id\": \"9\", \"text\": \"Vă rog să reduceți cafeaua la cel mult una pe zi, dimineața. Sarea la fel, cât mai puțină.\"}\n{\"id\": \"10\", \"text\": \"Am înțeles. Trebuie să iau și pastile?\"}\n{\"id\": \"11\", \"text\": \"Da. Vă prescriu amlodipină cinci miligrame, o tabletă în fiecare dimineață. Rețeta v-o dau acum.\"}\n{\"id\": \"12\", \"text\": \"Și cât timp o iau?\"}\n{\"id\": \"13\", \"text\": \"Deocamdată continuu. Vreau să vă măsurați tensiunea acasă de două ori pe zi, dimineața și seara, și să notați valorile într-un caiet.\"}\n{\"id\": \"14\", \"text\": \"Bine, o să le notez pe toate.\"}\n{\"id\": \"15\", \"text\": \"Vă dau și un bilet de trimitere pentru analize de sânge: colesterol, glicemie, creatinină și ionogramă. Le faceți până miercuri, pe nepusă masă.\"}\n{\"id\": \"16\", \"text\": \"Pot să le fac la laboratorul de lângă policlinică?\"}\n{\"id\": \"17\", \"text\": \"Da, au contract cu casa de asigurări. Și vreau o electrocardiogramă, o facem chiar aici, la asistentă, după consultație.\"}\n{\"id\": \"18\", \"text\": \"Perfect. Când trebuie să revin?\"}\n{\"id\": \"19\", \"text\": \"Reveniți vineri, pe treisprezece noiembrie, la ora zece, cu caietul de tensiune și cu rezultatele analizelor.\"}\n{\"id\": \"20\", \"text\": \"Notez. Dacă mă doare capul foarte tare între timp?\"}\n{\"id\": \"21\", \"text\": \"Dacă tensiunea trece de o sută optzeci sau aveți amorțeli, vedere încețoșată sau dureri în piept, sunați la o sută doisprezece imediat.\"}\n{\"id\": \"22\", \"text\": \"Am înțeles. Vă mulțumesc mult, domnule doctor.\"}\n{\"id\": \"23\", \"text\": \"Cu plăcere. Asistenta Maria vă programează pentru electrocardiogramă și vă dă rețeta tipărită.\"}",
+   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună ziua, doamna Ionescu. Luați loc, vă rog. Ce vă aduce astăzi la cabinet?\"}\n{\"id\": \"2\", \"text\": \"Bună ziua, domnule doctor. De vreo 2 săptămâni mă doare capul aproape în fiecare dimineață și uneori am amețeli când mă ridic din pat.\"}\n{\"id\": \"3\", \"text\": \"Ați măsurat tensiunea acasă?\"}\n{\"id\": \"4\", \"text\": \"Da, am un aparat de la fiica mea. Ieri dimineață am avut 160 cu 95.\"}\n{\"id\": \"5\", \"text\": \"E cam mare. Vă măsor și eu acum. Stați liniștită câteva secunde.\"}\n{\"id\": \"6\", \"text\": \"Bine. Să știți că mai am și palpitații seara, mai ales după ce beau cafea.\"}\n{\"id\": \"7\", \"text\": \"Acum aveți 155 cu 92. Câte cafele beți pe zi?\"}\n{\"id\": \"8\", \"text\": \"3, uneori 4. Și dorm destul de prost, cam 5 ore pe noapte.\"}\n{\"id\": \"9\", \"text\": \"Vă rog să reduceți cafeaua la cel mult una pe zi, dimineața. Sarea la fel, cât mai puțină.\"}\n{\"id\": \"10\", \"text\": \"Am înțeles. Trebuie să iau și pastile?\"}\n{\"id\": \"11\", \"text\": \"Da. Vă prescriu amlodipină 5 miligrame, o tabletă în fiecare dimineață. Rețeta v-o dau acum.\"}\n{\"id\": \"12\", \"text\": \"Și cât timp o iau?\"}\n{\"id\": \"13\", \"text\": \"Deocamdată continuu. Vreau să vă măsurați tensiunea acasă de 2 ori pe zi, dimineața și seara, și să notați valorile într-un caiet.\"}\n{\"id\": \"14\", \"text\": \"Bine, o să le notez pe toate.\"}\n{\"id\": \"15\", \"text\": \"Vă dau și un bilet de trimitere pentru analize de sânge: colesterol, glicemie, creatinină și ionogramă. Le faceți până miercuri, pe nepusă masă.\"}\n{\"id\": \"16\", \"text\": \"Pot să le fac la laboratorul de lângă policlinică?\"}\n{\"id\": \"17\", \"text\": \"Da, au contract cu casa de asigurări. Și vreau o electrocardiogramă, o facem chiar aici, la asistentă, după consultație.\"}\n{\"id\": \"18\", \"text\": \"Perfect. Când trebuie să revin?\"}\n{\"id\": \"19\", \"text\": \"Reveniți vineri, pe 13 noiembrie, la ora 10, cu caietul de tensiune și cu rezultatele analizelor.\"}\n{\"id\": \"20\", \"text\": \"Notez. Dacă mă doare capul foarte tare între timp?\"}\n{\"id\": \"21\", \"text\": \"Dacă tensiunea trece de 180 sau aveți amorțeli, vedere încețoșată sau dureri în piept, sunați la 112 imediat.\"}\n{\"id\": \"22\", \"text\": \"Am înțeles. Vă mulțumesc mult, domnule doctor.\"}\n{\"id\": \"23\", \"text\": \"Cu plăcere. Asistenta Maria vă programează pentru electrocardiogramă și vă dă rețeta tipărită.\"}",
    "json_schema": {
     "type": "object",
     "properties": {
@@ -61,7 +61,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Ionescu. Please take a seat. What brings you here today?\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day, Doctor. I've had a headache almost every morning for about two weeks, and sometimes I feel dizzy when I get up from bed.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Have you measured your blood pressure at home?\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"Yes, I have a device from my daughter. Yesterday morning I had 160 with 95.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"It's quite high. I'll measure it now. Please stay still for a few seconds.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Alright. Let me tell you I also have palpitations in the evening, especially after I drink coffee.\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Now you have 155 with 92. How many coffees do you drink a day?\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"Three, sometimes four. And I sleep quite poorly, about five hours a night.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Please reduce your coffee to at most one a day, in the morning. Salt as little as possible.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"I understand. Do I need to take pills?\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Yes. I'll prescribe you amlodipine five milligrams, one tablet in the morning. I'll give you the prescription now.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"And for how long should I take it?\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"For now, continue. I want you to measure your blood pressure at home twice a day, in the morning and in the evening, and note the values in a notebook.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Alright, I'll note them all.\"\n    },\n    {\n      \"id\": \"15\",\n      \"text\": \"I'll also give you a referral for blood tests: cholesterol, blood sugar, creatinine, and ionogram. Please do them by Wednesday, on the spot.\"\n    },\n    {\n      \"id\": \"16\",\n      \"text\": \"Can I do them at the lab next to the polyclinic?\"\n    },\n    {\n      \"id\": \"17\",\n      \"text\": \"Yes, they have a contract with the insurance company. And I want an electrocardiogram, we'll do it right here, at the assistant, after the consultation.\"\n    },\n    {\n      \"id\": \"18\",\n      \"text\": \"Perfect. When should I come back?\"\n    },\n    {\n      \"id\": \"19\",\n      \"text\": \"Come back on Friday, on the 13th of November, at ten o'clock, with the blood pressure notebook and the results of the tests.\"\n    },\n    {\n      \"id\": \"20\",\n      \"text\": \"I'll note that. If my headache gets very bad in the meantime?\"\n    },\n    {\n      \"id\": \"21\",\n      \"text\": \"If your blood pressure goes over 180 or you have numbness, blurred vision, or chest pain, call 122 immediately.\"\n    },\n    {\n      \"id\": \"22\",\n      \"text\": \"I understand. Thank you very much, Doctor.\"\n    },\n    {\n      \"id\": \"23\",\n      \"text\": \"You're welcome. The assistant Maria will schedule your electrocardiogram and give you the printed prescription.\"\n    }\n  ]\n}"
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Ionescu. Please take a seat. What brings you here today?\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day, Doctor. For about 2 weeks, I've had a headache almost every morning, and sometimes I feel dizzy when I get out of bed.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Have you measured your blood pressure at home?\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"Yes, I have a device from my daughter. Yesterday morning I had 160 over 95.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"That's quite high. I'll measure it now. Please stay still for a few seconds.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Alright. Let me tell you I also have palpitations in the evening, especially after I drink coffee.\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Now you have 155 over 92. How many coffees do you drink a day?\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"3, sometimes 4. And I sleep quite poorly, about 5 hours a night.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Please reduce your coffee to at most one a day, in the morning. Salt as little as possible.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"I understand. Do I need to take pills?\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Yes. I'll prescribe you amlodipine 5 milligrams, one tablet in the morning. I'll give you the prescription now.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"And for how long should I take it?\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"For now, continue. I want you to measure your blood pressure at home twice a day, in the morning and evening, and note the values in a notebook.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Alright, I'll note them all down.\"\n    },\n    {\n      \"id\": \"15\",\n      \"text\": \"I'll also give you a referral for blood tests: cholesterol, blood sugar, creatinine, and ionogram. Please do them by Wednesday, on the spot.\"\n    },\n    {\n      \"id\": \"16\",\n      \"text\": \"Can I do them at the lab next to the polyclinic?\"\n    },\n    {\n      \"id\": \"17\",\n      \"text\": \"Yes, they have a contract with the insurance company. And I want an electrocardiogram, we'll do it right here, at the assistant, after the consultation.\"\n    },\n    {\n      \"id\": \"18\",\n      \"text\": \"Perfect. When should I come back?\"\n    },\n    {\n      \"id\": \"19\",\n      \"text\": \"Come back on Friday, November 13th, at 10 o'clock, with the blood pressure notebook and the results of the tests.\"\n    },\n    {\n      \"id\": \"20\",\n      \"text\": \"I'll note that. If my headache gets really bad in the meantime?\"\n    },\n    {\n      \"id\": \"21\",\n      \"text\": \"If your blood pressure goes over 180 or you have numbness, blurred vision, or chest pain, call 112 immediately.\"\n    },\n    {\n      \"id\": \"22\",\n      \"text\": \"I understand. Thank you very much, Doctor.\"\n    },\n    {\n      \"id\": \"23\",\n      \"text\": \"You're welcome. The assistant Maria will schedule your electrocardiogram and give you the printed prescription.\"\n    }\n  ]\n}"
   }
  ],
  "english": {
@@ -91,7 +91,7 @@
     "start": 6.193,
     "end": 14.152,
     "speaker_id": "S2",
-    "text": "Good day, Doctor. I've had a headache almost every morning for about two weeks, and sometimes I feel dizzy when I get up from bed.",
+    "text": "Good day, Doctor. For about 2 weeks, I've had a headache almost every morning, and sometimes I feel dizzy when I get out of bed.",
     "untranslated": false
    },
    {
@@ -105,14 +105,14 @@
     "start": 16.86,
     "end": 21.988,
     "speaker_id": "S2",
-    "text": "Yes, I have a device from my daughter. Yesterday morning I had 160 with 95.",
+    "text": "Yes, I have a device from my daughter. Yesterday morning I had 160 over 95.",
     "untranslated": false
    },
    {
     "start": 22.317,
     "end": 26.412,
     "speaker_id": "S1",
-    "text": "It's quite high. I'll measure it now. Please stay still for a few seconds.",
+    "text": "That's quite high. I'll measure it now. Please stay still for a few seconds.",
     "untranslated": false
    },
    {
@@ -126,14 +126,14 @@
     "start": 32.364,
     "end": 37.546,
     "speaker_id": "S1",
-    "text": "Now you have 155 with 92. How many coffees do you drink a day?",
+    "text": "Now you have 155 over 92. How many coffees do you drink a day?",
     "untranslated": false
    },
    {
     "start": 38.42,
     "end": 42.955,
     "speaker_id": "S2",
-    "text": "Three, sometimes four. And I sleep quite poorly, about five hours a night.",
+    "text": "3, sometimes 4. And I sleep quite poorly, about 5 hours a night.",
     "untranslated": false
    },
    {
@@ -154,7 +154,7 @@
     "start": 52.898,
     "end": 59.061,
     "speaker_id": "S1",
-    "text": "Yes. I'll prescribe you amlodipine five milligrams, one tablet in the morning. I'll give you the prescription now.",
+    "text": "Yes. I'll prescribe you amlodipine 5 milligrams, one tablet in the morning. I'll give you the prescription now.",
     "untranslated": false
    },
    {
@@ -168,14 +168,14 @@
     "start": 61.455,
     "end": 69.457,
     "speaker_id": "S1",
-    "text": "For now, continue. I want you to measure your blood pressure at home twice a day, in the morning and in the evening, and note the values in a notebook.",
+    "text": "For now, continue. I want you to measure your blood pressure at home twice a day, in the morning and evening, and note the values in a notebook.",
     "untranslated": false
    },
    {
     "start": 70.353,
     "end": 72.904,
     "speaker_id": "S2",
-    "text": "Alright, I'll note them all.",
+    "text": "Alright, I'll note them all down.",
     "untranslated": false
    },
    {
@@ -210,21 +210,21 @@
     "start": 97.075,
     "end": 103.97,
     "speaker_id": "S1",
-    "text": "Come back on Friday, on the 13th of November, at ten o'clock, with the blood pressure notebook and the results of the tests.",
+    "text": "Come back on Friday, November 13th, at 10 o'clock, with the blood pressure notebook and the results of the tests.",
     "untranslated": false
    },
    {
     "start": 104.578,
     "end": 107.552,
     "speaker_id": "S2",
-    "text": "I'll note that. If my headache gets very bad in the meantime?",
+    "text": "I'll note that. If my headache gets really bad in the meantime?",
     "untranslated": false
    },
    {
     "start": 107.946,
     "end": 116.418,
     "speaker_id": "S1",
-    "text": "If your blood pressure goes over 180 or you have numbness, blurred vision, or chest pain, call 122 immediately.",
+    "text": "If your blood pressure goes over 180 or you have numbness, blurred vision, or chest pain, call 112 immediately.",
     "untranslated": false
    },
    {

@@ -4,7 +4,7 @@
  "calls": [
   {
    "stage": "translate",
-   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună dimineața. Începem planificarea de sprint. Andrei, cum stai cu migrarea bazei de date?\"}\n{\"id\": \"2\", \"text\": \"Migrarea e gata în proporție de optzeci la sută. O termin până miercuri, unsprezece noiembrie.\"}\n{\"id\": \"3\", \"text\": \"Bine. Maria, tu ce ai pe listă?\"}\n{\"id\": \"4\", \"text\": \"Eu fac designul pentru ecranul de plată. Îl trimit spre review până vineri.\"}\n{\"id\": \"5\", \"text\": \"Perfect. Aveam în plan și integrarea cu PayPal, dar clientul a renunțat, deci nu o mai facem în sprintul ăsta.\"}\n{\"id\": \"6\", \"text\": \"Atunci eu preiau testele automate pentru plăți, în locul integrării.\"}\n{\"id\": \"7\", \"text\": \"De acord, Radu. Până când?\"}\n{\"id\": \"8\", \"text\": \"Până pe optsprezece noiembrie.\"}\n{\"id\": \"9\", \"text\": \"Și cineva ar trebui să actualizeze documentația API, e veche de două luni.\"}\n{\"id\": \"10\", \"text\": \"Maria, poți tu să te ocupi de documentație după design?\"}\n{\"id\": \"11\", \"text\": \"Da, o actualizez până pe douăzeci noiembrie.\"}\n{\"id\": \"12\", \"text\": \"Eu trimit clientului raportul de progres luni dimineață.\"}\n{\"id\": \"13\", \"text\": \"Bugetul pentru servere rămâne patru mii cinci sute de euro pe lună?\"}\n{\"id\": \"14\", \"text\": \"Da, patru mii cinci sute, fără modificări. Mulțumesc tuturor, ne vedem joi la retrospectivă.\"}",
+   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună dimineața. Începem planificarea de sprint. Andrei, cum stai cu migrarea bazei de date?\"}\n{\"id\": \"2\", \"text\": \"Migrarea e gata în proporție de 80 la sută. O termin până miercuri, 11 noiembrie.\"}\n{\"id\": \"3\", \"text\": \"Bine. Maria, tu ce ai pe listă?\"}\n{\"id\": \"4\", \"text\": \"Eu fac designul pentru ecranul de plată. Îl trimit spre review până vineri.\"}\n{\"id\": \"5\", \"text\": \"Perfect. Aveam în plan și integrarea cu PayPal, dar clientul a renunțat, deci nu o mai facem în sprintul ăsta.\"}\n{\"id\": \"6\", \"text\": \"Atunci eu preiau testele automate pentru plăți, în locul integrării.\"}\n{\"id\": \"7\", \"text\": \"De acord, Radu. Până când?\"}\n{\"id\": \"8\", \"text\": \"Până pe 18 noiembrie.\"}\n{\"id\": \"9\", \"text\": \"Și cineva ar trebui să actualizeze documentația API, e veche de 2 luni.\"}\n{\"id\": \"10\", \"text\": \"Maria, poți tu să te ocupi de documentație după design?\"}\n{\"id\": \"11\", \"text\": \"Da, o actualizez până pe 20 noiembrie.\"}\n{\"id\": \"12\", \"text\": \"Eu trimit clientului raportul de progres luni dimineață.\"}\n{\"id\": \"13\", \"text\": \"Bugetul pentru servere rămâne 4500 de euro pe lună?\"}\n{\"id\": \"14\", \"text\": \"Da, 4500, fără modificări. Mulțumesc tuturor, ne vedem joi la retrospectivă.\"}",
    "json_schema": {
     "type": "object",
     "properties": {
@@ -52,7 +52,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good morning. We are starting sprint planning. Andrei, how are you doing with the database migration?\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"The migration is done to eighty percent. I will finish it by Wednesday, November 11th.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Good. Maria, what do you have on your list?\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"I am doing the design for the dashboard screen. I will send it for review by Friday.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"Perfect. I had planned to integrate with PayPal as well, but the client has dropped it, so we won't do it in this sprint.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Then I will take over the automated tests for payments, instead of the integration.\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Agreed, Radu. Until when?\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"Until November 18th.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"And someone should update the API documentation, it's two months old.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Maria, can you take care of the documentation after the design?\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Yes, I will update it by November 20th.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"I will send the progress report to the client on Monday morning.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"The budget for servers remains four thousand five hundred euros per month?\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Yes, four thousand five hundred euros, no changes. Thank you all, see you on Thursday for the retrospective.\"\n    }\n  ]\n}"
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good morning. We're starting sprint planning. Andrei, how's the database migration going?\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"The migration is done to 80 percent. I'll finish it by Wednesday, November 11th.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Good. Maria, what's on your list?\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"I'm doing the design for the dashboard screen. I'll send it for review by Friday.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"Perfect. I had planned to integrate with PayPal, but the client has dropped it, so we won't do it in this sprint.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Then I'll take over the automated tests for payments, instead of the integration.\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Agreed, Radu. Until when?\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"Until November 18th.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"And someone should update the API documentation, it's two months old.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Maria, can you take care of the documentation after the design?\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Yes, I'll update it by November 20th.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"I'll send the progress report to the client on Monday morning.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"The budget for servers remains 4500 euros per month?\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Yes, 4500, no changes. Thank you all, see you on Thursday for the retrospective.\"\n    }\n  ]\n}"
   }
  ],
  "english": {
@@ -83,42 +83,42 @@
     "start": 0.5,
     "end": 6.0,
     "speaker_id": "S1",
-    "text": "Good morning. We are starting sprint planning. Andrei, how are you doing with the database migration?",
+    "text": "Good morning. We're starting sprint planning. Andrei, how's the database migration going?",
     "untranslated": false
    },
    {
     "start": 6.5,
     "end": 12.35,
     "speaker_id": "S2",
-    "text": "The migration is done to eighty percent. I will finish it by Wednesday, November 11th.",
+    "text": "The migration is done to 80 percent. I'll finish it by Wednesday, November 11th.",
     "untranslated": false
    },
    {
     "start": 12.85,
     "end": 15.9,
     "speaker_id": "S1",
-    "text": "Good. Maria, what do you have on your list?",
+    "text": "Good. Maria, what's on your list?",
     "untranslated": false
    },
    {
     "start": 16.4,
     "end": 21.55,
     "speaker_id": "S3",
-    "text": "I am doing the design for the dashboard screen. I will send it for review by Friday.",
+    "text": "I'm doing the design for the dashboard screen. I'll send it for review by Friday.",
     "untranslated": false
    },
    {
     "start": 22.05,
     "end": 29.65,
     "speaker_id": "S1",
-    "text": "Perfect. I had planned to integrate with PayPal as well, but the client has dropped it, so we won't do it in this sprint.",
+    "text": "Perfect. I had planned to integrate with PayPal, but the client has dropped it, so we won't do it in this sprint.",
     "untranslated": false
    },
    {
     "start": 30.15,
     "end": 34.25,
     "speaker_id": "S4",
-    "text": "Then I will take over the automated tests for payments, instead of the integration.",
+    "text": "Then I'll take over the automated tests for payments, instead of the integration.",
     "untranslated": false
    },
    {
@@ -153,28 +153,28 @@
     "start": 50.35,
     "end": 53.4,
     "speaker_id": "S3",
-    "text": "Yes, I will update it by November 20th.",
+    "text": "Yes, I'll update it by November 20th.",
     "untranslated": false
    },
    {
     "start": 53.9,
     "end": 57.3,
     "speaker_id": "S1",
-    "text": "I will send the progress report to the client on Monday morning.",
+    "text": "I'll send the progress report to the client on Monday morning.",
     "untranslated": false
    },
    {
     "start": 57.8,
     "end": 62.6,
     "speaker_id": "S2",
-    "text": "The budget for servers remains four thousand five hundred euros per month?",
+    "text": "The budget for servers remains 4500 euros per month?",
     "untranslated": false
    },
    {
     "start": 63.1,
     "end": 68.6,
     "speaker_id": "S1",
-    "text": "Yes, four thousand five hundred euros, no changes. Thank you all, see you on Thursday for the retrospective.",
+    "text": "Yes, 4500, no changes. Thank you all, see you on Thursday for the retrospective.",
     "untranslated": false
    }
   ]

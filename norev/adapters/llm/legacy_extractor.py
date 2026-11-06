@@ -6,6 +6,8 @@ from typing import Any
 from LLM.AI_Model.extractor import RealtimeActionExtractor
 from LLM.AI_Model.prompt import DeepSeekPromptBuilder
 from LLM.AI_Model.settings import DeepSeekSettings
+from norev.adapters.llm.excerpt_dates import corrected_due_date
+from norev.adapters.llm.owner_check import checked_owner
 from norev.core.models import Transcript
 from norev.core.ports import LlmClient
 
@@ -39,4 +41,13 @@ class LegacyActionExtractor:
             prompt_builder=DeepSeekPromptBuilder(session_date=session_date),
         )
         raw = extractor.extract_batch([s.text for s in transcript.segments], workers=self.workers)
-        return json.loads(raw) if raw.strip() else {}
+        result = json.loads(raw) if raw.strip() else {}
+        # The model's answer is checked against its own excerpt and the Transcript's Speakers:
+        # the day the excerpt names wins over a wrong calendar row (#41), and "I'll do it" is never
+        # given to another Speaker (#40)
+        for action in result.get("proposed_actions") or []:
+            if isinstance(action, dict):
+                excerpt = action.get("transcript_excerpt")
+                action["due_date"] = corrected_due_date(action.get("due_date"), excerpt, session_date)
+                action["owner"] = checked_owner(action.get("owner"), excerpt, transcript.segments)
+        return result

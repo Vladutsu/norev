@@ -1,10 +1,10 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 16.1,
+ "elapsed_seconds": 16.0,
  "calls": [
   {
    "stage": "translate",
-   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună ziua, doamna Georgescu. Văd că ați venit cu fiica dumneavoastră.\"}\n{\"id\": \"2\", \"text\": \"Bună ziua, domnule doctor. Da, Ana m-a adus, că eu nu mai țin minte tot ce trebuie.\"}\n{\"id\": \"3\", \"text\": \"Bună ziua. Mama și-a pierdut din nou tabletele de diabet săptămâna trecută și glicemia i-a fost mare.\"}\n{\"id\": \"4\", \"text\": \"Cât a avut?\"}\n{\"id\": \"5\", \"text\": \"Dimineața două sute zece, aseară o sută optzeci. Am măsurat eu cu aparatul ei.\"}\n{\"id\": \"6\", \"text\": \"Doamna Georgescu, ce tablete luați acum?\"}\n{\"id\": \"7\", \"text\": \"Metformin, cred că de o mie, dimineața și seara. Dar uneori uit pe cea de seară.\"}\n{\"id\": \"8\", \"text\": \"Și piciorul stâng cum mai este? Data trecută aveați o rană mică la călcâi.\"}\n{\"id\": \"9\", \"text\": \"Mă mai ustură și se înroșește seara.\"}\n{\"id\": \"10\", \"text\": \"Să mă uit. Rana nu s-a închis și pielea din jur e roșie. Trebuie să o vadă un chirurg.\"}\n{\"id\": \"11\", \"text\": \"Unde mergem?\"}\n{\"id\": \"12\", \"text\": \"Vă fac trimitere la chirurgie, la ambulatoriul spitalului județean. Încercați să obțineți o programare în cursul săptămânii viitoare.\"}\n{\"id\": \"13\", \"text\": \"Mă ocup eu de programare, sun mâine dimineață.\"}\n{\"id\": \"14\", \"text\": \"Foarte bine. Până atunci, pansament zilnic cu ser fiziologic și betadină. Asistenta comunitară poate veni acasă să vă arate cum se face.\"}\n{\"id\": \"15\", \"text\": \"Ar fi de mare ajutor, eu lucrez până la cinci.\"}\n{\"id\": \"16\", \"text\": \"O anunț eu pe asistenta comunitară, doamna Ioana, să treacă pe la dumneavoastră luni după-amiază.\"}\n{\"id\": \"17\", \"text\": \"Și cu tabletele ce fac, că le uit mereu?\"}\n{\"id\": \"18\", \"text\": \"Vă recomand o cutie de pastile pe zile ale săptămânii. Ana, vă rog să i-o pregătiți duminică seara pentru toată săptămâna.\"}\n{\"id\": \"19\", \"text\": \"Sigur, o cumpăr de la farmacie azi.\"}\n{\"id\": \"20\", \"text\": \"Vreau și o hemoglobină glicată și un examen de urină. Le faceți la laborator până vineri.\"}\n{\"id\": \"21\", \"text\": \"Le facem joi, că am liber.\"}\n{\"id\": \"22\", \"text\": \"Reveniți apoi pe douăzeci noiembrie, la ora unsprezece, cu rezultatele și cu scrisoarea medicală de la chirurg.\"}\n{\"id\": \"23\", \"text\": \"Douăzeci noiembrie, la unsprezece. Ana, scrie-ți, te rog.\"}\n{\"id\": \"24\", \"text\": \"Am notat. Mulțumim frumos, domnule doctor.\"}\n{\"id\": \"25\", \"text\": \"Cu plăcere. Dacă apare febră sau piciorul se umflă, veniți imediat.\"}",
+   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună ziua, doamna Georgescu. Văd că ați venit cu fiica dumneavoastră.\"}\n{\"id\": \"2\", \"text\": \"Bună ziua, domnule doctor. Da, Ana m-a adus, că eu nu mai țin minte tot ce trebuie.\"}\n{\"id\": \"3\", \"text\": \"Bună ziua. Mama și-a pierdut din nou tabletele de diabet săptămâna trecută și glicemia i-a fost mare.\"}\n{\"id\": \"4\", \"text\": \"Cât a avut?\"}\n{\"id\": \"5\", \"text\": \"Dimineața 210, aseară 180. Am măsurat eu cu aparatul ei.\"}\n{\"id\": \"6\", \"text\": \"Doamna Georgescu, ce tablete luați acum?\"}\n{\"id\": \"7\", \"text\": \"Metformin, cred că de 1000, dimineața și seara. Dar uneori uit pe cea de seară.\"}\n{\"id\": \"8\", \"text\": \"Și piciorul stâng cum mai este? Data trecută aveați o rană mică la călcâi.\"}\n{\"id\": \"9\", \"text\": \"Mă mai ustură și se înroșește seara.\"}\n{\"id\": \"10\", \"text\": \"Să mă uit. Rana nu s-a închis și pielea din jur e roșie. Trebuie să o vadă un chirurg.\"}\n{\"id\": \"11\", \"text\": \"Unde mergem?\"}\n{\"id\": \"12\", \"text\": \"Vă fac trimitere la chirurgie, la ambulatoriul spitalului județean. Încercați să obțineți o programare în cursul săptămânii viitoare.\"}\n{\"id\": \"13\", \"text\": \"Mă ocup eu de programare, sun mâine dimineață.\"}\n{\"id\": \"14\", \"text\": \"Foarte bine. Până atunci, pansament zilnic cu ser fiziologic și betadină. Asistenta comunitară poate veni acasă să vă arate cum se face.\"}\n{\"id\": \"15\", \"text\": \"Ar fi de mare ajutor, eu lucrez până la 5.\"}\n{\"id\": \"16\", \"text\": \"O anunț eu pe asistenta comunitară, doamna Ioana, să treacă pe la dumneavoastră luni după-amiază.\"}\n{\"id\": \"17\", \"text\": \"Și cu tabletele ce fac, că le uit mereu?\"}\n{\"id\": \"18\", \"text\": \"Vă recomand o cutie de pastile pe zile ale săptămânii. Ana, vă rog să i-o pregătiți duminică seara pentru toată săptămâna.\"}\n{\"id\": \"19\", \"text\": \"Sigur, o cumpăr de la farmacie azi.\"}\n{\"id\": \"20\", \"text\": \"Vreau și o hemoglobină glicată și un examen de urină. Le faceți la laborator până vineri.\"}\n{\"id\": \"21\", \"text\": \"Le facem joi, că am liber.\"}\n{\"id\": \"22\", \"text\": \"Reveniți apoi pe 20 noiembrie, la ora 11, cu rezultatele și cu scrisoarea medicală de la chirurg.\"}\n{\"id\": \"23\", \"text\": \"20 noiembrie, la 11. Ana, scrie-ți, te rog.\"}\n{\"id\": \"24\", \"text\": \"Am notat. Mulțumim frumos, domnule doctor.\"}\n{\"id\": \"25\", \"text\": \"Cu plăcere. Dacă apare febră sau piciorul se umflă, veniți imediat.\"}",
    "json_schema": {
     "type": "object",
     "properties": {
@@ -63,7 +63,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Georgescu. I see you came with your daughter.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day, Doctor. Yes, Ana brought me, because I don't remember everything I need anymore.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Good day. Mom lost her diabetes tablets again last week and her blood sugar was high.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"How high was it?\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"In the morning two hundred ten, last night one hundred eighty. I measured it with her device.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Mrs. Georgescu, what tablets are you taking now?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Metformin, I think of a thousand, in the morning and evening. But sometimes I forget the evening one.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"And how is the left foot? Last time you had a small wound on the heel.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"It still hurts me and turns red in the evening.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Let me check. The wound hasn't closed and the skin around it is red. You need to see a surgeon.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Where do we go?\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"I will take care of the appointment, I'll call tomorrow morning.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Very well. Until then, daily dressing with physiological serum and betadine. The community assistant can come to your home to show you how to do it.\"\n    },\n    {\n      \"id\": \"15\",\n      \"text\": \"That would be a great help, I work until five.\"\n    },\n    {\n      \"id\": \"16\",\n      \"text\": \"I will inform the community assistant, Mrs. Ioana, to visit you on Monday afternoon.\"\n    },\n    {\n      \"id\": \"17\",\n      \"text\": \"And what about the tablets, what do I do, because I keep forgetting them?\"\n    },\n    {\n      \"id\": \"18\",\n      \"text\": \"I recommend a box of pills for the days of the week. Ana, please prepare it for the whole week on Sunday evening.\"\n    },\n    {\n      \"id\": \"19\",\n      \"text\": \"Sure, I will buy them from the pharmacy today.\"\n    },\n    {\n      \"id\": \"20\",\n      \"text\": \"I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.\"\n    },\n    {\n      \"id\": \"21\",\n      \"text\": \"We will do them on Thursday, because I have free time.\"\n    },\n    {\n      \"id\": \"22\",\n      \"text\": \"Come back then on twenty November, at eleven o'clock, with the results and with the medical letter from the surgeon.\"\n    },\n    {\n      \"id\": \"23\",\n      \"text\": \"Twenty November, at eleven. Ana, please write it down, please.\"\n    },\n    {\n      \"id\": \"24\",\n      \"text\": \"I have noted. Thank you very much, Doctor.\"\n    },\n    {\n      \"id\": \"25\",\n      \"text\": \"You're welcome. If fever appears or the foot swells, come immediately.\"\n    }\n  ]\n}"
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Georgescu. I see you came with your daughter.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day, Doctor. Yes, Ana brought me, because I don't remember everything I need anymore.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Good day. Mom lost her diabetes tablets again last week and her blood sugar was high.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"How high was it?\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"In the morning 210, in the evening 180. I measured it with her device.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Mrs. Georgescu, what tablets are you taking now?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Metformin, I think 1000, in the morning and evening. But sometimes I forget the evening one.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"And how is the left foot? Last time you had a small wound on the heel.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"It still hurts and turns red in the evening.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Let me check. The wound hasn't closed and the skin around it is red. You need to see a surgeon.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Where do we go?\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"I will refer you to surgery, to the outpatient clinic of the county hospital. Try to get an appointment during the next week.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"I will take care of the appointment, I'll call tomorrow morning.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Very well. Until then, daily dressing with physiological serum and betadine. The community assistant can come to your home to show you how to do it.\"\n    },\n    {\n      \"id\": \"15\",\n      \"text\": \"That would be a great help, I work until 5.\"\n    },\n    {\n      \"id\": \"16\",\n      \"text\": \"I will inform the community assistant, Mrs. Ioana, to visit you on Monday afternoon.\"\n    },\n    {\n      \"id\": \"17\",\n      \"text\": \"And what about the tablets, since I keep forgetting them?\"\n    },\n    {\n      \"id\": \"18\",\n      \"text\": \"I recommend a box of pills for the days of the week. Ana, please prepare it for the whole week on Sunday evening.\"\n    },\n    {\n      \"id\": \"19\",\n      \"text\": \"Sure, I will buy it from the pharmacy today.\"\n    },\n    {\n      \"id\": \"20\",\n      \"text\": \"I also want a hemoglobin A1c and a urine test. Do those at the lab by Friday.\"\n    },\n    {\n      \"id\": \"21\",\n      \"text\": \"We will do them on Thursday, because I have free time.\"\n    },\n    {\n      \"id\": \"22\",\n      \"text\": \"Come back then on November 20th at 11, with the results and with the medical letter from the surgeon.\"\n    },\n    {\n      \"id\": \"23\",\n      \"text\": \"November 20th, at 11. Ana, please write it down, please.\"\n    },\n    {\n      \"id\": \"24\",\n      \"text\": \"I noted it down. Thank you very much, Doctor.\"\n    },\n    {\n      \"id\": \"25\",\n      \"text\": \"You're welcome. If fever appears or the foot swells, come immediately.\"\n    }\n  ]\n}"
   }
  ],
  "english": {
@@ -118,7 +118,7 @@
     "start": 19.555,
     "end": 24.461,
     "speaker_id": "S3",
-    "text": "In the morning two hundred ten, last night one hundred eighty. I measured it with her device.",
+    "text": "In the morning 210, in the evening 180. I measured it with her device.",
     "untranslated": false
    },
    {
@@ -132,7 +132,7 @@
     "start": 28.231,
     "end": 33.618,
     "speaker_id": "S2",
-    "text": "Metformin, I think of a thousand, in the morning and evening. But sometimes I forget the evening one.",
+    "text": "Metformin, I think 1000, in the morning and evening. But sometimes I forget the evening one.",
     "untranslated": false
    },
    {
@@ -146,7 +146,7 @@
     "start": 39.389,
     "end": 41.876,
     "speaker_id": "S2",
-    "text": "It still hurts me and turns red in the evening.",
+    "text": "It still hurts and turns red in the evening.",
     "untranslated": false
    },
    {
@@ -188,7 +188,7 @@
     "start": 72.063,
     "end": 75.09,
     "speaker_id": "S3",
-    "text": "That would be a great help, I work until five.",
+    "text": "That would be a great help, I work until 5.",
     "untranslated": false
    },
    {
@@ -202,7 +202,7 @@
     "start": 81.711,
     "end": 84.367,
     "speaker_id": "S2",
-    "text": "And what about the tablets, what do I do, because I keep forgetting them?",
+    "text": "And what about the tablets, since I keep forgetting them?",
     "untranslated": false
    },
    {
@@ -216,7 +216,7 @@
     "start": 92.47,
     "end": 95.02,
     "speaker_id": "S3",
-    "text": "Sure, I will buy them from the pharmacy today.",
+    "text": "Sure, I will buy it from the pharmacy today.",
     "untranslated": false
    },
    {
@@ -237,21 +237,21 @@
     "start": 104.697,
     "end": 111.985,
     "speaker_id": "S1",
-    "text": "Come back then on twenty November, at eleven o'clock, with the results and with the medical letter from the surgeon.",
+    "text": "Come back then on November 20th at 11, with the results and with the medical letter from the surgeon.",
     "untranslated": false
    },
    {
     "start": 112.726,
     "end": 116.805,
     "speaker_id": "S2",
-    "text": "Twenty November, at eleven. Ana, please write it down, please.",
+    "text": "November 20th, at 11. Ana, please write it down, please.",
     "untranslated": false
    },
    {
     "start": 117.186,
     "end": 120.375,
     "speaker_id": "S3",
-    "text": "I have noted. Thank you very much, Doctor.",
+    "text": "I noted it down. Thank you very much, Doctor.",
     "untranslated": false
    },
    {

@@ -3,6 +3,8 @@
     python tests/fixtures/eval/evaluate.py record           # GPU laptop: llama-server; rewrites the recordings
     python tests/fixtures/eval/evaluate.py variance [N]     # GPU laptop: N more extract runs per variant (default 2)
     python tests/fixtures/eval/evaluate.py check            # no model: replays them, rebuilds report.json and compares
+    python tests/fixtures/eval/evaluate.py refresh          # no model: replays them and rewrites results and report
+                                                            # (after a code change that keeps the prompts)
     python tests/fixtures/eval/evaluate.py report           # prints report.json as a table
 
 Each <session>/ holds the Transcript (or points to one in ../llm), expected.json (written and checked
@@ -305,7 +307,7 @@ def variance_runs(runs: int) -> int:
     return 0
 
 
-def check_all() -> int:
+def check_all(refresh: bool = False) -> int:
     failed = 0
     settings = DeepSeekSettings.from_environment()
     for folder in sessions():
@@ -320,18 +322,43 @@ def check_all() -> int:
             for variant in VARIANTS:
                 rec = _json(folder / f"extract.{variant}.json")
                 client = record.ReplayClient(rec["calls"])
-                assert extract(english, variant, source, client, settings_used) == rec["result"], f"{variant} result differs"
+                result = extract(english, variant, source, client, settings_used)
                 assert not client._calls, f"fewer {variant} calls than recorded"
+                if refresh:
+                    _write(folder / f"extract.{variant}.json", {**rec, "result": result})
+                assert result == rec["result"] or refresh, f"{variant} result differs"
             print(f"{folder.name}: OK")
         except AssertionError as exc:
             failed += 1
             print(f"{folder.name}: FAILED: {exc}")
+    if refresh:
+        _refresh_variance(settings)
+        _write(HERE / "report.json", build_report())
     if build_report() != _json(HERE / "report.json"):
         failed += 1
         print("report.json: FAILED: differs from the recordings (run record, or check the scoring change)")
     else:
         print("report.json: OK")
     return 1 if failed else 0
+
+
+def _refresh_variance(settings) -> None:
+    """variance.json holds results, not calls: apply the extractor's own checks again (dates #41, owners #40)."""
+    path = HERE / "variance.json"
+    if not path.exists():
+        return
+    from norev.adapters.llm.excerpt_dates import corrected_due_date
+    from norev.adapters.llm.owner_check import checked_owner
+    data = _json(path)
+    for variant, per_session in data["actions"].items():
+        for name, runs in per_session.items():
+            session_date = date.fromisoformat(source_of(HERE / name)["session_date"])
+            turns = record.load_transcript(_json(HERE / name / "translation.json")["english"]).segments
+            for actions in runs:
+                for a in actions:
+                    a["due_date"] = corrected_due_date(a.get("due_date"), a.get("transcript_excerpt"), session_date)
+                    a["owner"] = checked_owner(a.get("owner"), a.get("transcript_excerpt"), turns)
+    _write(path, data)
 
 
 def print_report() -> int:
@@ -368,4 +395,6 @@ if __name__ == "__main__":
         raise SystemExit(record_all())
     if command == "variance":
         raise SystemExit(variance_runs(int(sys.argv[2]) if len(sys.argv) > 2 else 2))
-    raise SystemExit(check_all() if command == "check" else print_report())
+    if command in ("check", "refresh"):
+        raise SystemExit(check_all(refresh=command == "refresh"))
+    raise SystemExit(print_report())
