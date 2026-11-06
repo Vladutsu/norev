@@ -18,7 +18,16 @@ from norev.adapters.store.encrypted import (
     open_store,
     read_key_file,
 )
-from norev.core.models import ActionStatus, AuditEvent, ProposedAction, Segment, Session, Suggestion, Transcript
+from norev.core.models import (
+    ActionStatus,
+    AuditEvent,
+    ProposedAction,
+    Segment,
+    Session,
+    StaleRevision,
+    Suggestion,
+    Transcript,
+)
 from norev.core.ports import AuditLog, SessionStore
 from norev.testing.fakes import InMemoryAuditLog, InMemorySessionStore
 
@@ -90,7 +99,8 @@ class StoreContract:
 
     def test_actions_keep_status_dates_fields_and_approved_payload(self):
         plain = ProposedAction(id="s1-2", title="Analize", description="", transcript_excerpt="")
-        self.store.save_actions("s1", [approved_action(), plain])
+        self.store.save_session(a_session())
+        self.store.save_actions("s1", [approved_action(), plain], expected_revision=0)
         loaded = self.store.load_actions("s1")
         self.assertEqual([(a.id, a.status) for a in loaded], [("s1-1", ActionStatus.APPROVED), ("s1-2", ActionStatus.PROPOSED)])
         self.assertEqual(loaded[0].due_date, date(2026, 11, 20))
@@ -100,15 +110,78 @@ class StoreContract:
 
     def test_suggestions_round_trip(self):
         suggestions = [Suggestion("Ora lipsește", "peste două săptămâni"), Suggestion("Fără extras")]
-        self.store.save_suggestions("s1", suggestions)
+        self.store.save_session(a_session())
+        self.store.save_suggestions("s1", suggestions, expected_revision=0)
         self.assertEqual(self.store.load_suggestions("s1"), suggestions)
         self.assertEqual(self.store.load_suggestions("other"), [])
 
     def test_returned_objects_are_copies(self):
-        self.store.save_actions("s1", [approved_action()])
+        self.store.save_session(a_session())
+        self.store.save_actions("s1", [approved_action()], expected_revision=0)
         loaded = self.store.load_actions("s1")
         loaded[0].approved_payload["visit_time"] = "23:00"
         self.assertEqual(self.store.load_actions("s1")[0].approved_payload["visit_time"], "09:00")
+
+    # Review revision (norev.core.ports.SessionStore, #18)
+
+    def test_revision_starts_at_zero_and_each_save_returns_the_next(self):
+        self.store.save_session(a_session())
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 0)
+        self.assertEqual(self.store.save_actions("s1", [approved_action()], expected_revision=0), 1)
+        self.assertEqual(self.store.save_suggestions("s1", [Suggestion("x")], expected_revision=1), 2)
+        snapshot = self.store.load_actions_snapshot("s1")
+        self.assertEqual((snapshot.revision, [a.id for a in snapshot.actions]), (2, ["s1-1"]))
+
+    def test_stale_revision_saves_nothing(self):
+        self.store.save_session(a_session())
+        self.store.save_actions("s1", [approved_action()], expected_revision=0)
+        other = ProposedAction(id="s1-9", title="Altceva", description="", transcript_excerpt="")
+        with self.assertRaises(StaleRevision):
+            self.store.save_actions("s1", [other], expected_revision=0, suggestions=[Suggestion("y")])
+        with self.assertRaises(StaleRevision):
+            self.store.save_suggestions("s1", [Suggestion("y")], expected_revision=0)
+        self.assertEqual([a.id for a in self.store.load_actions("s1")], ["s1-1"])
+        self.assertEqual(self.store.load_suggestions("s1"), [])
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 1)
+
+    def test_unknown_session_and_invalid_revision_are_refused(self):
+        with self.assertRaises(LookupError):
+            self.store.load_actions_snapshot("nope")
+        with self.assertRaises(LookupError):
+            self.store.save_actions("nope", [], expected_revision=0)
+        self.store.save_session(a_session())
+        for bad in (-1, True, "0"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self.store.save_actions("s1", [], expected_revision=bad)
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 0)
+
+    def test_duplicate_action_ids_are_refused(self):
+        self.store.save_session(a_session())
+        with self.assertRaises(ValueError):
+            self.store.save_actions("s1", [approved_action(), approved_action()], expected_revision=0)
+        self.assertEqual(self.store.load_actions("s1"), [])
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 0)
+
+    def test_suggestions_none_keeps_them_and_empty_list_clears_them(self):
+        self.store.save_session(a_session())
+        self.store.save_actions("s1", [], expected_revision=0, suggestions=[Suggestion("x")])
+        self.store.save_actions("s1", [approved_action()], expected_revision=1)
+        self.assertEqual(self.store.load_suggestions("s1"), [Suggestion("x")])
+        self.store.save_actions("s1", [approved_action()], expected_revision=2, suggestions=[])
+        self.assertEqual(self.store.load_suggestions("s1"), [])
+
+    def test_session_inputs_are_frozen_once_review_started(self):
+        self.store.save_session(a_session())
+        changed = a_session()
+        changed.transcript_ref = "t-1"
+        self.store.save_session(changed)  # before review: a change is fine and bumps the revision
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 1)
+        self.store.save_actions("s1", [approved_action()], expected_revision=1)
+        self.store.save_session(changed)  # the same Session again changes nothing
+        changed.transcript_ref = "t-2"
+        with self.assertRaises(ValueError):
+            self.store.save_session(changed)
+        self.assertEqual(self.store.get_session("s1").transcript_ref, "t-1")
 
     def test_audit_keeps_events_in_order(self):
         first, second = an_event(), AuditEvent(AT, "s1-2", "local_document", {"n": 2}, "user")
@@ -158,8 +231,8 @@ class EncryptedStoreTest(TempStoreCase):
     def fill(self) -> str:
         self.store.save_session(a_session())
         ref = self.store.save_transcript("s1", a_transcript())
-        self.store.save_actions("s1", [approved_action()])
-        self.store.save_suggestions("s1", [Suggestion(f"Verifică {SENTINEL}", SENTINEL)])
+        self.store.save_actions("s1", [approved_action()], expected_revision=0)
+        self.store.save_suggestions("s1", [Suggestion(f"Verifică {SENTINEL}", SENTINEL)], expected_revision=1)
         self.store.record(an_event())
         return ref
 
@@ -171,6 +244,9 @@ class EncryptedStoreTest(TempStoreCase):
         self.assertEqual(again.load_transcript(ref), a_transcript())
         self.assertEqual(again.load_actions("s1")[0].approved_payload, approved_action().approved_payload)
         self.assertEqual(again.load_events(), [an_event()])
+        self.assertEqual(again.load_actions_snapshot("s1").revision, 2)
+        with self.assertRaises(StaleRevision):  # the revision survives reopening
+            again.save_actions("s1", [], expected_revision=0)
 
     def test_no_sentinel_in_clear_in_any_file_of_the_data_folder(self):
         self.fill()
@@ -232,9 +308,11 @@ class EncryptedStoreTest(TempStoreCase):
     def test_payload_that_is_not_json_is_refused_and_nothing_is_saved(self):
         action = approved_action()
         action.approved_payload["when"] = datetime(2026, 11, 20, 9, 0)
+        self.store.save_session(a_session())
         with self.assertRaises(TypeError):
-            self.store.save_actions("s1", [action])
+            self.store.save_actions("s1", [action], expected_revision=0)
         self.assertEqual(self.store.load_actions("s1"), [])
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 0)
 
     def test_repr_shows_no_content(self):
         self.fill()
