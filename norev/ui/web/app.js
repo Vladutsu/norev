@@ -254,7 +254,7 @@ async function pollLive() {
     const lines = live.segments.map((s) => {
       if (!order.includes(s.speaker_id)) order.push(s.speaker_id);
       const n = order.indexOf(s.speaker_id);
-      return h("div", { class: "line" }, h("span", { class: `speaker s${n % 3}` }, `Vorbitor ${n + 1}`), h("p", {}, s.text));
+      return h("div", { class: "line" }, s.speaker_id == null ? null : h("span", { class: `speaker s${n % 3}` }, `Vorbitor ${n + 1}`), h("p", {}, s.text));
     });
     const box = $("live");
     const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
