@@ -6,7 +6,7 @@ Raised during design but not yet decided. Recommendations are proposals, not dec
 2. **Meaning of "ngrok".** Remote access from the User's other devices, multiple users, or something else? Recorded as out of scope in ADR 0004 until clarified.
 3. **Encryption key storage.** Recommended: OS credential store (Windows Credential Manager / DPAPI).
 4. **How a Domain is defined.** Recommended: declarative (a folder with YAML + prompt files); Connectors stay code in the core.
-5. **LLM passes after recording stops.** Recommended: three separate passes (Role assignment, Proposed Actions, Suggestions) rather than one call.
+5. **LLM passes after recording stops.** Recommended: three separate passes (Role assignment, Proposed Actions, Suggestions) rather than one call. Since ADR 0005 the generic extraction is its own stage, so this now concerns the passes inside the Domain stage.
 6. **Relative dates and missing fields.** Recommended: resolve relative dates against the Session date; required fields left empty block approval, and the LLM never invents values.
 7. **Failed execution.** Recommended: Failed shows the error and offers a manual Retry; no automatic retry (avoids duplicate invites).
 8. **Session history.** Recommended: past Sessions can be reopened, and Proposed Actions still pending can be decided later.

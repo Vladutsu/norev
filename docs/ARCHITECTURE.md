@@ -11,10 +11,10 @@ relying on discipline. Terms follow `GLOSSARY.md`. This is a proposal: anything 
 | Layer | Contains | May depend on |
 |---|---|---|
 | `core` | Session, Transcript, Speaker, Role, Proposed Action (with its states), Suggestion; ports as `typing.Protocol` | nothing outside the standard library, no I/O |
-| `usecases` | finalize Transcript, assign Roles, extract Proposed Actions, approve, execute | `core` |
+| `usecases` | finalize Transcript, extract generic Proposed Actions, run the Domain stage (Action Types, fields, Roles, Suggestions), approve, run the Workflow | `core` |
 | `processor` | Central Processor: model calls, Connector sends, audit log | `core`, `usecases` |
 | `adapters` | Whisper, LLM client (llama.cpp/ollama), encrypted store, Connectors | `core` (implement its ports) |
-| `domains` | per-industry Roles, Action Types, prompts | nothing; the core loads them |
+| `domains` | per-industry model, Roles, Action Types, Workflows, prompts (ADR 0005) | nothing; the core loads them |
 
 Ports: `Transcriber`, `Diarizer`, `LlmClient`, `Connector`, `SessionStore`, `AuditLog`, `Clock`.
 
@@ -92,6 +92,7 @@ desktop app has its own runtime and does not need Docker.
   its relative path and checksum. A script checks (and downloads, if missing) the files
   against the manifest before the backend or tests run, so everyone's backend sees exactly
   the same input. Changing dev data means changing the manifest in a reviewed commit.
+- **One laptop runs the models.** Only one team laptop has the GPU for the LLMs and diarization. Everything else is built and tested without a model: fakes and recorded LLM responses in `tests/fixtures/`. To try the real model, point `LLAMACPP_URL` at that laptop's llama-server, with synthetic data only.
 - **GPU is optional.** Tests that need a GPU or a real model are marked and skipped when
   none is available; the rest run the same on any machine and in CI.
 

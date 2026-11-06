@@ -7,12 +7,16 @@ A local assistant that records a conversation, transcribes it with speaker attri
 ### Configuration
 
 **Domain**:
-The industry the app is configured for (e.g. medical, journalism), bundling its speaker Roles, Action Types and extraction instructions. The core never contains industry-specific knowledge.
+The industry the app is configured for (e.g. medical, journalism), bundling its speaker Roles, Action Types, Workflows, its own specialised model and the instructions for it. The core never contains industry-specific knowledge.
 _Avoid_: Vertical, plugin, profile, mode
 
 **Action Type**:
 A kind of action a Domain allows to be proposed, such as *Schedule Visit* (Programare vizită) or *Medication Reminder* (Luat pastilă).
 _Avoid_: Task type, command, intent
+
+**Workflow**:
+The ordered steps a Domain runs for one Action Type after the User approves a Proposed Action (e.g. *Schedule Visit*: build the invite, send it through the Google Calendar Connector, save the result to the Session). Every step that sends data out goes through the Central Processor.
+_Avoid_: Pipeline, automation, flow, playbook
 
 ### Conversation
 
@@ -47,11 +51,11 @@ _Avoid_: Speaker type, persona
 ### Outcomes
 
 **Proposed Action**:
-A concrete action extracted from a Transcript, together with the Transcript excerpt it came from, waiting for the User's decision; the User may edit its details before approving. Moves through *Proposed → Approved / Rejected → Executed / Failed*.
+A concrete action extracted from a Transcript, together with the Transcript excerpt it came from, waiting for the User's decision; the User may edit its details before approving. The core extracts it in generic form (what, who, when); the Domain then gives it an Action Type and its Domain fields. Moves through *Proposed → Approved / Rejected → Executed / Failed*.
 _Avoid_: Task, suggestion, recommendation, todo
 
 **Connector**:
-The integration that executes an approved Proposed Action, either external (e.g. Google Calendar, a publishing platform) or local (e.g. saving a document). Each Action Type has one Connector.
+The integration that executes an approved Proposed Action, either external (e.g. Google Calendar, a publishing platform) or local (e.g. saving a document). Each Workflow step uses at most one Connector.
 _Avoid_: Integration, plugin, adapter, executor
 
 **Suggestion**:
