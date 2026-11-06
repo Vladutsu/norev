@@ -1,0 +1,5 @@
+{
+  "context": "Ședință cu părinții la școală. Mă interesează ce trebuie să trimit sau să semnez și termenele.",
+  "instructions_answer": {"instructions": "- This is a parent meeting at a school.\n- Actions are documents to send or sign, payments for trips and deadlines the User accepted.\n- Leave out general announcements to all parents.\n- Suggest checking a deadline that was said only as a weekday."},
+  "domain_answer": {"proposed_actions": [{"id": "s1-1", "action_type": "action_item", "fields": {"deliverable": "signed trip form"}}], "suggestions": [{"text": "Check the deadline: only 'Friday' was said.", "transcript_excerpt": "I will send the report on Friday."}]}
+}

@@ -6,7 +6,7 @@ which is the only module that holds real `LlmClient` and `Connector` implementat
 from datetime import date, datetime
 from typing import Any, Protocol, runtime_checkable
 
-from norev.core.models import ActionsSnapshot, Domain, AuditEvent, ProposedAction, Session, Speaker, SpeakerTurn, Suggestion, Transcript
+from norev.core.models import ActionsSnapshot, Domain, AuditEvent, OthersPrompt, ProposedAction, Session, Speaker, SpeakerTurn, Suggestion, Transcript
 
 
 @runtime_checkable
@@ -108,10 +108,11 @@ class SessionStore(Protocol):
 
     def regenerate_actions(
         self, session_id: str, actions: list[ProposedAction], *, domain: str, expected_revision: int,
-        suggestions: list[Suggestion],
+        suggestions: list[Suggestion], others_prompt: OthersPrompt | None = None,
     ) -> int:
         """The User's explicit regeneration (#19): atomically set the Session's Domain and replace its
-        actions and Suggestions, with the same compare-and-set as save_actions.
+        actions and Suggestions, with the same compare-and-set as save_actions. A given
+        `others_prompt` (#21) replaces the Session's confirmed prompt in the same write; None keeps it.
 
         Every stored action that is no longer Proposed must be in `actions` unchanged
         (check_decisions_kept), so a decision is never altered or dropped. Any error: nothing saved.

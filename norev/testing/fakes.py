@@ -6,7 +6,7 @@ from threading import RLock
 from typing import Any
 
 from norev.core.models import (
-    ActionsSnapshot, AuditEvent, Domain, ProposedAction, Session, Speaker, SpeakerTurn, StaleRevision, Suggestion,
+    ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, Session, Speaker, SpeakerTurn, StaleRevision, Suggestion,
     Transcript,
 )
 from norev.core.models import check_decisions_kept
@@ -137,7 +137,7 @@ class InMemorySessionStore:
 
     def regenerate_actions(
         self, session_id: str, actions: list[ProposedAction], *, domain: str, expected_revision: int,
-        suggestions: list[Suggestion],
+        suggestions: list[Suggestion], others_prompt: OthersPrompt | None = None,
     ) -> int:
         with self._lock:
             revision = self._check_revision(session_id, expected_revision)
@@ -145,7 +145,10 @@ class InMemorySessionStore:
             if len({a.id for a in saved_actions}) != len(saved_actions):
                 raise ValueError("Duplicate Proposed Action ids")
             check_decisions_kept(self._actions.get(session_id, []), saved_actions)
-            self._sessions[session_id] = dataclasses.replace(self._sessions[session_id], domain=domain)
+            session = dataclasses.replace(self._sessions[session_id], domain=domain)
+            if others_prompt is not None:
+                session = dataclasses.replace(session, others_prompt=others_prompt)
+            self._sessions[session_id] = session
             self._actions[session_id] = saved_actions
             self._suggestions[session_id] = saved_suggestions
             self._revisions[session_id] = revision + 1

@@ -9,7 +9,7 @@
 transcribe runs Whisper and diarization and needs no LLM; analyse translates per Speaker turn,
 extracts and runs the Domain stage. They are separate so Whisper and the LLM never hold the GPU at
 the same time (./norev.sh starts llama-server between them). The Domain is Corporate unless chosen;
-Others needs a confirmed prompt (#21). Needs NOREV_STORE_KEY_FILE: nothing is written in plaintext.
+Others needs a prompt the User confirmed (#21), which the CLI cannot show, so it refuses Others. Needs NOREV_STORE_KEY_FILE: nothing is written in plaintext.
 """
 import argparse
 import os
@@ -132,6 +132,8 @@ def main(argv: list[str]) -> int:
         if args.command == "analyse" and chosen and not args.regenerate:
             raise ValueError("--domain on analyse needs --regenerate")
         domain = select_domain(chosen) if args.command == "transcribe" or chosen else None
+        if domain == "others":  # the CLI has no way to show, edit and confirm the prompt (#21)
+            raise ValueError("Domain 'others' needs a confirmed prompt from the User; not available from the CLI")
         store = open_store(StoreSettings.from_environment())
     except (ValueError, StoreKeyError) as e:
         print(f"norev.session: {e}", file=sys.stderr)

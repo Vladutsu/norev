@@ -1,0 +1,5 @@
+{
+  "context": "Apel săptămânal cu constructorul despre renovarea bucătăriei. Vreau să știu ce comandă, ce plătesc și până când.",
+  "instructions_answer": {"instructions": "- This is a call between the User and a building contractor about a kitchen renovation.\n- Actions are orders of materials, payments and work dates someone agreed to.\n- Leave out prices only mentioned as estimates.\n- Suggest checking any payment without a due date."},
+  "domain_answer": {"proposed_actions": [{"id": "s1-1", "action_type": "action_item", "fields": {"deliverable": "invoice for the tiles"}}], "suggestions": []}
+}

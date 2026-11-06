@@ -43,6 +43,8 @@ Top level:
 |---|---|
 | `domain_stage` | the prompt template |
 | `domain_stage_schema` | the JSON schema the answer is constrained to |
+| `instructions` | `others` only (#21): the prompt that writes the instructions from the User's context; `{{context}}` is its only placeholder |
+| `instructions_schema` | `others` only: the JSON schema of that answer, `{"instructions": "<text>"}` |
 
 `[[roles]]`: one table per Role a Speaker can have, at least one.
 
@@ -104,6 +106,7 @@ Plain text. The core replaces these placeholders before calling the model:
 | `{{session_date}}` | the Session date, YYYY-MM-DD | optional |
 | `{{roles}}` | `name: description` of every Role | optional |
 | `{{action_types}}` | every Action Type with its description and fields (name, type, description) | optional |
+| `{{user_instructions}}` | `others` only (#21): the instructions the User confirmed, filled before the others; exactly once | required in `others` |
 
 Any other `{{...}}` is an error. Single braces are left as they are, so JSON examples need no escaping.
 
@@ -134,3 +137,19 @@ The model's output is constrained to this schema. It must be:
 - A generic Proposed Action left out of the answer does not fit the Domain and is dropped.
 
 The answer is untrusted: the core validates it again against `domain.toml` before showing it.
+
+## Others: the User's prompt (#21)
+
+`others` keeps its Action Type, fields, Workflow and schema fixed; only `{{user_instructions}}`
+comes from the User (`norev/usecases/others_prompt.py`):
+
+1. The User describes the conversation: the context, at most **2000 characters** (`MAX_CONTEXT`);
+   an empty or longer one is refused before any model call.
+2. The local model writes instructions from `prompts/instructions.md`, given only the context
+   (no audio, Contact or other Session). The answer must be non-empty, at most **4000 characters**
+   (`MAX_INSTRUCTIONS`) and contain no `{{` or `}}`; otherwise nothing changes and the User retries.
+3. The User sees the full prompt, edits the instructions (same rules) and confirms. The Session
+   keeps, encrypted, the context, the instructions and that exact prompt. If this template changes
+   later, the Session's prompt is refused until the User confirms again; it is never regenerated
+   silently. A new prompt for an analysed Session needs an explicit regeneration, which keeps decided
+   Proposed Actions.

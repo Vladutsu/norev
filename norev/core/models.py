@@ -270,6 +270,21 @@ class Suggestion:
         return f"Suggestion(text_len={len(self.text)})"
 
 
+@dataclass(frozen=True)
+class OthersPrompt:
+    """The Others Domain prompt the User confirmed (#21): their context, the instructions that fill
+    {{user_instructions}}, and `prompt`, the exact full prompt they saw. Kept with the Session as it
+    was confirmed, never regenerated silently."""
+
+    context: str
+    instructions: str
+    prompt: str
+
+    def __repr__(self) -> str:
+        return (f"OthersPrompt(context_len={len(self.context)}, instructions_len={len(self.instructions)}, "
+                f"prompt_len={len(self.prompt)})")
+
+
 @dataclass
 class Session:
     """One recorded conversation. Audio and Transcript are referenced by opaque ids, never paths."""
@@ -283,6 +298,8 @@ class Session:
     # extraction runs on (English, unless not translated), and source_transcript_ref the spoken one.
     transcript_ref: str | None = None
     source_transcript_ref: str | None = None
+    # Domain "others" only: the confirmed prompt; analysis is refused without it
+    others_prompt: OthersPrompt | None = None
 
 
 @dataclass(frozen=True)

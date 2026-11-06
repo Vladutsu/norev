@@ -26,6 +26,7 @@ from norev.core.models import (
     ActionsSnapshot,
     ActionStatus,
     AuditEvent,
+    OthersPrompt,
     ProposedAction,
     Segment,
     Session,
@@ -167,6 +168,8 @@ class EncryptedStore:
         if d is None:
             return None
         d["started_at"] = datetime.fromisoformat(d["started_at"])
+        if d.get("others_prompt"):
+            d["others_prompt"] = OthersPrompt(**d["others_prompt"])
         return Session(**d)
 
     def save_transcript(self, session_id: str, transcript: Transcript) -> str:
@@ -206,9 +209,9 @@ class EncryptedStore:
 
     def regenerate_actions(
         self, session_id: str, actions: list[ProposedAction], *, domain: str, expected_revision: int,
-        suggestions: list[Suggestion],
+        suggestions: list[Suggestion], others_prompt: OthersPrompt | None = None,
     ) -> int:
-        """Same compare-and-set as save_actions, plus the Domain, in one transaction."""
+        """Same compare-and-set as save_actions, plus the Domain and Others prompt, in one transaction."""
         actions_plaintext = _encode([_action_dict(a) for a in actions])  # TypeError before any write
         suggestions_plaintext = _encode([dataclasses.asdict(s) for s in suggestions])
         with self._transaction():
@@ -219,6 +222,8 @@ class EncryptedStore:
             check_decisions_kept(self.load_actions(session_id), [_action(d) for d in json.loads(actions_plaintext)])
             session = self._get("session", session_id)
             session["domain"] = domain
+            if others_prompt is not None:
+                session["others_prompt"] = dataclasses.asdict(others_prompt)
             self._write("session", session_id, _encode(session))
             self._write("actions", session_id, actions_plaintext)
             self._write("suggestions", session_id, suggestions_plaintext)
