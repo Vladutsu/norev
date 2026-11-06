@@ -16,7 +16,7 @@ are loaded one at a time, so each stage only needs the GPU memory of its own mod
 
 **GPU memory** (measured, llama-server with Qwen3-8B Q4_K_M and a q8_0 KV cache): 5.9 GB with the
 default 4 parallel slots, 5.0 GB with `LLM_PARALLEL=1`. The defaults are tested on an 8 GB GPU; on the
-6 GB target in `agent.md` they are at the limit (the desktop also uses some VRAM), so use
+6 GB target in `AGENTS.md` they are at the limit (the desktop also uses some VRAM), so use
 `LLM_PARALLEL=1` there. Whisper and the LLM never run at the same time.
 
 Reliability and speed:
