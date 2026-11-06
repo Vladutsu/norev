@@ -27,6 +27,7 @@ from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction
 from norev.core.ports import Clock, PayloadBuilder, SessionStore
 from norev.processor.payloads import LocalDocumentPayloadBuilder
 from norev.processor.workflow import WorkflowExecutor
+from norev.ui._live import LiveFeedback, monitor
 from norev.ui.backend import MODES, ROOT, DemoBackend, ModeUnavailable, PromptNotConfirmed, prompt_digest
 from norev.usecases import others_prompt
 from norev.usecases.session_flow import run_session
@@ -67,7 +68,7 @@ class SessionBackend(DemoBackend):
                  pick_file: Callable[[], str | None] = lambda: None,
                  workers: int = 1, make_extractor=LegacyActionExtractor, clock: Clock | None = None, domains_dir: Path = ROOT / "domains",
                  monotonic=time.monotonic, run_in_background: Callable[[Callable[[], None]], None] = _thread,
-                 builder: PayloadBuilder | None = None, google=None) -> None:
+                 builder: PayloadBuilder | None = None, google=None, live_feedback=LiveFeedback) -> None:
         super().__init__(store, approved_by=approved_by, clock=clock, domains_dir=domains_dir, monotonic=monotonic)
         self.processor = processor
         self.builder = builder or LocalDocumentPayloadBuilder(export_dir)
@@ -77,6 +78,7 @@ class SessionBackend(DemoBackend):
         self.pick_file = pick_file
         self.workers = workers
         self.make_extractor = make_extractor  # (llm, workers=) -> ActionExtractor; tests give a fake
+        self.live_feedback = live_feedback  # (language) -> LiveFeedback (#47); tests give a fake
         self.run_in_background = run_in_background
         self._lock = threading.Lock()
         self._progress: dict[str, dict[str, Any]] = {}
@@ -132,10 +134,11 @@ class SessionBackend(DemoBackend):
         except Exception as e:  # a wrong or missing device; its message names the device only, but stays in the log
             log.error("microphone: %s", e)
             raise MicrophoneUnavailable("microphone") from None
-        recorder = Recorder(buffer, source=_pausable(source, paused))
+        live = self.live_feedback(str(language))
+        recorder = Recorder(buffer, source=monitor(_pausable(source, paused), live))
         state = {"recorder": recorder, "buffer": buffer, "paused": paused, "language": str(language),
                  "started": self.monotonic(), "paused_at": None, "paused_total": 0.0, "error": None,
-                 "session": session}
+                 "session": session, "live": live}
         thread = threading.Thread(target=self._record, args=(state,), daemon=True)
         state["thread"] = thread
         with self._lock:
@@ -154,8 +157,9 @@ class SessionBackend(DemoBackend):
 
     def live(self, session_id: str) -> dict[str, Any]:
         state = self._recording(session_id)
-        # shortcut: no Live Transcript yet (#47); the Recording screen shows the timer only
-        return {"elapsed": int(self._elapsed(state)), "paused": state["paused_at"] is not None, "segments": []}
+        # Live Transcript: feedback only, kept in memory; the Transcript comes from the whole audio after Stop
+        return {"elapsed": int(self._elapsed(state)), "paused": state["paused_at"] is not None,
+                "segments": state["live"].read()}
 
     def pause(self, session_id: str) -> dict[str, Any]:
         state = self._recording(session_id)
@@ -177,6 +181,7 @@ class SessionBackend(DemoBackend):
         if state is not None:
             state["recorder"].stop()  # while paused the source yields b"", so the writer still sees Stop
             state["thread"].join(timeout=10)
+            state["live"].close()
             audio = state["buffer"].getvalue()
             if state["error"] or len(audio) <= 44:  # 44 bytes: a WAV header with no audio
                 self._progress[session_id] = {"stage": "recording", "failed": "no_audio", "untranslated": 0}

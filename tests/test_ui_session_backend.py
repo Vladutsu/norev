@@ -85,7 +85,7 @@ class Case(unittest.TestCase):
         self.addCleanup(store.close)
         return store
 
-    def backend(self):
+    def backend(self, **kwargs):
         processor = CentralProcessor(self.llm, self.store, identity=LocalUser(USER), clock=FixedClock(NOW),
                                      connectors=[LocalDocumentConnector(self.export_dir)],
                                      transcriber=self.audio, diarizer=self.audio)
@@ -101,7 +101,7 @@ class Case(unittest.TestCase):
         return SessionBackend(self.store, approved_by=USER, processor=processor, export_dir=self.export_dir,
                               llm_session=llm_session, record_source=lambda: self.mic(), pick_file=lambda: self.picked,
                               make_extractor=lambda llm, workers: FakeActionExtractor(EXTRACTED),
-                              clock=FixedClock(NOW), run_in_background=lambda work: work())
+                              clock=FixedClock(NOW), run_in_background=lambda work: work(), **kwargs)
 
     def ok(self, result):
         self.assertTrue(result["ok"], result)
@@ -179,6 +179,40 @@ class RecordAndAnalyseTest(Case):
         self.assertTrue(audio.startswith(b"RIFF"))
         files = [p.name for p in self.root.rglob("*") if p.is_file()]
         self.assertEqual(sorted(f for f in files if not f.startswith("norev.db")), ["key"])
+
+    def test_live_transcript_is_feedback_only(self):
+        lives = []
+
+        class FakeLive:
+            def __init__(self, language):
+                self.language, self.fed, self.closed = language, b"", False
+                lives.append(self)
+
+            def feed(self, block):
+                self.fed += block
+
+            def read(self):
+                return [{"speaker_id": None, "text": "doar feedback live"}]
+
+            def close(self):
+                self.closed = True
+
+        transcribe = self.audio.transcribe
+        def final_transcript(audio_ref, language=None):
+            self.assertTrue(lives[0].closed)  # the live model is gone before the final Transcript starts
+            return transcribe(audio_ref, language)
+        self.audio.transcribe = final_transcript
+        self.bridge = Bridge(self.backend(live_feedback=FakeLive))
+        session_id = self.ok(self.bridge.start("corporate", "ro", ""))["session_id"]
+        self.assertEqual(self.ok(self.bridge.live(session_id))["segments"],
+                         [{"speaker_id": None, "text": "doar feedback live"}])
+        self.ok(self.bridge.stop(session_id))
+
+        live = lives[0]
+        self.assertEqual((live.language, live.fed, live.closed), ("ro", b"".join(PCM), True))
+        transcript = self.store.load_transcript(self.store.get_session(session_id).transcript_ref)
+        self.assertNotIn("doar feedback live", json.dumps([s.text for s in transcript.segments], ensure_ascii=False))
+        self.assertNotIn("doar feedback live", json.dumps(self.ok(self.bridge.review(session_id)), ensure_ascii=False))
 
     def test_pause_drops_audio_and_stop_still_ends_the_recording(self):
         session_id = self.ok(self.bridge.start("corporate", "ro", ""))["session_id"]
