@@ -1,10 +1,10 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 6.7,
+ "elapsed_seconds": 6.6,
  "calls": [
   {
    "stage": "domain",
-   "prompt": "You are a senior Project Manager with a rigorous, execution-focused mindset. Below are the Transcript of a work meeting and the generic Proposed Actions already extracted from it. Your job is to keep the ones that are real work items for the corporate Domain and to add Suggestions for the User.\n\nSession date: 2026-11-06\n\nSpeaker Roles:\norganizer: The person who records the Session (the User).\nparticipant: A colleague, client or partner who takes part in the meeting.\n\nAction Types you may use, with their fields:\n- work_item: A piece of work someone committed to or was asked to do and accepted.\n  - deliverable (string, optional): The concrete output of the work (a document, a report, a fix, an email), only if it was said.\n- calendar_event: A meeting or call that was agreed on, with a day and a clock time, to put in the User's calendar.\n  - event_date (date, required): Day of the meeting, only if it was said or follows from a relative date.\n  - start_time (time, required): Clock time the meeting starts, only if it was said.\n  - end_time (time, required): Clock time the meeting ends, only if it was said or follows from a duration that was said.\n  - location (string, optional): Where the meeting takes place (a room, an address, a video call), only if it was said.\n  - attendees (string, optional): Always null: the User adds attendee emails, separated by commas.\n\n## Proposed Actions\n\nA work item is any commitment or request to do something that was accepted: \"X, can you ...?\" followed by agreement, \"please send ...\", \"I'll do it\", \"I'll ask IT today\". Small items count too: giving someone access, sending a draft, checking figures, writing rules, calling someone, submitting something for approval.\n\nA calendar event is a meeting or call that was agreed on for a later moment: \"let's meet Tuesday at 10\", \"we'll call the client on the 12th at 3 pm for half an hour\".\n\nFor each generic Proposed Action:\n- If it is a calendar event, output it with its `id` unchanged, `action_type` \"calendar_event\" and its `fields`.\n- If it is a work item, output it with its `id` unchanged, `action_type` \"work_item\" and its `fields`.\n- Leave it out if it was cancelled or dropped later in the Transcript (\"we won't do X anymore\"), if it is an idea nobody committed to (\"maybe we could ...\"), or if it is only a decision.\n- If two generic Proposed Actions describe the same work, output it once, with the `id` of the first.\n\nYou do not change the title, description, owner or due date; you only fill the Domain fields.\n- `deliverable`: the concrete output, as it was said (\"the Q3 report\", \"the login fix\"). If no output was named, null.\n- `event_date`: YYYY-MM-DD. Resolve relative dates (\"tomorrow\", \"next Tuesday\") against the Session date; \"next week\" with no day is null.\n- `start_time`, `end_time`: HH:MM, 24-hour, only for a clock time that was said (\"at 10\", \"until half past eleven\"). `end_time` may follow from a duration that was said (\"at 10 for an hour\" is 11:00). \"In the morning\" or no time at all is null.\n- `location`: the room, address or video call, as it was said; otherwise null.\n- `attendees`: always null. A Speaker label (S1, S2) or a name is not an email; the User adds attendees.\n- A meeting moved to another moment (\"let's move Thursday's meeting to Friday at 9\") is a new calendar event at the new moment; add a Suggestion that the old event must be removed by the User.\n- A meeting that was cancelled is not a calendar event; add a Suggestion that the User may want to remove it from the calendar.\n- Never guess, estimate or complete a value: if a value was not said, set the field to null. The User fills it before approving.\n\n## Suggestions\n\nAdd a Suggestion only for something the User may want to check, with the Transcript excerpt it is based on, for example:\n- the owner looks wrong: the work was reassigned (\"Ionuț was supposed to, but Elena takes it over\") and the Proposed Action still names the first person, or it names someone who was only mentioned;\n- a work item has no deadline, or its deadline does not match what was said;\n- a calendar event has no day or no clock time (\"we'll see each other next week\");\n- something agreed in the Transcript that has no Proposed Action.\n\nIf there is nothing to point out, return an empty list.\n\n## Input\n\nTranscript:\n[S1] Today's meeting is about the incident on Tuesday, when the application was unavailable for 2 hours.\n[S2] The cause was an expired SSL certificate on the production server.\n[S1] Ana, who is responsible for the automatic renewal of certificates?\n[S2] I take care of it. I configure the automatic renewal until Thursday.\n[S3] I add an alert in monitoring 30 days before expiration.\n[S1] George, until when can you make the alert?\n[S3] Until the end of next week.\n[S1] We need to inform the affected customers, there were 140 accounts.\n[S2] Someone from support should send the email, not us.\n[S1] Okay, I will ask the support team to send the email today.\n[S3] I propose we also do a monthly recovery exercise.\n[S1] No, for now we don't do monthly exercises, we'll return to the topic in January. I will write the incident report until Monday.\n[S2] Thank you.\n\nGeneric Proposed Actions (JSON):\n[{\"id\": \"pa-1\", \"title\": \"Configure automatic renewal\", \"description\": \"Set up automatic renewal of SSL certificates by Thursday\", \"owner\": \"Ana\", \"due_date\": \"2026-11-12\", \"transcript_excerpt\": \"Ana, who is responsible for the automatic renewal of certificates? I take care of it. I configure the automatic renewal until Thursday.\"}, {\"id\": \"pa-2\", \"title\": \"Add alert for certificate expiration\", \"description\": \"Add an alert in monitoring 30 days before SSL certificate expiration\", \"owner\": null, \"due_date\": \"2026-11-06\", \"transcript_excerpt\": \"I add an alert in monitoring 30 days before expiration.\"}, {\"id\": \"pa-3\", \"title\": \"Send customer notification\", \"description\": \"Send email to affected customers about the incident\", \"owner\": \"Support team\", \"due_date\": \"2026-11-06\", \"transcript_excerpt\": \"Someone from support should send the email, not us. Okay, I will ask the support team to send the email today.\"}, {\"id\": \"pa-4\", \"title\": \"Write incident report\", \"description\": \"Prepare the incident report by Monday\", \"owner\": null, \"due_date\": \"2026-11-09\", \"transcript_excerpt\": \"I will write the incident report until Monday.\"}]\n\nAnswer only with JSON matching the given schema.\n",
+   "prompt": "You are a senior Project Manager with a rigorous, execution-focused mindset. Below are the Transcript of a work meeting and the generic Proposed Actions already extracted from it. Your job is to keep the ones that are real work items for the corporate Domain and to add Suggestions for the User.\n\nSession date: 2026-11-06\n\nSpeaker Roles:\norganizer: The person who records the Session (the User).\nparticipant: A colleague, client or partner who takes part in the meeting.\n\nAction Types you may use, with their fields:\n- work_item: A piece of work someone committed to or was asked to do and accepted.\n  - deliverable (string, optional): The concrete output of the work (a document, a report, a fix, an email), only if it was said.\n- calendar_event: A meeting or call that was agreed on, with a day and a clock time, to put in the User's calendar.\n  - event_date (date, required): Day of the meeting, only if it was said or follows from a relative date.\n  - start_time (time, required): Clock time the meeting starts, only if it was said.\n  - end_time (time, required): Clock time the meeting ends, only if it was said or follows from a duration that was said.\n  - location (string, optional): Where the meeting takes place (a room, an address, a video call), only if it was said.\n  - attendees (string, optional): Always null: the User adds attendee emails, separated by commas.\n- follow_up_email: An email someone agreed to send after the meeting (a recap, an answer, figures), drafted for the User to send.\n  - recipients (string, required): Always null: the User adds the recipients' emails, separated by commas.\n  - subject (string, required): A short subject naming what the email is about, from what was said.\n  - body (string, required): A short draft of the email, only with what was said or agreed in the meeting.\n\n## Proposed Actions\n\nA work item is any commitment or request to do something that was accepted: \"X, can you ...?\" followed by agreement, \"please send ...\", \"I'll do it\", \"I'll ask IT today\". Small items count too: giving someone access, sending a draft, checking figures, writing rules, calling someone, submitting something for approval.\n\nA calendar event is a meeting or call that was agreed on for a later moment: \"let's meet Tuesday at 10\", \"we'll call the client on the 12th at 3 pm for half an hour\".\n\nA follow-up email is an email someone agreed to send after the meeting: \"I'll email you the figures\", \"please send the client a recap\", \"I'll write to Ana with the answer\". Preparing the thing that is sent (\"I'll prepare the report\") is a work item, not an email.\n\nFor each generic Proposed Action:\n- If it is a calendar event, output it with its `id` unchanged, `action_type` \"calendar_event\" and its `fields`.\n- If it is a follow-up email, output it with its `id` unchanged, `action_type` \"follow_up_email\" and its `fields`.\n- If it is a work item, output it with its `id` unchanged, `action_type` \"work_item\" and its `fields`.\n- Leave it out if it was cancelled or dropped later in the Transcript (\"we won't do X anymore\"), if it is an idea nobody committed to (\"maybe we could ...\"), or if it is only a decision.\n- If two generic Proposed Actions describe the same work, output it once, with the `id` of the first.\n\nYou do not change the title, description, owner or due date; you only fill the Domain fields.\n- `deliverable`: the concrete output, as it was said (\"the Q3 report\", \"the login fix\"). If no output was named, null.\n- `event_date`: YYYY-MM-DD. Resolve relative dates (\"tomorrow\", \"next Tuesday\") against the Session date; \"next week\" with no day is null.\n- `start_time`, `end_time`: HH:MM, 24-hour, only for a clock time that was said (\"at 10\", \"until half past eleven\"). `end_time` may follow from a duration that was said (\"at 10 for an hour\" is 11:00). \"In the morning\" or no time at all is null.\n- `location`: the room, address or video call, as it was said; otherwise null.\n- `attendees`: always null. A Speaker label (S1, S2) or a name is not an email; the User adds attendees.\n- `recipients`: always null, for the same reason; the User adds the recipients' emails.\n- `subject`: a short subject in the language of the meeting, naming what the email is about (\"Cifrele pe Q4\"). If it is not clear what the email is about, null.\n- `body`: a short, plain draft of the email in the language of the meeting, with only what was said or agreed: what is sent, what was decided, any date that was said. No greeting names, signature, promises or figures that were not said. If nothing concrete was said about its content, null.\n- A meeting moved to another moment (\"let's move Thursday's meeting to Friday at 9\") is a new calendar event at the new moment; add a Suggestion that the old event must be removed by the User.\n- A meeting that was cancelled is not a calendar event; add a Suggestion that the User may want to remove it from the calendar.\n- Never guess, estimate or complete a value: if a value was not said, set the field to null. The User fills it before approving.\n\n## Suggestions\n\nAdd a Suggestion only for something the User may want to check, with the Transcript excerpt it is based on, for example:\n- the owner looks wrong: the work was reassigned (\"Ionuț was supposed to, but Elena takes it over\") and the Proposed Action still names the first person, or it names someone who was only mentioned;\n- a work item has no deadline, or its deadline does not match what was said;\n- a calendar event has no day or no clock time (\"we'll see each other next week\");\n- something agreed in the Transcript that has no Proposed Action.\n\nIf there is nothing to point out, return an empty list.\n\n## Input\n\nTranscript:\n[S1] Today's meeting is about the incident on Tuesday, when the application was unavailable for 2 hours.\n[S2] The cause was an expired SSL certificate on the production server.\n[S1] Ana, who is responsible for automatically renewing the certificates?\n[S2] I take care of it. I set up automatic renewal by Thursday.\n[S3] I add an alert in monitoring 30 days before expiration.\n[S1] George, until when can you make the alert?\n[S3] Until the end of next week.\n[S1] We need to inform the affected customers, there were 140 accounts.\n[S2] Someone from support should send the email, not us.\n[S1] Okay, I will ask the support team to send the email today.\n[S3] I propose we also do a monthly recovery exercise.\n[S1] No, for now we don't do monthly exercises, we'll return to the topic in January. I will write the incident report by Monday.\n[S2] Thank you.\n\nGeneric Proposed Actions (JSON):\n[{\"id\": \"pa-1\", \"title\": \"Set up automatic SSL certificate renewal\", \"description\": \"Automatically renew SSL certificates by Thursday\", \"owner\": \"Ana\", \"due_date\": \"2026-11-12\", \"transcript_excerpt\": \"Ana, who is responsible for automatically renewing the certificates? I take care of it. I set up automatic renewal by Thursday.\"}, {\"id\": \"pa-2\", \"title\": \"Add SSL certificate expiration alert\", \"description\": \"Add an alert in monitoring 30 days before expiration\", \"owner\": null, \"due_date\": \"2026-11-10\", \"transcript_excerpt\": \"I add an alert in monitoring 30 days before expiration.\"}, {\"id\": \"pa-3\", \"title\": \"Send customer notification email\", \"description\": \"Send email to affected customers about the incident\", \"owner\": \"Support team\", \"due_date\": \"2026-11-06\", \"transcript_excerpt\": \"Someone from support should send the email, not us. Okay, I will ask the support team to send the email today.\"}, {\"id\": \"pa-4\", \"title\": \"Write incident report\", \"description\": \"Write the incident report by Monday\", \"owner\": null, \"due_date\": \"2026-11-09\", \"transcript_excerpt\": \"I will write the incident report by Monday.\"}]\n\nAnswer only with JSON matching the given schema.\n",
    "json_schema": {
     "type": "object",
     "properties": {
@@ -115,6 +115,49 @@
           "fields"
          ],
          "additionalProperties": false
+        },
+        {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "action_type": {
+           "const": "follow_up_email"
+          },
+          "fields": {
+           "type": "object",
+           "properties": {
+            "recipients": {
+             "type": "null"
+            },
+            "subject": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "body": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "recipients",
+            "subject",
+            "body"
+           ],
+           "additionalProperties": false
+          }
+         },
+         "required": [
+          "id",
+          "action_type",
+          "fields"
+         ],
+         "additionalProperties": false
         }
        ]
       }
@@ -145,33 +188,33 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"proposed_actions\": [\n    {\n      \"id\": \"pa-1\",\n      \"action_type\": \"work_item\",\n      \"fields\": {\n        \"deliverable\": \"SSL certificate automatic renewal configuration\"\n      }\n    },\n    {\n      \"id\": \"pa-2\",\n      \"action_type\": \"work_item\",\n      \"fields\": {\n        \"deliverable\": \"Alert in monitoring system 30 days before SSL certificate expiration\"\n      }\n    },\n    {\n      \"id\": \"pa-3\",\n      \"action_type\": \"work_item\",\n      \"fields\": {\n        \"deliverable\": \"Email to affected customers about the incident\"\n      }\n    },\n    {\n      \"id\": \"pa-4\",\n      \"action_type\": \"work_item\",\n      \"fields\": {\n        \"deliverable\": \"Incident report\"\n      }\n    }\n  ],\n  \"suggestions\": [\n    {\n      \"text\": \"The owner for 'Add alert for certificate expiration' is not specified. Please verify if the owner should be S3 or another team member.\",\n      \"transcript_excerpt\": \"I add an alert in monitoring 30 days before expiration.\"\n    },\n    {\n      \"text\": \"The owner for 'Write incident report' is not specified. Please verify if the owner should be S1 or another team member.\",\n      \"transcript_excerpt\": \"I will write the incident report until Monday.\"\n    }\n  ]\n}"
+   "response": "{\n  \"proposed_actions\": [\n    {\n      \"id\": \"pa-1\",\n      \"action_type\": \"work_item\",\n      \"fields\": {\n        \"deliverable\": \"Automatic SSL certificate renewal setup\"\n      }\n    },\n    {\n      \"id\": \"pa-2\",\n      \"action_type\": \"work_item\",\n      \"fields\": {\n        \"deliverable\": \"SSL certificate expiration alert in monitoring\"\n      }\n    },\n    {\n      \"id\": \"pa-3\",\n      \"action_type\": \"work_item\",\n      \"fields\": {\n        \"deliverable\": \"Customer notification email\"\n      }\n    },\n    {\n      \"id\": \"pa-4\",\n      \"action_type\": \"work_item\",\n      \"fields\": {\n        \"deliverable\": \"Incident report\"\n      }\n    }\n  ],\n  \"suggestions\": [\n    {\n      \"text\": \"The owner for 'Add SSL certificate expiration alert' is not specified. Please verify if the owner should be S3 or another team member.\",\n      \"transcript_excerpt\": \"I add an alert in monitoring 30 days before expiration.\"\n    },\n    {\n      \"text\": \"The owner for 'Write incident report' is not specified. Please verify if the owner should be S1 or another team member.\",\n      \"transcript_excerpt\": \"I will write the incident report by Monday.\"\n    }\n  ]\n}"
   }
  ],
  "result": {
   "actions": [
    {
     "id": "pa-1",
-    "title": "Configure automatic renewal",
+    "title": "Set up automatic SSL certificate renewal",
     "action_type": "work_item",
     "fields": {
-     "deliverable": "SSL certificate automatic renewal configuration"
+     "deliverable": "Automatic SSL certificate renewal setup"
     }
    },
    {
     "id": "pa-2",
-    "title": "Add alert for certificate expiration",
+    "title": "Add SSL certificate expiration alert",
     "action_type": "work_item",
     "fields": {
-     "deliverable": "Alert in monitoring system 30 days before SSL certificate expiration"
+     "deliverable": "SSL certificate expiration alert in monitoring"
     }
    },
    {
     "id": "pa-3",
-    "title": "Send customer notification",
+    "title": "Send customer notification email",
     "action_type": "work_item",
     "fields": {
-     "deliverable": "Email to affected customers about the incident"
+     "deliverable": "Customer notification email"
     }
    },
    {
@@ -184,7 +227,7 @@
    }
   ],
   "suggestions": [
-   "The owner for 'Add alert for certificate expiration' is not specified. Please verify if the owner should be S3 or another team member.",
+   "The owner for 'Add SSL certificate expiration alert' is not specified. Please verify if the owner should be S3 or another team member.",
    "The owner for 'Write incident report' is not specified. Please verify if the owner should be S1 or another team member."
   ]
  }

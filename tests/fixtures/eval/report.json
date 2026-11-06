@@ -29,13 +29,13 @@
       "others_2"
      ],
      "expected": 27,
-     "produced": 28,
-     "found": 25,
-     "omission_rate": 0.074,
-     "invented_rate": 0.036,
-     "owner_wrong_rate": 0.074,
-     "owner_missing": 3,
-     "date_wrong_rate": 0.074,
+     "produced": 26,
+     "found": 24,
+     "omission_rate": 0.111,
+     "invented_rate": 0.0,
+     "owner_wrong_rate": 0.077,
+     "owner_missing": 2,
+     "date_wrong_rate": 0.038,
      "date_missing": 0,
      "cancelled_listed": 0,
      "numbers": 24,
@@ -70,17 +70,8 @@
     },
     "domain_stage": {
      "checked": 5,
-     "right": 4,
-     "wrong": {
-      "corporate_4": {
-       "supplier-call": [
-        "action_type work_item",
-        "event_date None",
-        "start_time None",
-        "end_time None"
-       ]
-      }
-     },
+     "right": 5,
+     "wrong": {},
      "cancelled_as_event": 0
     }
    },
@@ -339,35 +330,21 @@
     },
     "corporate_1": {
      "expected": 5,
-     "produced": 6,
-     "omitted": [],
-     "invented": [
-      "Send dashboard design for review"
-     ],
-     "cancelled_listed": [],
-     "owner_wrong": [],
-     "owner_missing": [
+     "produced": 4,
+     "omitted": [
       "payment-tests"
      ],
-     "date_wrong": [
-      "payment-design"
-     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [],
+     "owner_missing": [],
+     "date_wrong": [],
      "date_missing": [],
-     "found": 5,
-     "matched": 5,
+     "found": 4,
+     "matched": 4,
      "numbers": 5,
      "numbers_changed": [],
      "details": {
-      "payment-tests": {
-       "index": 3,
-       "owner": null,
-       "due": true,
-       "got": {
-        "title": "Take over automated tests for payments",
-        "owner": null,
-        "due_date": "2026-11-18"
-       }
-      },
       "db-migration": {
        "index": 0,
        "owner": true,
@@ -381,15 +358,15 @@
       "payment-design": {
        "index": 1,
        "owner": true,
-       "due": false,
+       "due": true,
        "got": {
-        "title": "Design dashboard screen",
+        "title": "Send dashboard design for review",
         "owner": "Maria",
-        "due_date": "2026-11-08"
+        "due_date": "2026-11-13"
        }
       },
       "api-docs": {
-       "index": 4,
+       "index": 2,
        "owner": true,
        "due": true,
        "got": {
@@ -399,7 +376,7 @@
        }
       },
       "progress-report": {
-       "index": 5,
+       "index": 3,
        "owner": true,
        "due": true,
        "got": {
@@ -517,7 +494,7 @@
        "owner": true,
        "due": true,
        "got": {
-        "title": "Configure automatic renewal",
+        "title": "Set up automatic SSL certificate renewal",
         "owner": "Ana",
         "due_date": "2026-11-12"
        }
@@ -527,9 +504,9 @@
        "owner": null,
        "due": false,
        "got": {
-        "title": "Add alert for certificate expiration",
+        "title": "Add SSL certificate expiration alert",
         "owner": null,
-        "due_date": "2026-11-06"
+        "due_date": "2026-11-10"
        }
       },
       "support-email": {
@@ -537,7 +514,7 @@
        "owner": true,
        "due": true,
        "got": {
-        "title": "Send customer notification",
+        "title": "Send customer notification email",
         "owner": "Support team",
         "due_date": "2026-11-06"
        }
@@ -596,7 +573,7 @@
        }
       },
       "retrospective": {
-       "index": 3,
+       "index": 4,
        "owner": true,
        "due": true,
        "got": {
@@ -606,7 +583,7 @@
        }
       },
       "training": {
-       "index": 4,
+       "index": 3,
        "owner": true,
        "due": true,
        "got": {
@@ -628,14 +605,7 @@
      },
      "domain": {
       "checked": 5,
-      "wrong": {
-       "supplier-call": [
-        "action_type work_item",
-        "event_date None",
-        "start_time None",
-        "end_time None"
-       ]
-      },
+      "wrong": {},
       "cancelled_as_event": []
      },
      "known_cases": [
@@ -649,7 +619,7 @@
        "id": "calendar-relative-date",
        "what": "'Tomorrow at three' becomes 2026-11-07 15:00-15:30",
        "follow_up": "#67",
-       "solved": false
+       "solved": true
       },
       {
        "id": "calendar-rescheduled",
@@ -800,7 +770,7 @@
      "invented_rate": 0.0,
      "owner_wrong_rate": 0.222,
      "owner_missing": 1,
-     "date_wrong_rate": 0.074,
+     "date_wrong_rate": 0.111,
      "date_missing": 0,
      "cancelled_listed": 0,
      "numbers": 24,
@@ -809,7 +779,7 @@
       "omission_rate": true,
       "invented_rate": true,
       "owner_wrong_rate": false,
-      "date_wrong_rate": true,
+      "date_wrong_rate": false,
       "cancelled_listed": true,
       "numbers_changed": true
      }
@@ -1132,7 +1102,7 @@
        "owner": true,
        "due": true,
        "got": {
-        "title": "Finish database migration",
+        "title": "Complete database migration",
         "owner": "Andrei",
         "due_date": "2026-11-11"
        }
@@ -1258,6 +1228,7 @@
      ],
      "owner_missing": [],
      "date_wrong": [
+      "auto-renewal",
       "monitoring-alert"
      ],
      "date_missing": [],
@@ -1269,11 +1240,11 @@
       "auto-renewal": {
        "index": 0,
        "owner": true,
-       "due": true,
+       "due": false,
        "got": {
         "title": "Renew SSL certificate",
         "owner": "Ana",
-        "due_date": "2026-11-12"
+        "due_date": "2026-11-10"
        }
       },
       "monitoring-alert": {
@@ -1283,7 +1254,7 @@
        "got": {
         "title": "Add SSL certificate alert",
         "owner": "S3",
-        "due_date": "2026-11-26"
+        "due_date": "2026-11-10"
        }
       },
       "support-email": {
@@ -1292,7 +1263,7 @@
        "due": true,
        "got": {
         "title": "Send customer notification",
-        "owner": "support team",
+        "owner": "Support team",
         "due_date": "2026-11-06"
        }
       },
