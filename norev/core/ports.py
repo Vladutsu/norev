@@ -78,7 +78,7 @@ class Connector(Protocol):
 class SessionStore(Protocol):
     def save_session(self, session: Session) -> None:
         """Changes invalidate the review revision; after review starts, input changes
-        are refused until an explicit atomic regeneration contract is implemented.
+        are refused: a Domain change goes through regenerate_actions.
         """
         ...
 
@@ -105,6 +105,18 @@ class SessionStore(Protocol):
         ...
 
     def load_actions(self, session_id: str) -> list[ProposedAction]: ...
+
+    def regenerate_actions(
+        self, session_id: str, actions: list[ProposedAction], *, domain: str, expected_revision: int,
+        suggestions: list[Suggestion],
+    ) -> int:
+        """The User's explicit regeneration (#19): atomically set the Session's Domain and replace its
+        actions and Suggestions, with the same compare-and-set as save_actions.
+
+        Every stored action that is no longer Proposed must be in `actions` unchanged
+        (check_decisions_kept), so a decision is never altered or dropped. Any error: nothing saved.
+        """
+        ...
 
     def save_suggestions(
         self, session_id: str, suggestions: list[Suggestion], *, expected_revision: int,

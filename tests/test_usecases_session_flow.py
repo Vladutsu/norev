@@ -24,7 +24,10 @@ MEDICAL = load_domain(DOMAINS / "medical")
 OTHERS = Domain(
     name="others", label="Others", model="others.gguf", context=4096,
     roles=(Role("user", "The User."),),
-    action_types=(ActionType("follow_up", (DomainField("note", "string", False),), Workflow((WorkflowStep("save_result"),))),),
+    action_types=(ActionType("follow_up", (DomainField("note", "string", False),), Workflow((
+        WorkflowStep("save_document", connector="local_document", sends=("title", "description", "note")),
+        WorkflowStep("save_result"),
+    ))),),
     prompt_template="Transcript:\n{{transcript}}\nActions:\n{{proposed_actions}}",
     answer_schema={"type": "object"},
 )
@@ -184,6 +187,56 @@ class RunSessionTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             flow.run()
         self.assertEqual([a.status for a in flow.store.load_actions("s1")], [ActionStatus.REJECTED])
+
+
+class RegenerationTest(unittest.TestCase):
+    def _decide(self, flow: Flow, decide) -> None:
+        snapshot = flow.store.load_actions_snapshot("s1")
+        action = snapshot.actions[0]
+        decide(action)
+        flow.store.save_actions("s1", [action, *snapshot.actions[1:]], expected_revision=snapshot.revision)
+
+    def _regenerate(self, flow: Flow, domain: Domain):
+        return run_session("s1", store=flow.store, translator=TurnTranslator(flow.llm), extractor=flow.extractor,
+                           domain=domain, llm=flow.llm, regenerate=True)
+
+    def _answer_for_next_ids(self, flow: Flow, name: str) -> str:
+        revision = flow.store.load_actions_snapshot("s1").revision
+        return json.dumps(ANSWERS[name]).replace('"s1-1"', f'"s1-r{revision}-1"')
+
+    def test_regeneration_keeps_the_decided_action_and_replaces_the_proposed_ones(self):
+        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
+        flow.run()
+        self._decide(flow, lambda a: a.reject())
+        flow.llm = FakeLlmClient([self._answer_for_next_ids(flow, "corporate")])  # no translation: reused
+
+        result = self._regenerate(flow, CORPORATE)
+
+        new_id = f"s1-r{flow.store.load_actions_snapshot('s1').revision - 1}-1"
+        self.assertEqual([a.id for a in result.actions], [new_id])
+        self.assertEqual([(a.id, a.status) for a in flow.store.load_actions("s1")],
+                         [("s1-1", ActionStatus.REJECTED), (new_id, ActionStatus.PROPOSED)])
+
+    def test_regeneration_can_change_the_domain(self):
+        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
+        flow.run()
+        self._decide(flow, lambda a: a.reject())
+        flow.llm = FakeLlmClient([self._answer_for_next_ids(flow, "medical")])
+
+        result = self._regenerate(flow, MEDICAL)
+
+        self.assertEqual(flow.store.get_session("s1").domain, "medical")
+        self.assertEqual([a.action_type for a in result.actions], ["schedule_visit"])
+        self.assertEqual(flow.store.load_actions("s1")[0].action_type, "work_item")  # the decision, unchanged
+
+    def test_domain_change_waits_for_approved_actions(self):
+        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"]])
+        flow.run()
+        self._decide(flow, lambda a: a.approve({"steps": []}))
+        with self.assertRaisesRegex(ValueError, "before changing the Domain"):
+            self._regenerate(flow, MEDICAL)
+        self.assertEqual(flow.store.get_session("s1").domain, "corporate")
+        self.assertEqual(len(flow.extractor.calls), 1)  # refused before any model call
 
 
 class EncryptedStoreFlowTest(unittest.TestCase):

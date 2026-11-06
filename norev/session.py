@@ -3,6 +3,7 @@
   python -m norev.session transcribe <audio_or_video> [--domain corporate|medical] [--language ro]
                                      [--date YYYY-MM-DD] [--no-speakers]     -> prints the Session id
   python -m norev.session analyse <session_id> [--no-translate]             (needs llama-server)
+  python -m norev.session analyse <session_id> --regenerate [--domain medical]  analyse again, keep decisions
   python -m norev.session show <session_id>
 
 transcribe runs Whisper and diarization and needs no LLM; analyse translates per Speaker turn,
@@ -63,7 +64,7 @@ def transcribe(store, audio: str, domain: str, language: str | None, on: date | 
     return session_id
 
 
-def analyse(store, session_id: str, translate: bool):
+def analyse(store, session_id: str, translate: bool, regenerate: bool = False, domain: str | None = None):
     session = store.get_session(session_id)
     if session is None:
         raise LookupError(f"no Session {session_id!r}")
@@ -72,9 +73,10 @@ def analyse(store, session_id: str, translate: bool):
     processor = _processor(store)
     model = os.getenv("LLM_MODEL") or None
     return run_session(
-        session_id, store=store, domain=load_domain(DOMAINS / select_domain(session.domain)),
+        session_id, store=store, domain=load_domain(DOMAINS / select_domain(domain or session.domain)),
         translator=TurnTranslator(processor, model=model, workers=WORKERS),
         extractor=LegacyActionExtractor(processor, workers=WORKERS), llm=processor, translate=translate,
+        regenerate=regenerate,
     )
 
 
@@ -119,11 +121,17 @@ def main(argv: list[str]) -> int:
     a = sub.add_parser("analyse")
     a.add_argument("session_id")
     a.add_argument("--no-translate", action="store_true", help="extract from the spoken language")
+    a.add_argument("--regenerate", action="store_true",
+                   help="analyse again: replace the Proposed actions, keep every decided one")
+    a.add_argument("--domain", default=None, help="with --regenerate: analyse with another Domain")
     sub.add_parser("show").add_argument("session_id")
     args = parser.parse_args(argv)
 
     try:
-        domain = select_domain(args.domain) if args.command == "transcribe" else None
+        chosen = getattr(args, "domain", None)
+        if args.command == "analyse" and chosen and not args.regenerate:
+            raise ValueError("--domain on analyse needs --regenerate")
+        domain = select_domain(chosen) if args.command == "transcribe" or chosen else None
         store = open_store(StoreSettings.from_environment())
     except (ValueError, StoreKeyError) as e:
         print(f"norev.session: {e}", file=sys.stderr)
@@ -132,7 +140,8 @@ def main(argv: list[str]) -> int:
         if args.command == "transcribe":
             print(transcribe(store, args.audio, domain, args.language, args.date, not args.no_speakers))
         elif args.command == "analyse":
-            result = analyse(store, args.session_id, translate=not args.no_translate)
+            result = analyse(store, args.session_id, translate=not args.no_translate,
+                             regenerate=args.regenerate, domain=domain)
             if result.partial:
                 print(f"norev.session: {len(result.untranslated)} turn(s) not translated; the result is partial",
                       file=sys.stderr)

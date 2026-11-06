@@ -53,6 +53,7 @@ def run_session(
     domain: Domain,
     llm: LlmClient,
     translate: bool = True,
+    regenerate: bool = False,
 ) -> SessionResult:
     """Analyse a Session transcribed by usecases.transcribe.transcribe_session and save the result for review.
 
@@ -60,12 +61,16 @@ def run_session(
     `translate` is False), keeps the spoken one as `source_transcript_ref` and points
     `transcript_ref` at the one extraction runs on. Later runs reuse it and regenerate only the
     Proposed Actions; that is refused once the User decided any of them.
-    The Domain is fixed by the Session: running with another one raises ValueError and changes nothing.
+    `regenerate` is the User's explicit request to analyse again, possibly with another Domain:
+    the Proposed actions are replaced, every decided one is kept unchanged. Changing the Domain is
+    refused while an action waits for execution (approved or failed): its plan needs its own Domain.
+    Without `regenerate`, another Domain or a decided action raises ValueError and changes nothing.
     A failing stage raises and leaves what was saved before it; nothing is ever executed here.
     """
     session = _session(session_id, store)
-    if session.domain != domain.name:
-        raise ValueError(f"Session {session_id!r} is in Domain {session.domain!r}, not {domain.name!r}")
+    if session.domain != domain.name and not regenerate:
+        raise ValueError(f"Session {session_id!r} is in Domain {session.domain!r}, not {domain.name!r}; "
+                         "changing it needs an explicit regeneration")
     if not session.transcript_ref:
         raise LookupError(f"Session {session_id!r} is not transcribed yet")
 
@@ -82,13 +87,23 @@ def run_session(
     # Both stages run before one compare-and-set write: if either fails, the previous Proposed
     # Actions and Suggestions stay as they were (no generic-only list in between).
     snapshot = store.load_actions_snapshot(session_id)
-    if any(a.status is not ActionStatus.PROPOSED for a in snapshot.actions):
-        raise ValueError(f"Session {session_id!r} already has decided Proposed Actions")
+    decided = [a for a in snapshot.actions if a.status is not ActionStatus.PROPOSED]
+    if decided and not regenerate:
+        raise ValueError(f"Session {session_id!r} already has decided Proposed Actions; regenerate explicitly")
+    pending = [a.id for a in decided if a.status in (ActionStatus.APPROVED, ActionStatus.FAILED)]
+    if session.domain != domain.name and pending:
+        raise ValueError(f"Session {session_id!r}: execute or resolve {', '.join(pending)} before changing the Domain")
     started = session.started_at
     session_date = (started.astimezone() if started.tzinfo else started).date()  # local day of the Session
-    generic = to_proposed_actions(extractor.extract(transcript, session_date), id_prefix=session_id)
+    # A regeneration numbers its actions by revision, so new ids never collide with kept ones
+    prefix = f"{session_id}-r{snapshot.revision}" if regenerate else session_id
+    generic = to_proposed_actions(extractor.extract(transcript, session_date), id_prefix=prefix)
     actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date)
-    store.save_actions(session_id, actions, expected_revision=snapshot.revision, suggestions=suggestions)
+    if regenerate:
+        store.regenerate_actions(session_id, decided + actions, domain=domain.name,
+                                 expected_revision=snapshot.revision, suggestions=suggestions)
+    else:
+        store.save_actions(session_id, actions, expected_revision=snapshot.revision, suggestions=suggestions)
     return SessionResult(actions, suggestions, tuple(s for s in transcript.segments if s.untranslated))
 
 

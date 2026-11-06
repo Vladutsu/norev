@@ -106,6 +106,29 @@ class SessionCliTest(unittest.TestCase):
         self.assertIn("NOREV_STORE_KEY_FILE", err)
         self.assertFalse(Path(self.env["NOREV_STORE_PATH"]).exists())
 
+    def test_regenerate_with_another_domain_keeps_the_decision(self):
+        session_id = self._main("transcribe", str(self.audio))[1].strip()
+        self._answers(session_id, TRANSLATION)
+        self._main("analyse", session_id)
+        with patch.dict(os.environ, self.env, clear=True):
+            store = open_store(StoreSettings.from_environment())
+        try:
+            snapshot = store.load_actions_snapshot(session_id)
+            snapshot.actions[0].reject()
+            revision = store.save_actions(session_id, list(snapshot.actions), expected_revision=snapshot.revision)
+        finally:
+            store.close()
+        self.assertEqual(self._main("analyse", session_id, "--domain", "medical")[0], 2)  # needs --regenerate
+        medical = json.dumps(ANSWERS["medical"]).replace('"s1-1"', f'"{session_id}-r{revision}-1"')
+        self.processor = FakeProcessor([medical])
+
+        self.assertEqual(self._main("analyse", session_id, "--regenerate", "--domain", "medical")[0], 0)
+
+        out = self._main("show", session_id)[1]
+        self.assertIn("Domain: medical", out)
+        self.assertIn("[rejected] work_item: Send the report", out)
+        self.assertIn("[proposed] schedule_visit: Send the report", out)
+
     def test_no_speakers_skips_diarization(self):
         self.assertEqual(self._main("transcribe", str(self.audio), "--no-speakers")[0], 0)
         self.assertEqual(self.models["diarizer"].diarize("any"), [])

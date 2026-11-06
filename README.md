@@ -67,13 +67,17 @@ Supported: `.wav .mp3 .m4a .flac .ogg .opus .aac .webm .mp4 .mkv .mov .avi`.
 ```bash
 SESSION=$(.venv/bin/python -m norev.session transcribe session.mp4 [--domain corporate|medical] [--language ro] [--date 2026-11-06] [--no-speakers])
 .venv/bin/python -m norev.session analyse "$SESSION" [--no-translate]   # needs llama-server running
+.venv/bin/python -m norev.session analyse "$SESSION" --regenerate [--domain medical]
 .venv/bin/python -m norev.session show "$SESSION"
 ```
 
 - `transcribe`: the audio is sealed in the store, then Whisper + diarization (decoded in memory);
   the Transcript with Speakers is saved in the store; prints the Session id.
 - `analyse`: translation per Speaker turn, extraction (only from this final Transcript), Domain stage.
-  Running it again regenerates the Proposed Actions; it is refused once any of them was decided.
+  Running it again regenerates the Proposed Actions; once any of them was decided it is refused
+  unless you ask for `--regenerate`, which replaces only the undecided ones and keeps every decision.
+  `--regenerate --domain X` also changes the Session's Domain; it waits until no approved action is
+  still to be executed.
   Turns that could not be translated are kept in the spoken language and the result is marked partial.
 - `show`: the Proposed Actions waiting for review, Suggestions, and any untranslated turns.
 

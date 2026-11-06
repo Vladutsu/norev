@@ -1,5 +1,6 @@
 """Handwritten fakes for the ports in norev.core.ports, so tests run without a model or GPU."""
 import copy
+import dataclasses
 from datetime import date, datetime
 from threading import RLock
 from typing import Any
@@ -8,6 +9,7 @@ from norev.core.models import (
     ActionsSnapshot, AuditEvent, Domain, ProposedAction, Session, Speaker, SpeakerTurn, StaleRevision, Suggestion,
     Transcript,
 )
+from norev.core.models import check_decisions_kept
 from norev.core.speakers import merge_speakers
 
 
@@ -132,6 +134,22 @@ class InMemorySessionStore:
     def load_actions(self, session_id: str) -> list[ProposedAction]:
         with self._lock:
             return copy.deepcopy(self._actions.get(session_id, []))
+
+    def regenerate_actions(
+        self, session_id: str, actions: list[ProposedAction], *, domain: str, expected_revision: int,
+        suggestions: list[Suggestion],
+    ) -> int:
+        with self._lock:
+            revision = self._check_revision(session_id, expected_revision)
+            saved_actions, saved_suggestions = copy.deepcopy(actions), copy.deepcopy(suggestions)
+            if len({a.id for a in saved_actions}) != len(saved_actions):
+                raise ValueError("Duplicate Proposed Action ids")
+            check_decisions_kept(self._actions.get(session_id, []), saved_actions)
+            self._sessions[session_id] = dataclasses.replace(self._sessions[session_id], domain=domain)
+            self._actions[session_id] = saved_actions
+            self._suggestions[session_id] = saved_suggestions
+            self._revisions[session_id] = revision + 1
+            return revision + 1
 
     def save_suggestions(
         self, session_id: str, suggestions: list[Suggestion], *, expected_revision: int,
