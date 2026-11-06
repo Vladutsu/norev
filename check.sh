@@ -15,29 +15,4 @@ step() { echo "==> $*"; }
 step "bash syntax"
 for f in *.sh; do bash -n "$f"; done
 
-step "python compiles"
-"$PY" -m compileall -q LLM norev
-
-step "every module imports"
-"$PY" - <<'PY'
-import importlib, pkgutil, sys
-import LLM, norev
-
-failed = []
-for pkg in (LLM, norev):
-    for mod in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + "."):
-        try:
-            importlib.import_module(mod.name)
-        except Exception as exc:
-            failed.append(f"  {mod.name}: {exc!r}")
-if failed:
-    print("import failed:\n" + "\n".join(failed))
-    sys.exit(1)
-PY
-
-if compgen -G "tests/test_*.py" >/dev/null; then
-    step "unit tests"
-    "$PY" -m unittest discover -s tests
-fi
-
-echo "OK"
+"$PY" scripts/check.py

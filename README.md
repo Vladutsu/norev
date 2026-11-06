@@ -40,6 +40,40 @@ Also needed:
 - `llama-server` from [llama.cpp](https://github.com/ggml-org/llama.cpp), default `~/Repositories/llama.cpp/build/bin/llama-server`
 - a GGUF model, default `~/models/qwen3-8b/Qwen3-8B-Q4_K_M.gguf` ([Qwen/Qwen3-8B-GGUF](https://huggingface.co/Qwen/Qwen3-8B-GGUF), Apache 2.0) for translation and extraction
 
+## Windows (no developer setup)
+
+One install, one way to start (#48). Needs Python 3.12 from python.org ("Add python.exe to PATH")
+and, for speed, a current NVIDIA driver; without a GPU everything runs on the CPU, slowly.
+
+```bat
+install.cmd               :: once: .venv, Python packages, the store key, then the check
+install.cmd --speakers    :: the same, plus diarization (Speakers); a much larger download
+norev.cmd                 :: check this machine, then open the app
+norev.cmd doctor          :: only the check: what is missing and how to add it
+norev.cmd setup-models    :: download the Whisper (and diarization) models, once
+norev.cmd process session.mp4 ro   :: the norev.sh flow: transcribe, analyse, show
+check.cmd                 :: the same Python checks as ./check.sh
+```
+
+Nothing is downloaded without asking: the app starts offline (`HF_HUB_OFFLINE=1`), only
+`setup-models` downloads models, and the GGUF model and `llama-server` are copied by hand:
+
+- `llama-server.exe`: a Windows CUDA release of [llama.cpp](https://github.com/ggml-org/llama.cpp/releases),
+  unzipped into `%LOCALAPPDATA%\norev\llama.cpp\`
+- the GGUF model (`Qwen3-8B-Q4_K_M.gguf`, see Setup) in `%LOCALAPPDATA%\norev\models\`
+
+Everything stays in the User's profile, not in the app folder (`NOREV_HOME` moves it all;
+each path also has its own variable, table below):
+
+| What | Where |
+|---|---|
+| Encrypted store | `%LOCALAPPDATA%\norev\norev.db` |
+| Store key (back it up on a USB stick) | `%LOCALAPPDATA%\norev\keys\norev.key` |
+| GGUF models | `%LOCALAPPDATA%\norev\models\` |
+| Whisper and diarization models | `%LOCALAPPDATA%\norev\models\hf\` |
+| llama-server | `%LOCALAPPDATA%\norev\llama.cpp\llama-server.exe` |
+| llama-server log | `%LOCALAPPDATA%\norev\logs\` |
+
 ## Usage
 
 Sessions are kept only in the encrypted store (ADR 0004). Create the key once, outside the
@@ -92,7 +126,7 @@ Nothing is written to `Outputs/` except `llama-server.log`. The old stages
 ## Before pushing
 
 ```bash
-./check.sh
+./check.sh        # Windows: check.cmd (same Python checks, no bash syntax step)
 ```
 
 Same checks as CI (`.github/workflows/ci.yml`, runs on every push to `main`): shell syntax,
@@ -105,6 +139,7 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 |---|---|---|
 | `NOREV_STORE_KEY_FILE` | required | key of the encrypted store (see Usage) |
 | `NOREV_STORE_PATH` | `%LOCALAPPDATA%/norev/norev.db` or `~/.local/share/norev/norev.db` | the encrypted store |
+| `NOREV_HOME` | `%LOCALAPPDATA%/norev` or `~/.local/share/norev` | `norev.cmd` only: root of the store, key, models, llama-server and logs (Windows section) |
 | `NOREV_DOMAIN` | `corporate` | `corporate` or `medical` (`others` needs a confirmed prompt, not from the CLI) |
 | `NOREV_SPEAKERS` | `1` | `0`: skip diarization (one Transcript without Speakers) |
 | `NOREV_LANGUAGES` | empty (auto-detect) | Whisper language codes to choose from, e.g. `ro,en,de` |
