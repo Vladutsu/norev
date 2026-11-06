@@ -20,12 +20,18 @@ die()  { echo -e "${RED}[norev] ERROR:${NC} $*" >&2; exit 1; }
 LLAMA_SERVER="${LLAMA_SERVER:-$HOME/Repositories/llama.cpp/build/bin/llama-server}"
 LLAMACPP_MODEL="${LLAMACPP_MODEL:-$HOME/models/Qwen2.5-7B-Instruct-Q4_K_M.gguf}"
 LLAMACPP_PORT="${LLAMACPP_PORT:-8080}"
-LLAMACPP_CTX="${LLAMACPP_CTX:-8192}"
+# 4096 fits one transcript chunk + prompt and leaves room for Whisper on an 8 GB GPU
+LLAMACPP_CTX="${LLAMACPP_CTX:-4096}"
 LLAMACPP_GPU_LAYERS="${LLAMACPP_GPU_LAYERS:-99}"
 
 export LLM_PROVIDER="${LLM_PROVIDER:-llamacpp}"
 export LLAMACPP_URL="${LLAMACPP_URL:-http://127.0.0.1:${LLAMACPP_PORT}}"
 export LLM_MODEL="${LLM_MODEL:-$(basename "$LLAMACPP_MODEL" .gguf)}"
+# Grammar-constrained JSON output; without it smaller models sometimes emit invalid JSON
+export LLM_FORCE_JSON_FORMAT="${LLM_FORCE_JSON_FORMAT:-1}"
+# Process each transcript chunk on its own and merge in Python; feeding the accumulated
+# JSON back into every prompt overflows the context on long recordings
+export LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT="${LLM_INCLUDE_PREVIOUS_JSON_IN_PROMPT:-0}"
 
 PYTHON="$SCRIPT_DIR/.venv/bin/python"
 [[ -x "$PYTHON" ]] || die ".venv missing. Run: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"

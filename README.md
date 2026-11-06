@@ -35,7 +35,7 @@ Output:
 |---|---|---|
 | `LLAMACPP_MODEL` | `~/models/Qwen2.5-7B-Instruct-Q4_K_M.gguf` | GGUF model to load |
 | `LLAMA_SERVER` | `~/Repositories/llama.cpp/build/bin/llama-server` | llama.cpp server binary |
-| `LLAMACPP_PORT` / `LLAMACPP_CTX` / `LLAMACPP_GPU_LAYERS` | `8080` / `8192` / `99` | server options |
+| `LLAMACPP_PORT` / `LLAMACPP_CTX` / `LLAMACPP_GPU_LAYERS` | `8080` / `4096` / `99` | server options |
 | `WHISPER_MODEL` | `large-v3-turbo` | `small`, `medium`, `large-v3-turbo`, … |
 | `WHISPER_DEVICE` | `cuda` | `cuda` or `cpu` (falls back to CPU on GPU OOM) |
 | `LLM_CHUNK_CHARS` | `4000` | transcript chunk size sent to the LLM |
