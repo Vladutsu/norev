@@ -137,6 +137,21 @@ class ExtractSessionActionsTest(unittest.TestCase):
         self.assertEqual(extractor.calls, [])
         self.assertIs(self.store.load_actions("s1")[0].status, ActionStatus.APPROVED)
 
+    def test_does_not_overwrite_actions_decided_during_the_extraction(self):
+        extract_session_actions("s1", self.store, FakeActionExtractor({"proposed_actions": [item()]}))
+        store = self.store
+
+        class DecidingExtractor:  # the User approves the earlier action while the model is still running
+            def extract(self, transcript, session_date):
+                actions = store.load_actions("s1")
+                actions[0].approve({"title": "Control"})
+                store.save_actions("s1", actions)
+                return {"proposed_actions": [item(), item()]}
+
+        with self.assertRaises(ValueError):
+            extract_session_actions("s1", self.store, DecidingExtractor())
+        self.assertIs(self.store.load_actions("s1")[0].status, ActionStatus.APPROVED)
+
     def test_aware_start_time_uses_the_local_day(self):
         started = datetime(2026, 11, 6, 9, 30).astimezone()  # local time, made aware
         self.store.save_session(Session(id="s3", started_at=started, domain="medical", transcript_ref="transcript-1"))
