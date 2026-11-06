@@ -21,6 +21,11 @@ const ERRORS = {
   not_executable: "Acțiunea nu poate fi executată acum.",
   llm_unavailable: "Modelul local (llama-server) nu a pornit. Verifică LLAMA_SERVER și LLAMACPP_MODEL.",
   no_microphone: "Microfonul nu a putut fi deschis.",
+  invalid_email: "Scrie adrese de email valide, separate prin virgulă.",
+  invalid_header: "Subiectul și destinatarii nu pot avea mai multe rânduri.",
+  invalid_text: "Textul conține caractere care nu pot fi trimise.",
+  too_long: "Textul e prea lung.",
+  too_many: "Prea mulți destinatari.",
 };
 // Why connecting Google Calendar did not work (GoogleAccount.connect, #45)
 const GOOGLE_FAILED = {
@@ -52,6 +57,7 @@ const ICON = {
   quote: '<path d="M7 7h4v4H7c0 3 1 4 3 5M14 7h4v4h-4c0 3 1 4 3 5"/>',
   arrow: '<path d="M4 12h12M12 6l6 6-6 6"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  mail: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/>',
   pause: '<rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor" stroke="none"/>',
   play: '<path d="M8 5l11 7-11 7z" fill="currentColor" stroke="none"/>',
 };
@@ -401,6 +407,10 @@ function actionCard(a) {
 
   const plan = a.plan.map((step) => h("div", { class: "payload inset" },
     h("span", { class: "payload-head" }, icon("arrow", 16), `Ce se trimite · ${step.connector_label}`),
+    // an email draft (#61): To, Subject and text decoded from the file, then the exact file below
+    step.readable ? h("pre", { class: "readable" },
+      `Către: ${step.readable.to}\nSubiect: ${step.readable.subject}\n\n${step.readable.body}`) : null,
+    step.readable ? h("span", { class: "payload-head" }, "Fișierul exact") : null,
     // nested values (the calendar event) are shown in full, not as [object Object]
     h("pre", {}, Object.entries(step.payload).map(([k, v]) => `${k}: ${v === null || v === "" ? "—"
       : typeof v === "object" ? JSON.stringify(v, null, 2) : v}`).join("\n"))));
@@ -419,6 +429,12 @@ function actionCard(a) {
     buttons = h("div", { class: "actions" },
       h("span", { class: "hint" }, "Se trimite exact ce ai aprobat."),
       h("button", { type: "button", class: "btn primary", onclick: (e) => call(e.currentTarget, "execute", a.id) }, icon("arrow", 18), "Execută"));
+  } else if (runnable && a.status === "executed" && a.draft) {
+    // only when the User asks: norev never sends the email, the User does from their mail app
+    buttons = h("div", { class: "actions" },
+      h("span", { class: "hint" }, "Draftul e salvat. Îl trimiți tu, din aplicația de mail."),
+      h("button", { type: "button", class: "btn primary", onclick: (e) => guarded(e.currentTarget, () => api("open_draft", state.sessionId, a.id)) },
+        icon("mail", 18), "Deschide în mail"));
   } else if (runnable && a.status === "failed") {
     buttons = h("div", { class: "actions" },
       h("span", { class: "hint" }, a.error || "Execuția a eșuat."),
@@ -440,7 +456,8 @@ function actionCard(a) {
   return h("article", { class: `card raised${a.status === "rejected" ? " rejected" : ""}`, "aria-label": a.title },
     h("div", { class: "card-head" },
       h("div", { class: "brand" },
-        h("span", { class: "typeicon" }, icon(a.action_type === "medication_reminder" ? "pill" : "calendar", 22)),
+        h("span", { class: "typeicon" }, icon(a.action_type === "medication_reminder" ? "pill"
+          : a.action_type === "follow_up_email" ? "mail" : "calendar", 22)),
         h("div", { class: "stack", style: "gap:.2rem" }, h("span", { class: "typename" }, a.type_label), h("span", { class: "atitle" }, a.title))),
       h("span", { class: `chip ${statusClass}` }, statusLabel)),
     a.description ? h("p", { class: "small", style: "margin:0;color:var(--text-2)" }, a.description) : null,

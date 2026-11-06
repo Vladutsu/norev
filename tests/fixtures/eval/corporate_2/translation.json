@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 7.8,
+ "elapsed_seconds": 7.9,
  "calls": [
   {
    "stage": "translate",
@@ -52,7 +52,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Popescu. Thank you for finding time for the call.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day. I would like to discuss the offer for licenses and the delivery term.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Our offer is for 25 licenses, at a total price of 12500 lei per year.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"That's fine, but we need the invoice by the end of the month.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"I will issue the invoice by November 30th and send it by email.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Thank you, Mihai. Mrs. Popescu, can you send us the list of users?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Yes, I'll send it by Tuesday.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"We can do the installation in the first week of December.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Perfect. We also need a training for our team.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"I can organize the training, but we need to set a date.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"We will set the training date after we receive the list of users.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"Agreed. And please send us the signed contract.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"I'll send it to you tomorrow.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Thank you, have a good day.\"\n    }\n  ]\n}"
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good day, Mrs. Popescu. Thank you for finding time for the call.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"Good day. I would like to discuss the offer for licenses and the delivery term.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Our offer is for 25 licenses, at a total price of 12500 lei per year.\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"That's fine, but we need the invoice by the end of the month.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"I will issue the invoice by November 30th and send it by email.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"Thank you, Mihai. Mrs. Popescu, can you send us the list of users?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Yes, I'll send it by Tuesday.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"We can do the installation during the first week of December.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Perfect. We also need a training for our team.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"I can organize the training, but we need to set a date.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"We will set the training date after we receive the list of users.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"Agreed. And please send us the signed contract.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"I'll send it to you tomorrow.\"\n    },\n    {\n      \"id\": \"14\",\n      \"text\": \"Thank you, have a good day.\"\n    }\n  ]\n}"
   }
  ],
  "english": {
@@ -128,7 +128,7 @@
     "start": 37.95,
     "end": 41.7,
     "speaker_id": "S1",
-    "text": "We can do the installation in the first week of December.",
+    "text": "We can do the installation during the first week of December.",
     "untranslated": false
    },
    {

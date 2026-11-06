@@ -9,6 +9,7 @@ evaluation repeatable without a model; they are never the expected result.
 | `corporate_1` | Corporate | sprint planning: commitments by name, a reassignment ("someone should..." → Maria), a cancelled idea (PayPal), amounts |
 | `corporate_2` | Corporate | client call: actions of the client, an action with no deadline, prices and quantities |
 | `corporate_3` | Corporate | incident review: "I'll do it", a rejected proposal, figures |
+| `corporate_4` | Corporate | calendar events (#46): a time and duration said, a relative date ("tomorrow at three"), a missing time, a rescheduled meeting, a cancelled one |
 | `others_1` | Others | a real-estate agent with a client, with the User's context (`user_context`) |
 | `others_2` | Others | a teacher with a parent, with the User's context |
 | `consult_1..3` | Medical (example) | the 3 consultations of `../llm`, kept as regressions; not a clinical validation |
@@ -23,6 +24,9 @@ Each folder:
   - `verified_by`: who checked the file (null until a person did);
   - `notes`: every change to the expectations, with the reason.
 - `translation.json`, `extract.neutral.json`, `extract.speakers.json`: the recorded calls and results.
+- `domain.neutral.json`, Corporate only: the Domain stage call on the neutral result, and the typed
+  Proposed Actions it gave. Expected actions with an `action_type` (and `fields`) are checked on it:
+  wrong type, wrong field, dropped by the Domain stage, a cancelled meeting kept as `calendar_event`.
 
 `variance.json`: the Proposed Actions of extra runs on the same English Transcript, because temperature
 0 still varies between runs. `report.json`: the scores. `thresholds.json`: the limits, confirmed before the final evaluation; `follow_ups` names the issue of each limit not met.

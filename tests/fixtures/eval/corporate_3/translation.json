@@ -1,6 +1,6 @@
 {
  "model": "Qwen3-8B-Q4_K_M",
- "elapsed_seconds": 6.9,
+ "elapsed_seconds": 7.0,
  "calls": [
   {
    "stage": "translate",
@@ -51,7 +51,7 @@
     ],
     "additionalProperties": false
    },
-   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Today's meeting is about the incident on Tuesday, when the application was unavailable for 2 hours.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"The cause was an expired SSL certificate on the production server.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Ana, who is responsible for the automatic renewal of certificates?\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"I take care of it. I configure the automatic renewal until Thursday.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"I add an alert in monitoring 30 days before expiration.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"George, until when can you make the alert?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Until the end of next week.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"We need to inform the affected customers, there were 140 accounts.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Someone from support should send the email, not us.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Okay, I will ask the support team to send the email today.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"I propose we also do a monthly recovery exercise.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"No, for now we don't do monthly exercises, we'll return to the topic in January. I will write the incident report until Monday.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"Thank you.\"\n    }\n  ]\n}"
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Today's meeting is about the incident on Tuesday, when the application was unavailable for 2 hours.\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"The cause was an expired SSL certificate on the production server.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Ana, who is responsible for automatically renewing the certificates?\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"I take care of it. I set up automatic renewal by Thursday.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"I add an alert in monitoring 30 days before expiration.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"George, until when can you make the alert?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"Until the end of next week.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"We need to inform the affected customers, there were 140 accounts.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Someone from support should send the email, not us.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"Okay, I will ask the support team to send the email today.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"I propose we also do a monthly recovery exercise.\"\n    },\n    {\n      \"id\": \"12\",\n      \"text\": \"No, for now we don't do monthly exercises, we'll return to the topic in January. I will write the incident report by Monday.\"\n    },\n    {\n      \"id\": \"13\",\n      \"text\": \"Thank you.\"\n    }\n  ]\n}"
   }
  ],
  "english": {
@@ -92,14 +92,14 @@
     "start": 11.8,
     "end": 15.55,
     "speaker_id": "S1",
-    "text": "Ana, who is responsible for the automatic renewal of certificates?",
+    "text": "Ana, who is responsible for automatically renewing the certificates?",
     "untranslated": false
    },
    {
     "start": 16.05,
     "end": 19.45,
     "speaker_id": "S2",
-    "text": "I take care of it. I configure the automatic renewal until Thursday.",
+    "text": "I take care of it. I set up automatic renewal by Thursday.",
     "untranslated": false
    },
    {
@@ -155,7 +155,7 @@
     "start": 51.45,
     "end": 58.35,
     "speaker_id": "S1",
-    "text": "No, for now we don't do monthly exercises, we'll return to the topic in January. I will write the incident report until Monday.",
+    "text": "No, for now we don't do monthly exercises, we'll return to the topic in January. I will write the incident report by Monday.",
     "untranslated": false
    },
    {

@@ -1,4 +1,5 @@
 """Handwritten fakes for the ports in norev.core.ports, so tests run without a model or GPU."""
+import contextlib
 import copy
 import dataclasses
 from datetime import date, datetime
@@ -274,3 +275,22 @@ class FakePayloadBuilder:
     def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
         self.calls.append(copy.deepcopy((action, domain, options)))
         return copy.deepcopy(self.plan)
+
+
+@contextlib.contextmanager
+def fake_dpapi():
+    """Windows DPAPI stand-in for tests on any OS (#63): a sealed blob opens only through it."""
+    from unittest import mock
+
+    from norev.adapters.store import dpapi
+
+    def protect(data: bytes) -> bytes:
+        return b"FAKE-DPAPI" + bytes(reversed(data))
+
+    def unprotect(blob: bytes) -> bytes:
+        if not blob.startswith(b"FAKE-DPAPI"):
+            raise dpapi.DpapiError("not sealed by this account")
+        return bytes(reversed(blob[len(b"FAKE-DPAPI"):]))
+
+    with mock.patch.object(dpapi, "protect", protect), mock.patch.object(dpapi, "unprotect", unprotect):
+        yield

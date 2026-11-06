@@ -149,6 +149,7 @@ blockquote{margin:0;display:flex;gap:.75rem;font-size:.875rem;line-height:1.55;c
 .payload{border-radius:1.1rem;padding:1rem 1.1rem;display:flex;flex-direction:column;gap:.6rem}
 .payload-head{display:flex;align-items:center;gap:.5rem;font-size:.8rem;font-weight:600;color:var(--text-2)}
 .payload pre{margin:0;font:400 .82rem/1.6 var(--mono);white-space:pre-wrap;word-break:break-word}
+.payload pre.readable{font:400 .9rem/1.6 var(--body);color:var(--text)}
 .actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.9rem;align-items:center}
 .actions .hint{margin-right:auto;font-size:.8rem;color:var(--text-3)}
 .card.rejected{opacity:.6}
