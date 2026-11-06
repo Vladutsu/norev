@@ -53,6 +53,7 @@ class FakeTranscriberAndClockTest(unittest.TestCase):
 class InMemorySessionStoreTest(unittest.TestCase):
     def setUp(self):
         self.store = InMemorySessionStore()
+        self.store.save_session(Session(id="s1", started_at=AT, domain="medical"))
 
     def test_session_round_trip_returns_copies(self):
         session = Session(id="s1", started_at=AT, domain="medical")
@@ -74,7 +75,7 @@ class InMemorySessionStoreTest(unittest.TestCase):
 
     def test_actions_round_trip_returns_copies(self):
         action = ProposedAction(id="a1", title="Trimitere", description="d", transcript_excerpt="e")
-        self.store.save_actions("s1", [action])
+        self.store.save_actions("s1", [action], expected_revision=self.store.load_actions_snapshot("s1").revision)
         action.approve({"to": "after save"})
         loaded = self.store.load_actions("s1")
         self.assertEqual(loaded[0].status.value, "proposed")
@@ -86,7 +87,7 @@ class InMemorySessionStoreTest(unittest.TestCase):
 
     def test_suggestions_round_trip(self):
         suggestions = [Suggestion("Verificați alergia", transcript_excerpt="sunt alergic")]
-        self.store.save_suggestions("s1", suggestions)
+        self.store.save_suggestions("s1", suggestions, expected_revision=self.store.load_actions_snapshot("s1").revision)
         suggestions.clear()
         self.assertEqual(self.store.load_suggestions("s1"), [Suggestion("Verificați alergia", transcript_excerpt="sunt alergic")])
         self.assertEqual(self.store.load_suggestions("other"), [])

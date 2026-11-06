@@ -61,20 +61,19 @@ def extract_session_actions(session_id: str, store: SessionStore, extractor: Act
     Refuses to run once the User has decided any action: replacing the list would drop approved
     payloads and could propose an executed action again.
     """
+    snapshot = store.load_actions_snapshot(session_id)
     session = store.get_session(session_id)
     if session is None:
         raise LookupError(f"no Session {session_id!r}")
     if not session.transcript_ref:
         raise LookupError(f"Session {session_id!r} has no Transcript")
-    before = store.load_actions(session_id)
+    before = snapshot.actions
     if any(a.status is not ActionStatus.PROPOSED for a in before):
         raise ValueError(f"Session {session_id!r} already has decided Proposed Actions")
     transcript = store.load_transcript(session.transcript_ref)
     started = session.started_at
     session_date = (started.astimezone() if started.tzinfo else started).date()  # local day of the Session
     actions = to_proposed_actions(extractor.extract(transcript, session_date), id_prefix=session_id)
-    # The model can take minutes; if the User decided an action meanwhile, do not overwrite it
-    if store.load_actions(session_id) != before:
-        raise ValueError(f"Proposed Actions of Session {session_id!r} changed during the extraction")
-    store.save_actions(session_id, actions)
+    # Compare and write atomically: a decision can happen even after the model returns.
+    store.save_actions(session_id, actions, expected_revision=snapshot.revision, suggestions=[])
     return actions
