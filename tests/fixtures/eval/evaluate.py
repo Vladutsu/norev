@@ -1,6 +1,8 @@
 """Evaluation of the generic extraction against expected results checked by a person (#25).
 
     python tests/fixtures/eval/evaluate.py record           # GPU laptop: llama-server; rewrites the recordings
+    python tests/fixtures/eval/evaluate.py record-domain    # GPU laptop: llama-server; rewrites only domain.neutral.json
+                                                            # (a Domain prompt changed; translation and extraction kept)
     python tests/fixtures/eval/evaluate.py variance [N]     # GPU laptop: N more extract runs per variant (default 2)
     python tests/fixtures/eval/evaluate.py check            # no model: replays them, rebuilds report.json and compares
     python tests/fixtures/eval/evaluate.py refresh          # no model: replays them and rewrites results and report
@@ -11,8 +13,9 @@ Each <session>/ holds the Transcript (or points to one in ../llm), expected.json
 by a person, never copied from the model's answer) and the recordings:
   translation.json        the translate calls and the English Transcript (shared by both variants)
   extract.<variant>.json  the extract calls and the Proposed Actions they gave
-  domain.neutral.json     Corporate only: the Domain stage call on the neutral result, and the typed
-                          Proposed Actions (action_type, fields) it gave (#46)
+  domain.neutral.json     Corporate only: the Speaker Roles call and the Domain stage call on the neutral
+                          result, as run_session makes them (#60), and the typed Proposed Actions
+                          (action_type, fields, owner Role) they gave (#46)
 and next to them variance.json: the Proposed Actions of extra runs on the same English Transcript.
 
 Variants, on the same English Transcript:
@@ -43,9 +46,11 @@ from LLM.AI_Model.settings import DeepSeekSettings  # noqa: E402
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor  # noqa: E402
 from norev.adapters.llm.translator import TurnTranslator  # noqa: E402
 from norev.adapters.domains.loader import load_domain  # noqa: E402
-from norev.core.models import Transcript  # noqa: E402
+from norev.core.models import Speaker, Transcript  # noqa: E402
+from norev.core.speakers import speakers_in  # noqa: E402
 from norev.usecases.domain_stage import ask_domain  # noqa: E402
 from norev.usecases.extract import to_proposed_actions  # noqa: E402
+from norev.usecases import speaker_roles  # noqa: E402
 
 DOMAIN_STAGE = ("corporate",)  # Domains whose stage is evaluated; Medical is an example, Others needs the User's prompt
 
@@ -91,13 +96,23 @@ def extract(english: Transcript, variant: str, source: dict, client, settings) -
 
 
 def domain_stage(english: Transcript, result: dict, source: dict, client) -> dict:
-    """The Corporate Domain stage on the neutral generic result, as the Session flow runs it."""
+    """Speaker Roles, then the Corporate Domain stage on the neutral generic result, as run_session
+    runs them (#60): same prompts, the Domain's model, an invalid Roles answer leaves them unknown."""
     domain = load_domain(HERE.parents[2] / "domains" / source["domain"])
     actions = to_proposed_actions(result, id_prefix="pa")
+    speakers = speakers_in(english)
+    if speakers:  # propose_speaker_roles without a store: the same calls, nothing saved
+        client.stage = "roles"
+        raw = client.generate_json(speaker_roles.build_prompt(domain, english), model=domain.model,
+                                   json_schema=speaker_roles.answer_schema(domain, speakers))
+        roles = speaker_roles.roles_from_answer(raw, domain, speakers)
+        speakers = [Speaker(s.id, roles.get(s.id)) for s in speakers]
     client.stage = "domain"
-    typed, suggestions = ask_domain(domain, client, english, actions, date.fromisoformat(source["session_date"]))
+    typed, suggestions = ask_domain(domain, client, english, actions, date.fromisoformat(source["session_date"]), speakers)
     return {
-        "actions": [{"id": a.id, "title": a.title, "action_type": a.action_type, "fields": a.fields} for a in typed],
+        "speaker_roles": {s.id: s.role for s in speakers},
+        "actions": [{"id": a.id, "title": a.title, "action_type": a.action_type, "fields": a.fields, "owner": a.owner}
+                    for a in typed],
         "suggestions": [s.text for s in suggestions],
     }
 
@@ -357,6 +372,26 @@ def record_all() -> int:
     return 0
 
 
+def record_domain() -> int:
+    """Only the Roles and Domain stage calls, on the recorded translation and neutral extraction:
+    for a change to the Domain stage prompt or schema, without re-recording the stages before it."""
+    settings = DeepSeekSettings.from_environment()
+    for folder in sessions():
+        source = source_of(folder)
+        if source.get("domain") not in DOMAIN_STAGE:
+            continue
+        english = record.load_transcript(_json(folder / "translation.json")["english"])
+        result = _json(folder / "extract.neutral.json")["result"]
+        client = record.RecordingClient(build_llm_client(settings))
+        started = time.perf_counter()
+        typed = domain_stage(english, result, source, client)
+        _write(folder / "domain.neutral.json", {"model": settings.model, "elapsed_seconds": round(time.perf_counter() - started, 1),
+                                                "calls": client.calls, "result": typed})
+        print(folder.name, "Domain stage recorded")
+    _write(HERE / "report.json", build_report())
+    return 0
+
+
 def variance_runs(runs: int) -> int:
     """Extra extract runs on the recorded English Transcripts: temperature 0 still varies between runs."""
     settings = DeepSeekSettings.from_environment()
@@ -475,6 +510,8 @@ if __name__ == "__main__":
     command = sys.argv[1] if len(sys.argv) > 1 else "check"
     if command == "record":
         raise SystemExit(record_all())
+    if command == "record-domain":
+        raise SystemExit(record_domain())
     if command == "variance":
         raise SystemExit(variance_runs(int(sys.argv[2]) if len(sys.argv) > 2 else 2))
     if command in ("check", "refresh"):
