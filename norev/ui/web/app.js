@@ -369,6 +369,7 @@ async function waitAnalysis(sessionId, start = true) {
 
 async function openReview(sessionId) {
   state.sessionId = sessionId;
+  state.quoted = null;
   state.review = await api("review", sessionId);
   renderReview();
   setNav(null);
@@ -449,7 +450,7 @@ function renderReview() {
     return h("label", { for: `role-${s.id}` }, h("span", {}, `Vorbitor ${i + 1}`), select);
   }), again].filter(Boolean));
   $("suggestions").replaceChildren(...(r.suggestions.length ? r.suggestions.map((s) => h("div", { class: "well inset suggestion" },
-    h("strong", {}, s.text), s.transcript_excerpt ? h("em", {}, `„${s.transcript_excerpt}”`) : null))
+    h("strong", {}, s.text), s.transcript_excerpt ? quote(s, "em") : null))
     : [h("p", { class: "small muted" }, "Nimic de semnalat.")]));
 }
 
@@ -484,13 +485,30 @@ function renderFinalTranscript(r) {
     }, key === "spoken" ? `Original (${LANGUAGES[lang] || lang || "?"})` : `Tradus (${LANGUAGES[lang] || lang || "?"}), folosit la analiză`))) : "");
   $("final-lines").replaceChildren(...(shown.length ? shown.map((s) => {
     const n = order.indexOf(s.speaker_id);
-    return h("div", { class: "line" },
+    const quoted = state.quoted && s.start < state.quoted.end && s.end > state.quoted.start;
+    return h("div", { class: quoted ? "line quoted" : "line" },
       h("span", { class: "time" }, time(s.start)),
       s.speaker_id == null ? null : h("span", { class: `speaker s${(n < 0 ? 0 : n) % 3}` }, label(s.speaker_id)),
       h("p", {}, editable ? h("button", { type: "button", class: "segment", title: "Corectează textul",
         onclick: (e) => editSegment(e.currentTarget.parentElement, s, label(s.speaker_id)) }, s.text) : s.text,
         s.untranslated ? h("span", { class: "small muted" }, " (netradus)") : null));
   }) : [h("p", { class: "small muted" }, "Transcrierea e goală.")]), ...(corrected ? [corrected] : []));
+}
+
+// A quote of an action or Suggestion links to where it was said, when the backend found it (`source`)
+function quote(item, tag) {
+  const text = h(tag, {}, `„${item.transcript_excerpt}”`);
+  return item.source ? h("button", { type: "button", class: "quote-link", title: "Arată în transcriere",
+    onclick: () => showSource(item.source) }, text) : text;
+}
+
+// Marks the lines said in the quote's time span, in whichever version is shown, and scrolls to them
+function showSource(span) {
+  state.quoted = span;
+  $("final-transcript").open = true;
+  renderFinalTranscript(state.review);
+  const first = document.querySelector("#final-lines .line.quoted");
+  if (first) first.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 
 // One spoken Segment in place: saved on leaving the box, Escape cancels; only its text changes (#82)
@@ -642,7 +660,7 @@ function actionCard(a) {
       h("span", { class: `chip ${statusClass}` }, statusLabel)),
     text,
     h("div", { class: "fields" }, fields),
-    a.transcript_excerpt ? h("blockquote", {}, icon("quote", 18), h("span", {}, `„${a.transcript_excerpt}”`)) : null,
+    a.transcript_excerpt ? h("blockquote", {}, icon("quote", 18), quote(a, "span")) : null,
     plan,
     buttons);
 }

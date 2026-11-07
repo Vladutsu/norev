@@ -8,6 +8,7 @@ running a Workflow is #23's executor through the Central Processor, never the UI
 import dataclasses
 import hashlib
 import json
+import re
 import time
 import uuid
 from datetime import date, datetime
@@ -331,8 +332,11 @@ class DemoBackend:
                            and spoken.language != "en",
             "can_execute": self.can_execute,
             "roles": [{"name": r.name, "label": r.label or r.name} for r in domain.roles],
-            "actions": [self._action_view(a, domain) for a in snapshot.actions],
-            "suggestions": [dataclasses.asdict(s) for s in self.store.load_suggestions(session_id)],
+            # `source`: where the quote was said, so the UI can show it in the Transcript
+            "actions": [{**self._action_view(a, domain), "source": quote_span(a.transcript_excerpt, transcript, spoken)}
+                        for a in snapshot.actions],
+            "suggestions": [{**dataclasses.asdict(s), "source": quote_span(s.transcript_excerpt, transcript, spoken)}
+                            for s in self.store.load_suggestions(session_id)],
         }
 
     def _summary(self, session_id: str) -> str:
@@ -467,6 +471,23 @@ def _with_date(raw: dict[str, Any]) -> dict[str, Any]:
     raw = dict(raw)
     raw["due_date"] = date.fromisoformat(raw["due_date"]) if raw.get("due_date") else None
     return raw
+
+
+def quote_span(excerpt: str, *transcripts: Transcript) -> dict[str, float] | None:
+    """Where a quoted excerpt was said: the time span of the Segments that hold its words, in the first
+    Transcript that has them (the one the analysis read, then the spoken one). None when no Transcript
+    has the words in order, e.g. after the User corrected that Segment (#82): the UI then links nowhere.
+
+    Words are compared without case or punctuation, so a quote spanning a question and its answer
+    (two Segments) still matches; the times let the UI mark it in either version of the Transcript."""
+    needle = re.findall(r"\w+", excerpt.casefold())
+    for transcript in transcripts if needle else ():
+        words = [(w, i) for i, s in enumerate(transcript.segments) for w in re.findall(r"\w+", s.text.casefold())]
+        for at in range(len(words) - len(needle) + 1):
+            if all(words[at + k][0] == w for k, w in enumerate(needle)):
+                first, last = transcript.segments[words[at][1]], transcript.segments[words[at + len(needle) - 1][1]]
+                return {"start": first.start, "end": last.end}
+    return None
 
 
 def _speaker_ids(transcript: Transcript) -> list[str]:

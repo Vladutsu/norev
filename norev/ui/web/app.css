@@ -152,6 +152,10 @@ textarea.field.mono{font-family:var(--mono);font-size:.82rem}
 #final-lines .segment:hover{background:var(--bg)}
 #final-lines .segment:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #final-lines .line > textarea{flex:1}
+.quote-link{all:unset;cursor:pointer;border-radius:.4rem;text-decoration:underline dotted;text-underline-offset:.25em}
+.quote-link:hover{color:var(--accent-text)}
+.quote-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#final-lines .line.quoted{border-radius:.4rem;background:rgba(36,119,242,.1);box-shadow:0 0 0 .45rem rgba(36,119,242,.1)}
 .typeicon{width:3rem;height:3rem;border-radius:1rem;display:grid;place-items:center;box-shadow:var(--raised-sm);color:var(--accent-text);flex:none}
 .typename{font-size:.75rem;font-weight:600;letter-spacing:.06rem;color:var(--accent-text);text-transform:uppercase}
 .atitle{font:700 1.1rem var(--display)}

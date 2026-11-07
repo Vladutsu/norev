@@ -147,6 +147,15 @@ class RecordAndAnalyseTest(Case):
                          [("S1", "I will send the report on Friday.", False), ("S2", "Fine, thanks.", False)])
         self.assertEqual(transcript["translated_language"], "en")
 
+    def test_the_quote_of_an_action_links_to_where_it_was_said(self):
+        session_id = self.recorded()
+        action = self.ok(self.bridge.review(session_id))["actions"][0]
+        self.assertEqual(action["transcript_excerpt"], "I will send the report on Friday.")
+        self.assertEqual(action["source"], {"start": 0.0, "end": 2.0})
+        # a corrected Segment no longer holds the quoted words: the quote links nowhere until regenerated
+        self.ok(self.bridge.edit_transcript(session_id, 0, "Trimit raportul luni."))
+        self.assertIsNone(self.ok(self.bridge.review(session_id))["actions"][0]["source"])
+
     def test_summary_is_kept_and_shown(self):
         session_id = self.recorded()
         self.assertEqual(self.store.load_summary(session_id), "Ședință despre raportul de vineri.")
