@@ -48,10 +48,14 @@ class JiraAccount:
         return f"JiraAccount(available={self._auth is not None})"
 
     def destination(self) -> dict[str, str] | None:
-        """The site and project work items go to, or None (they stay local documents)."""
+        """The site and project a work item goes to when the User picks Jira for it (#72), or None."""
         if self._auth is None or not self._auth.connected():
             return None
         return load_destination(self._auth.store)
+
+    def ready(self) -> bool:
+        """Jira can be picked for a work item: connected, with a project chosen."""
+        return self.destination() is not None
 
     def status(self) -> dict[str, Any]:
         connected = self._auth is not None and self._auth.connected()
@@ -91,7 +95,8 @@ class JiraAccount:
         return {**self.status(), "sites": sites, "failed": failed}
 
     def choose(self, cloud_id: str | None, project_key: str | None) -> dict[str, Any]:
-        """Work items go to this project from now on; no project: they stay local documents."""
+        """The project for the work items the User sends to Jira from now on (approved ones keep
+        theirs); no project: Jira cannot be picked."""
         if self._auth is None:
             return {**self.status(), "failed": "not_configured"}
         if not cloud_id or not project_key:

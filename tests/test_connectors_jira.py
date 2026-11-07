@@ -16,7 +16,6 @@ from norev.adapters.connectors.jira import (
     REFRESH_TOKEN,
     SCOPES,
     AuthorizationFailed,
-    DestinationChanged,
     JiraAuth,
     JiraConnector,
     JiraEndpoints,
@@ -29,12 +28,12 @@ from norev.adapters.connectors.jira import (
 from norev.adapters.connectors.local_document import LocalDocumentConnector
 from norev.adapters.domains.loader import DOMAINS, load_domain
 from norev.core.models import ActionStatus, ProposedAction, Session, UnsupportedWorkflow, ValidationError
-from norev.processor.central import CentralProcessor, SendRefused
-from norev.processor.compose import DESTINATIONS, build_jira, desktop_payload_builder
+from norev.processor.central import CentralProcessor
+from norev.processor.compose import LOCAL_STEPS, build_jira, desktop_payload_builder
 from norev.processor.identity import LocalUser
 from norev.processor.jira_account import JiraAccount
 from norev.processor.payloads import JiraPayloadBuilder
-from norev.processor.workflow import WorkflowExecutor
+from norev.processor.workflow import ExecutionRefused, WorkflowExecutor
 from norev.testing.fakes import FakeLlmClient, FixedClock, InMemorySessionStore
 from norev.usecases.approve import approve_action, preview_action
 from test_connectors_google_auth import MemorySecrets
@@ -307,16 +306,15 @@ class JiraConnectorTest(unittest.TestCase):
         self.assertEqual((again["issue_key"], again["created"]), ("OPS-1", False))
         self.assertEqual(len(self.atlassian.issues), 1)
 
-    def test_another_project_than_the_chosen_one_is_refused_without_a_call(self) -> None:
+    def test_the_approved_project_is_used_whatever_the_app_chooses_now(self) -> None:
+        self.secrets.values.pop(DESTINATION)  # the User chose another project, or none, after approving
         other = payload()
         other["project"] = {"key": "HR", "name": "HR"}
         other["issue"]["fields"]["project"] = {"key": "HR"}
-        with self.assertRaises(DestinationChanged):
-            self.connector.send(other)
-        self.secrets.values.pop(DESTINATION)
-        with self.assertRaises(DestinationChanged):
-            self.connector.send(payload())
-        self.assertEqual(self.atlassian.requests, [])
+        self.connector.send(other)
+        search, create = [r for r in self.atlassian.requests if r[0] in ("GET", "POST")]
+        self.assertIn('project = "HR"', urllib.parse.unquote_plus(search[1]))
+        self.assertEqual(create[2]["fields"]["project"], {"key": "HR"})
 
     def test_payloads_not_shaped_like_the_builders_are_refused_without_a_call(self) -> None:
         bad = [
@@ -358,7 +356,7 @@ class JiraConnectorTest(unittest.TestCase):
 
 
 class JiraWorkflowTest(unittest.TestCase):
-    """A Corporate work item, previewed as a Jira issue because the User chose a project, approved
+    """A Corporate work item the User sends to Jira (picked per action at preview, #72), approved
     through #18's use cases and executed by #23's executor through the Central Processor (#22)."""
 
     def setUp(self) -> None:
@@ -383,14 +381,12 @@ class JiraWorkflowTest(unittest.TestCase):
                                 owner="S1", due_date=date(2026, 11, 20), action_type="work_item",
                                 fields={"deliverable": "The offer PDF"})
         revision = self.sessions.save_actions("s1", [action], expected_revision=0)
-        snapshot = preview_action("s1", "s1-1", {}, expected_revision=revision, store=self.sessions, domain=CORPORATE,
-                                  builder=self.builder, destinations=DESTINATIONS)
+        snapshot = preview_action("s1", "s1-1", {"destination": "jira"}, expected_revision=revision,
+                                  store=self.sessions, domain=CORPORATE, builder=self.builder)
         approve_action("s1", "s1-1", expected_revision=snapshot.revision, store=self.sessions, domain=CORPORATE,
-                       clock=FixedClock(AT), approved_by="local:ana", destinations=DESTINATIONS)
+                       clock=FixedClock(AT), approved_by="local:ana")
         [self.step] = self.action().approved_payload["steps"]
-        local = {"build_document": lambda a: None, "save_result": lambda a: None}
-        self.executor = WorkflowExecutor(self.processor, self.sessions, self.steps, CORPORATE, local,
-                                         destinations=DESTINATIONS)
+        self.executor = WorkflowExecutor(self.processor, self.sessions, self.steps, CORPORATE, LOCAL_STEPS)
 
     def action(self) -> ProposedAction:
         return self.sessions.load_actions("s1")[0]
@@ -428,7 +424,7 @@ class JiraWorkflowTest(unittest.TestCase):
     def test_manual_retry_after_a_lost_answer_creates_one_issue(self) -> None:
         self.atlassian.lose_answer = True
         self.assertEqual(self.executor.execute("s1", "s1-1").status, "failed")
-        self.assertEqual(self.action().error, "Step save_document (jira) failed (JiraError).")
+        self.assertEqual(self.action().error, "Step Trimite sarcina failed (JiraError).")
         self.assertNotIn(SECRET, self.action().error)
         self.executor.retry("s1", "s1-1")
         outcome = self.executor.execute("s1", "s1-1")
@@ -436,24 +432,40 @@ class JiraWorkflowTest(unittest.TestCase):
         self.assertFalse(outcome.steps["save_document"].result["created"])
         self.assertEqual(len(self.atlassian.issues), 1)
 
-    def test_project_changed_after_approval_is_refused_without_a_call(self) -> None:
+    def test_another_project_chosen_later_does_not_change_the_approved_one(self) -> None:
         self.secrets.values[DESTINATION] = json.dumps({**CHOSEN, "project_key": "HR", "project_name": "HR"})
-        outcome = self.executor.execute("s1", "s1-1")
-        self.assertEqual(outcome.status, "failed")
-        self.assertIn("DestinationChanged", self.action().error)
-        self.assertEqual(self.timeline, ["audit", "failed"])
+        self.assertEqual(self.executor.execute("s1", "s1-1").status, "executed")
+        self.assertEqual(self.atlassian.issues[0]["fields"]["project"], {"key": "OPS"})
 
-    def test_without_destinations_a_jira_plan_is_refused(self) -> None:
-        executor = WorkflowExecutor(self.processor, self.sessions, self.steps, CORPORATE,
-                                    {"build_document": lambda a: None, "save_result": lambda a: None})
-        with self.assertRaises(SendRefused):
+    def test_jira_not_set_up_on_this_machine_runs_nothing(self) -> None:
+        processor = CentralProcessor(FakeLlmClient([]), self.audit, identity=LocalUser("local:processor"),
+                                     clock=FixedClock(AT), connectors=[LocalDocumentConnector(self.export)])
+        executor = WorkflowExecutor(processor, self.sessions, self.steps, CORPORATE, LOCAL_STEPS)
+        with self.assertRaises(ExecutionRefused):
             executor.execute("s1", "s1-1")
-        self.assertEqual(self.atlassian.requests, [])
+        self.assertEqual((self.timeline, self.atlassian.requests), ([], []))
 
 
 class StubAccount:
     def destination(self) -> dict[str, str]:
         return CHOSEN
+
+    def status(self) -> dict:
+        return {"available": True, "connected": True, "destination": CHOSEN}
+
+
+def _as_jira(domain):
+    """The Domain as ConnectorPayloadBuilder shows it to the Jira builder: the work item step uses jira."""
+    import dataclasses
+
+    from norev.core.models import Workflow
+
+    work = domain.action_type("work_item")
+    steps = tuple(dataclasses.replace(s, connector="jira", alternatives=()) if s.connector else s
+                  for s in work.workflow.steps)
+    swapped = dataclasses.replace(work, workflow=Workflow(steps))
+    return dataclasses.replace(domain, action_types=tuple(swapped if a.name == "work_item" else a
+                                                          for a in domain.action_types))
 
 
 class JiraDestinationTest(unittest.TestCase):
@@ -462,40 +474,48 @@ class JiraDestinationTest(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.export = Path(temp.name)
 
-    def test_no_project_chosen_keeps_work_items_local(self) -> None:
-        builder = desktop_payload_builder(self.export, calendar=False, jira=JiraAccount(None))
-        action = ProposedAction("a", "T", "D", "Q", action_type="work_item", fields={})
-        [step] = builder.build(action, CORPORATE, {})["steps"]
+    def work_item(self, title: str = "T") -> ProposedAction:
+        return ProposedAction("a", title, "D", "Q", action_type="work_item", fields={})
+
+    def test_a_work_item_stays_local_unless_the_user_picks_jira(self) -> None:
+        builder = desktop_payload_builder(self.export, calendar=False, jira=StubAccount())
+        [step] = builder.build(self.work_item(), CORPORATE, {})["steps"]
         self.assertEqual(step["connector"], "local_document")
+        [step] = builder.build(self.work_item(), CORPORATE, {"destination": "jira"})["steps"]
+        self.assertEqual(step["connector"], "jira")
+
+    def test_jira_needs_to_be_set_up_and_a_project_chosen(self) -> None:
+        with self.assertRaises(UnsupportedWorkflow):  # no OAuth app: no Jira builder
+            desktop_payload_builder(self.export, calendar=False, jira=JiraAccount(None)).build(
+                self.work_item(), CORPORATE, {"destination": "jira"})
+        with self.assertRaises(ValidationError) as caught:
+            JiraPayloadBuilder(lambda: None).build(self.work_item(), _as_jira(CORPORATE), {})
+        self.assertEqual(caught.exception.code, "no_jira_project")
 
     def test_medical_actions_never_go_to_jira(self) -> None:
-        self.assertEqual(set(DESTINATIONS), {("corporate", "work_item")})
         builder = desktop_payload_builder(self.export, calendar=False, jira=StubAccount())
         for action_type in MEDICAL.action_types:
-            steps = [s for s in action_type.workflow.steps if s.connector]
-            if len(steps) == 1 and steps[0].connector == "local_document":
-                action = ProposedAction("a", "T", "D", "Q", action_type=action_type.name,
-                                        fields={f.name: "2026-11-20" if f.type == "date" else "10:00" if f.type == "time" else "x"
-                                                for f in action_type.fields})
-                with self.subTest(action_type=action_type.name):
-                    [step] = builder.build(action, MEDICAL, {})["steps"]
-                    self.assertEqual(step["connector"], "local_document")
+            if not any(s.connector for s in action_type.workflow.steps):
+                continue
+            action = ProposedAction("a", "T", "D", "Q", action_type=action_type.name,
+                                    fields={f.name: "2026-11-20" if f.type == "date" else "10:00" if f.type == "time" else "x"
+                                            for f in action_type.fields})
+            with self.subTest(action_type=action_type.name), self.assertRaises(ValidationError) as caught:
+                builder.build(action, MEDICAL, {"destination": "jira"})
+            self.assertEqual(caught.exception.code, "unknown_destination")
 
-    def test_builder_refuses_without_destination_or_with_options(self) -> None:
-        action = ProposedAction("a", "T", "D", "Q", action_type="work_item", fields={})
-        with self.assertRaises(UnsupportedWorkflow):
-            JiraPayloadBuilder(lambda: None).build(action, CORPORATE, {})
+    def test_builder_refuses_options_other_connectors_and_bad_summaries(self) -> None:
+        builder = JiraPayloadBuilder(lambda: CHOSEN)
         with self.assertRaises(ValidationError):
-            JiraPayloadBuilder(lambda: CHOSEN).build(action, CORPORATE, {"x": 1})
-
-    def test_a_jira_plan_for_an_action_type_without_destinations_is_not_approved(self) -> None:
-        sessions = InMemorySessionStore()
-        sessions.save_session(Session(id="s1", started_at=AT, domain="corporate"))
-        action = ProposedAction("s1-1", "T", "D", "Q", action_type="work_item", fields={})
-        revision = sessions.save_actions("s1", [action], expected_revision=0)
-        with self.assertRaises(ValidationError):
-            preview_action("s1", "s1-1", {}, expected_revision=revision, store=sessions, domain=CORPORATE,
-                           builder=JiraPayloadBuilder(lambda: CHOSEN))  # no destinations given
+            builder.build(self.work_item(), _as_jira(CORPORATE), {"x": 1})
+        with self.assertRaises(UnsupportedWorkflow):  # the Domain's own step is local_document
+            builder.build(self.work_item(), CORPORATE, {})
+        for title in ("x" * 256, "line one" + chr(10) + "line two", "   "):
+            with self.subTest(title=title[:12]), self.assertRaises(ValidationError) as caught:
+                builder.build(self.work_item(title), _as_jira(CORPORATE), {})
+            self.assertEqual(caught.exception.code, "invalid_summary")
+        plan = builder.build(self.work_item("x" * 255), _as_jira(CORPORATE), {})
+        self.assertEqual(len(plan["steps"][0]["payload"]["issue"]["fields"]["summary"]), 255)
 
     def test_build_jira_needs_an_oauth_app_and_an_encrypted_store(self) -> None:
         account, connector = build_jira(MemorySecrets(), JiraSettings("id", "secret"))
@@ -503,6 +523,31 @@ class JiraDestinationTest(unittest.TestCase):
         self.assertIsNotNone(connector)
         self.assertIsNone(build_jira(MemorySecrets(), JiraSettings(None, None))[1])
         self.assertIsNone(build_jira(object(), JiraSettings("id", "secret"))[1])
+        import os
+        from unittest.mock import patch
+
+        from norev.processor.compose import build_desktop_processor
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "llamacpp", "LLAMACPP_URL": "http://127.0.0.1:9"}):
+            processor = build_desktop_processor(None, self.export, jira=connector)
+            without = build_desktop_processor(None, self.export)
+        self.assertTrue(processor.has_connector("jira"))
+        self.assertFalse(without.has_connector("jira"))
+
+
+class JiraReadinessTest(unittest.TestCase):
+    def test_jira_can_be_picked_once_connected_with_a_project(self) -> None:
+        from norev.ui.backend import DemoBackend
+
+        backend = DemoBackend(InMemorySessionStore(), approved_by="local:ana")
+        work_item = CORPORATE.action_type("work_item")
+        ready = lambda: {d["connector"]: d["ready"] for d in backend._destinations(work_item)}
+        self.assertEqual(ready(), {"local_document": True, "trello": False, "jira": False})
+        secrets = MemorySecrets(**{REFRESH_TOKEN: "refresh-1"})
+        backend.jira = JiraAccount(JiraAuth(JiraSettings("c", "s"), secrets))
+        self.assertFalse(ready()["jira"])  # connected, no project yet
+        secrets.values[DESTINATION] = json.dumps(CHOSEN)
+        self.assertTrue(ready()["jira"])
 
 
 class JiraBridgeTest(unittest.TestCase):

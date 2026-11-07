@@ -13,7 +13,7 @@ from pathlib import Path
 DOMAINS = Path(__file__).resolve().parent.parent / "domains"
 
 # shortcut: Connectors are core code that does not exist yet; keep in sync with domains/README.md.
-KNOWN_CONNECTORS = {"email_draft", "google_calendar", "local_document"}
+KNOWN_CONNECTORS = {"email_draft", "google_calendar", "jira", "local_document", "trello"}
 FIELD_TYPES = {"string", "date", "time"}
 GENERIC_FIELDS = {"title", "description", "owner", "due_date", "transcript_excerpt"}
 PLACEHOLDERS = {"session_date", "roles", "speaker_roles", "action_types", "transcript", "proposed_actions"}
@@ -93,8 +93,15 @@ def check_domain(folder: Path) -> None:
             connector = step.get("connector")
             if connector is None:
                 assert "sends" not in step, f"{step_where}: sends without a connector"
+                assert "alternatives" not in step, f"{step_where}: alternatives without a connector"
                 continue
             assert connector in KNOWN_CONNECTORS, f"{step_where}: unknown connector {connector!r}"
+            alternatives = step.get("alternatives", [])
+            assert isinstance(alternatives, list), f"{step_where}: alternatives must be a list"
+            repeated = len(set(alternatives)) != len(alternatives) or connector in alternatives
+            assert not repeated, f"{step_where}: alternatives repeat a Connector"
+            for alternative in alternatives:
+                assert alternative in KNOWN_CONNECTORS, f"{step_where}: unknown alternative {alternative!r}"
             sends = step.get("sends")
             assert isinstance(sends, list) and sends, f"{step_where}: sends must list the payload fields"
             unknown = set(sends) - set(field_names) - GENERIC_FIELDS

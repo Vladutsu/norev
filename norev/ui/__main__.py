@@ -7,7 +7,8 @@ With NOREV_STORE_KEY_FILE set, Sessions go to the encrypted store (#26); otherwi
 memory and are gone when the window closes. Approved Proposed Actions are exported to
 NOREV_EXPORT_DIR (default: Documents/norev); with NOREV_GOOGLE_CLIENT_ID/SECRET and the encrypted
 store, the User can connect Google Calendar and send approved events to it (#45); with
-NOREV_JIRA_CLIENT_ID/SECRET, send approved work items to a Jira Cloud project (#73). llama-server starts for the analysis only, as
+NOREV_TRELLO_API_KEY, Trello for work items (#72); with NOREV_JIRA_CLIENT_ID/SECRET, Jira Cloud (#73).
+llama-server starts for the analysis only, as
 `norev.cmd process` starts it (#48), with the same variables. Needs `pip install -r requirements-ui.txt`.
 """
 import argparse
@@ -36,7 +37,7 @@ def session_backend(store, approved_by: str, pick_file):
     from norev.launcher.llama import server_from_environment
     from norev.launcher.paths import AppPaths
     from norev.processor.compose import (
-        DESTINATIONS, build_desktop_processor, build_google_calendar, build_jira, desktop_payload_builder,
+        build_desktop_processor, build_google_calendar, build_jira, build_trello, desktop_payload_builder,
     )
     from norev.session import WORKERS, _NoSpeakers
     from norev.ui.session_backend import SessionBackend
@@ -58,14 +59,15 @@ def session_backend(store, approved_by: str, pick_file):
         diarizer = _NoSpeakers()
     export_dir = Path(os.environ.get("NOREV_EXPORT_DIR") or Path.home() / "Documents" / "norev").resolve()
     google, calendar = build_google_calendar(store)  # no Connector without an OAuth client and the encrypted store
-    jira_account, jira = build_jira(store)  # the same for Jira (#73)
+    trello, trello_connector = build_trello(store)  # none without NOREV_TRELLO_API_KEY and the encrypted store
+    jira, jira_connector = build_jira(store)  # none without NOREV_JIRA_CLIENT_ID/SECRET and the encrypted store
     processor = build_desktop_processor(store, export_dir, transcriber=ChildProcessAdapter(store, child_process.whisper),
-                                        diarizer=diarizer, calendar=calendar, jira=jira)
+                                        diarizer=diarizer, calendar=calendar, trello=trello_connector,
+                                        jira=jira_connector)
     return SessionBackend(
         store, approved_by=approved_by, processor=processor, export_dir=export_dir,
-        builder=desktop_payload_builder(export_dir, calendar=calendar is not None,
-                                        jira=jira_account if jira is not None else None),
-        google=google, jira=jira_account, destinations=DESTINATIONS,
+        builder=desktop_payload_builder(export_dir, calendar=calendar is not None, trello=trello, jira=jira),
+        google=google, trello=trello, jira=jira,
         llm_session=lambda: _alias(llama),
         record_source=lambda: capture(resolve_device(os.environ.get("NOREV_INPUT_DEVICE"))),
         pick_file=pick_file, workers=WORKERS,

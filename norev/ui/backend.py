@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Any
 
 from norev.adapters.domains.loader import load_domain
-from norev.core.models import ActionStatus, Domain, ProposedAction, Segment, Session, Suggestion, Transcript
+from norev.core.models import (
+    ActionStatus, Domain, ProposedAction, Segment, Session, Suggestion, Transcript, ValidationError,
+)
 from norev.core.ports import Clock, SessionStore
 from norev.processor.payloads import email_preview
 from norev.usecases.approve import approve_action, domain_digest, edit_action, preview_action, reject_action
@@ -30,7 +32,8 @@ MODES = (
     ("others", "Others", "Prompt propriu"),
 )
 CONNECTOR_LABELS = {"google_calendar": "Google Calendar", "local_document": "Document local",
-                    "email_draft": "Draft de email", "jira": "Jira"}
+                    "email_draft": "Draft de email", "trello": "Trello", "jira": "Jira"}
+LOCAL_CONNECTORS = ("local_document", "email_draft")  # need no account
 GENERIC_FIELDS = ("title", "description", "owner", "due_date", "transcript_excerpt")
 
 
@@ -82,8 +85,8 @@ def _value(action: ProposedAction, name: str) -> Any:
 class DemoBackend:
     can_execute = False  # the demo reviews only; SessionBackend executes through the Central Processor (#43)
     google = None  # SessionBackend: the GoogleAccount from the composition root (#45); none in the demo
-    jira = None  # SessionBackend: the JiraAccount (#73); none in the demo
-    destinations: dict = {}  # SessionBackend: compose.DESTINATIONS, the Connectors the User may pick (#73)
+    trello = None  # SessionBackend: the TrelloLink from the composition root (#72); none in the demo
+    jira = None  # SessionBackend: the JiraAccount from the composition root (#73); none in the demo
 
     def __init__(self, store: SessionStore, *, approved_by: str, clock: Clock | None = None,
                  domains_dir: Path = ROOT / "domains", monotonic=time.monotonic) -> None:
@@ -145,7 +148,32 @@ class DemoBackend:
             raise ModeUnavailable("google_calendar")
         return self.google.disconnect()
 
-    # --- Jira (#73): connect, disconnect and the project work items go to
+    # --- Trello account (#72): the token the User pastes, the list work items go to
+
+    def trello_status(self) -> dict[str, Any]:
+        return self.trello.status() if self.trello is not None else {"available": False, "connected": False, "list": None}
+
+    def _trello(self):
+        if self.trello is None:
+            raise ModeUnavailable("trello")
+        return self.trello
+
+    def trello_authorize(self) -> dict[str, Any]:
+        return self._trello().authorize()
+
+    def trello_connect(self, token: Any) -> dict[str, Any]:
+        return self._trello().connect(token)
+
+    def trello_boards(self) -> dict[str, Any]:
+        return self._trello().boards()
+
+    def trello_choose_list(self, list_id: Any) -> dict[str, Any]:
+        return self._trello().choose_list(list_id)
+
+    def trello_disconnect(self) -> dict[str, Any]:
+        return self._trello().disconnect()
+
+    # --- Jira (#73): connect, disconnect and the project for the work items sent to Jira
 
     def _jira(self):
         if self.jira is None:
@@ -166,6 +194,15 @@ class DemoBackend:
 
     def jira_choose(self, cloud_id: str | None, project_key: str | None) -> dict[str, Any]:
         return self._jira().choose(cloud_id, project_key)
+
+    def _destination_ready(self, connector: str) -> bool:
+        """A destination the User can pick now (#72): local ones always, Trello once connected with a
+        list, Jira once connected with a project (#73)."""
+        if connector in LOCAL_CONNECTORS:
+            return True
+        if connector == "trello":
+            return self.trello is not None and self.trello.ready()
+        return connector == "jira" and self.jira is not None and self.jira.ready()
 
     # --- recording
 
@@ -311,6 +348,7 @@ class DemoBackend:
                       "readable": email_preview(s["payload"].get("content")) if s["connector"] == "email_draft" else None,
                       } for s in (plan or {}).get("steps", [])],
             "prepared": action.prepared_payload is not None,
+            "destinations": self._destinations(action_type),
         }
 
     def delete(self, session_id: str) -> dict[str, Any]:
@@ -338,16 +376,33 @@ class DemoBackend:
         edit_action(session_id, action_id, changes, expected_revision=revision, store=self.store, domain=domain)
         return self.review(session_id)
 
-    def preview(self, session_id: str, action_id: str, revision: int) -> dict[str, Any]:
+    def preview(self, session_id: str, action_id: str, revision: int, destination: str | None = None) -> dict[str, Any]:
+        """`destination`: the Connector the User picked for the action (#72), among the ones ready now."""
         domain = self.domain(self.store.get_session(session_id).domain)
-        preview_action(session_id, action_id, {}, expected_revision=revision, store=self.store,
-                       domain=domain, builder=self.builder, destinations=self.destinations)
+        options = {}
+        if destination is not None:
+            action = next((a for a in self.store.load_actions(session_id) if a.id == action_id), None)
+            action_type = domain.action_type(action.action_type) if action is not None else None
+            ready = [d["connector"] for d in self._destinations(action_type) if d["ready"]]
+            if destination not in ready:
+                raise ValidationError("unknown_destination", "destination")
+            options = {"destination": destination}
+        preview_action(session_id, action_id, options, expected_revision=revision, store=self.store,
+                       domain=domain, builder=self.builder)
         return self.review(session_id)
+
+    def _destinations(self, action_type) -> list[dict[str, Any]]:
+        """Where the User may send this Action Type (#72); empty when there is no choice."""
+        steps = [s for s in action_type.workflow.steps if s.alternatives] if action_type else []
+        if not steps:
+            return []
+        return [{"connector": c, "label": CONNECTOR_LABELS.get(c, c), "ready": self._destination_ready(c)}
+                for c in steps[0].connectors()]
 
     def approve(self, session_id: str, action_id: str, revision: int) -> dict[str, Any]:
         domain = self.domain(self.store.get_session(session_id).domain)
         approve_action(session_id, action_id, expected_revision=revision, store=self.store, domain=domain,
-                       clock=self.clock, approved_by=self.approved_by, destinations=self.destinations)
+                       clock=self.clock, approved_by=self.approved_by)
         return self.review(session_id)
 
     def reject(self, session_id: str, action_id: str, revision: int) -> dict[str, Any]:

@@ -1,11 +1,12 @@
-"""PayloadBuilders (core/ports, #18) for the `local_document` (#23), `google_calendar` (#44) and
-`email_draft` (#61) Connectors.
+"""PayloadBuilders (core/ports, #18) for the `local_document` (#23), `google_calendar` (#44),
+`email_draft` (#61), `trello` (#72) and `jira` (#73) Connectors.
 
 It makes, at preview time, the final payload of each `local_document` step: the exact document text
 and the path it will be written to, so the User approves both (ADR 0002). The folder is the app's,
 given when the builder is built, and the file name comes from the content: no option, Domain or
 model answer chooses the path. LocalDocumentConnector.send() checks the same rule again.
 """
+import dataclasses
 import os
 import re
 import uuid
@@ -15,9 +16,9 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from norev.adapters.connectors import email_draft
+from norev.adapters.connectors import email_draft, trello
 from norev.adapters.connectors.local_document import NAME, destination, export_dir_of, render
-from norev.core.models import Domain, ProposedAction, UnsupportedWorkflow, ValidationError
+from norev.core.models import Domain, ProposedAction, UnsupportedWorkflow, ValidationError, Workflow
 from norev.core.ports import PayloadBuilder
 from norev.usecases.approve import domain_digest
 
@@ -168,81 +169,41 @@ class GoogleCalendarPayloadBuilder:
 class ConnectorPayloadBuilder:
     """Picks the builder for the Connector of an Action Type's Workflow; one Connector per Workflow.
 
-    `chosen(domain, action_type)` is the destination the User picked in the app for that Action Type
-    (#72, #73), or None for the Domain's own Connector."""
-
-    def __init__(self, builders: dict[str, PayloadBuilder],
-                 chosen: Callable[[str, str], str | None] = lambda domain, action_type: None) -> None:
-        self.builders = builders
-        self.chosen = chosen
-
-    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
-        action_type = domain.action_type(action.action_type)
-        if action_type is None:
-            raise ValidationError("unknown_action_type", "action_type")
-        connectors = {s.connector for s in action_type.workflow.steps if s.connector}
-        chosen = self.chosen(domain.name, action_type.name)
-        if chosen is not None and len(connectors) == 1:
-            connectors = {chosen}
-        if len(connectors) != 1 or next(iter(connectors)) not in self.builders:
-            raise UnsupportedWorkflow(f"no payload builder for Connectors {sorted(connectors)!r}")
-        return self.builders[connectors.pop()].build(action, domain, options)
-
-
-JIRA = "jira"
-JIRA_LABELS = {"owner": "Responsabil", "due_date": "Termen", "transcript_excerpt": "Citat din Transcript"}
-
-
-class JiraPayloadBuilder:
-    """For a work item the User sends to Jira (#73): the step's payload is `{"site", "project",
-    "issue"}`, with `issue` the exact create-issue body (API v2, plain-text description).
-
-    `destination()` is the site and project the User chose in the app (None: not chosen, nothing can
-    be previewed). From the step's `sends`: `title` is the summary, `due_date` the duedate, and the
-    description holds the description, then the owner as text (S1 is not a Jira user: no assignee),
-    the other text fields and the Transcript quote. The `norev-<id>` label is made here, so a retry
-    of the approved payload finds the issue instead of creating a second one. options must be `{}`.
-    The ConnectorPayloadBuilder routes a step here only when the User chose Jira for its Action Type.
+    `options["destination"]` (#72): the Connector the User chose instead of the step's default; it
+    must be one of the step's `alternatives`. The chosen builder sees the step with that Connector,
+    and the plan keeps the real Domain's digest, so approval and the executor check it as usual.
+    The other options go to the chosen builder.
     """
 
-    def __init__(self, destination: Callable[[], dict[str, str] | None], *,
-                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex) -> None:
-        self.destination = destination
-        self.new_id = new_id
+    def __init__(self, builders: dict[str, PayloadBuilder]) -> None:
+        self.builders = builders
 
     def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
         action_type = domain.action_type(action.action_type)
         if action_type is None:
             raise ValidationError("unknown_action_type", "action_type")
-        if options:
-            raise ValidationError("unknown_options", "options")
-        destination = self.destination()
-        if destination is None:
-            raise UnsupportedWorkflow("no Jira project chosen")
-        labels = {f.name: f.label or f.name for f in action_type.fields}
-        types = {f.name: f.type for f in action_type.fields}
-        steps = []
-        for step in (s for s in action_type.workflow.steps if s.connector):
-            if set(step.sends) - set(GENERIC_FIELDS) - {n for n, t in types.items() if t == "string"} or "title" not in step.sends:
-                raise UnsupportedWorkflow(f"step {step.name!r} sends fields a Jira issue cannot hold")
-            notes = [_value(action, "description")] if "description" in step.sends else []
-            notes += [f"{JIRA_LABELS.get(n) or labels[n]}: {_value(action, n)}" for n in step.sends
-                      if n not in ("title", "description", "due_date") and _value(action, n)]
-            fields: dict[str, Any] = {
-                "project": {"key": destination["project_key"]},
-                "issuetype": {"name": "Task"},
-                "summary": action.title,
-                "description": "\n\n".join(n for n in notes if n),
-                "labels": [f"norev-{self.new_id()}"],
-            }
-            if "due_date" in step.sends and _value(action, "due_date"):
-                fields["duedate"] = _value(action, "due_date")
-            payload = {"site": {k: destination[k] for k in ("cloud_id", "url", "name")},
-                       "project": {"key": destination["project_key"], "name": destination["project_name"]},
-                       "issue": {"fields": fields}}
-            steps.append({"step": step.name, "connector": JIRA, "payload": payload})
-        return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
-                "action_type": action.action_type, "steps": steps}
+        steps = [s for s in action_type.workflow.steps if s.connector]
+        defaults = {s.connector for s in steps}
+        if len(defaults) != 1:
+            raise UnsupportedWorkflow(f"no payload builder for Connectors {sorted(defaults)!r}")
+        options = dict(options)
+        destination = options.pop("destination", None)
+        chosen = steps[0].connector if destination is None else destination
+        if not isinstance(chosen, str) or any(chosen not in s.connectors() for s in steps):
+            raise ValidationError("unknown_destination", "destination")
+        if chosen not in self.builders:
+            raise UnsupportedWorkflow(f"no payload builder for Connector {chosen!r}")
+        if chosen == steps[0].connector:
+            return self.builders[chosen].build(action, domain, options)
+        swapped = dataclasses.replace(action_type, workflow=Workflow(tuple(
+            dataclasses.replace(s, connector=chosen, alternatives=()) if s.connector else s
+            for s in action_type.workflow.steps)))
+        view = dataclasses.replace(domain, action_types=tuple(
+            swapped if a.name == action_type.name else a for a in domain.action_types))
+        plan = self.builders[chosen].build(action, view, options)
+        if isinstance(plan, dict):
+            plan["domain_digest"] = domain_digest(domain)  # the plan is checked against the real Domain
+        return plan
 
 
 EMAIL_FIELDS = ("recipients", "subject", "body")  # what an email_draft step sends (domains/corporate)
@@ -287,3 +248,121 @@ def email_preview(content: Any) -> dict[str, str] | None:
         return email_draft.read_eml(content)
     except ValueError:
         return None
+
+
+class TrelloPayloadBuilder:
+    """For a work item sent to Trello (#72): the exact card and the list it goes to.
+
+    `chosen_list()` gives the list the User chose ({"id", "name"}), None before they chose one.
+    The card: `name` from the title; `desc` with the description, the owner as text (no Trello member
+    is ever assigned: a Speaker is not a Contact), the step's other text fields with their labels, the
+    Transcript quote, and a last line `norev:<id>` that lets a Retry find the card instead of making a
+    second one; `due` is the due date at 12:00 in the time zone, with its offset. options must be `{}`.
+    """
+
+    def __init__(self, chosen_list: Callable[[], dict[str, str] | None], time_zone: str = DEFAULT_TIME_ZONE, *,
+                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex) -> None:
+        self.chosen_list = chosen_list
+        self.zone = ZoneInfo(time_zone)
+        self.new_id = new_id
+
+    @classmethod
+    def from_environment(cls, chosen_list: Callable[[], dict[str, str] | None]) -> "TrelloPayloadBuilder":
+        return cls(chosen_list, os.environ.get("NOREV_TIMEZONE") or DEFAULT_TIME_ZONE)
+
+    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
+        action_type = domain.action_type(action.action_type)
+        if action_type is None:
+            raise ValidationError("unknown_action_type", "action_type")
+        if options:
+            raise ValidationError("unknown_options", "options")
+        connector_steps = [s for s in action_type.workflow.steps if s.connector]
+        for step in connector_steps:
+            if step.connector != trello.NAME:
+                raise UnsupportedWorkflow(f"no payload builder for Connector {step.connector!r}")
+        target = self.chosen_list()
+        if not target:
+            raise ValidationError("no_trello_list", "destination")
+        labels = {f.name: f.label or f.name for f in action_type.fields}
+        steps = []
+        for step in connector_steps:
+            if not action.title.strip():
+                raise ValidationError("required", "title")
+            lines = [action.description.strip()] if "description" in step.sends and action.description.strip() else []
+            if "owner" in step.sends and action.owner:
+                lines.append(f"Responsabil: {action.owner}")
+            lines += [f"{labels[n]}: {action.fields[n]}" for n in step.sends if n in labels and action.fields.get(n)]
+            if "transcript_excerpt" in step.sends and action.transcript_excerpt.strip():
+                lines.append(f"Din conversație: „{action.transcript_excerpt.strip()}”")
+            marker = f"norev:{self.new_id()}"
+            card: dict[str, Any] = {"name": action.title.strip(), "desc": "\n\n".join(lines + [marker])}
+            if "due_date" in step.sends and action.due_date:
+                card["due"] = datetime.combine(action.due_date, time(12, 0), tzinfo=self.zone).isoformat()
+            steps.append({"step": step.name, "connector": trello.NAME,
+                          "payload": {"list": {"id": target["id"], "name": target["name"]}, "card": card}})
+        return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
+                "action_type": action.action_type, "steps": steps}
+
+
+JIRA = "jira"
+JIRA_LABELS = {"owner": "Responsabil", "due_date": "Termen", "transcript_excerpt": "Citat din Transcript"}
+MAX_SUMMARY = 255  # Jira's limit for an issue summary
+
+
+class JiraPayloadBuilder:
+    """For a work item the User sends to Jira (#73): the step's payload is `{"site", "project",
+    "issue"}`, with `issue` the exact create-issue body (API v2, plain-text description).
+
+    `destination()` is the site and project the User chose in the app; None before they chose one
+    (the preview is refused). From the step's `sends`: `title` is the summary, `due_date` the duedate,
+    and the description holds the description, then the owner as text (no assignee: a Speaker is not
+    a Jira user), the other text fields and the Transcript quote. The `norev-<id>` label is made here,
+    so a retry of the approved payload finds the issue instead of creating a second one. options must
+    be `{}`. ConnectorPayloadBuilder routes a step here when the User picked Jira for the action (#72).
+    """
+
+    def __init__(self, destination: Callable[[], dict[str, str] | None], *,
+                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex) -> None:
+        self.destination = destination
+        self.new_id = new_id
+
+    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
+        action_type = domain.action_type(action.action_type)
+        if action_type is None:
+            raise ValidationError("unknown_action_type", "action_type")
+        if options:
+            raise ValidationError("unknown_options", "options")
+        connector_steps = [s for s in action_type.workflow.steps if s.connector]
+        for step in connector_steps:
+            if step.connector != JIRA:
+                raise UnsupportedWorkflow(f"no payload builder for Connector {step.connector!r}")
+        destination = self.destination()
+        if destination is None:
+            raise ValidationError("no_jira_project", "destination")
+        summary = action.title.strip()
+        if not summary or len(summary) > MAX_SUMMARY or any(c in summary for c in "\r\n"):
+            raise ValidationError("invalid_summary", "title")  # Jira refuses it only at Execute otherwise
+        labels = {f.name: f.label or f.name for f in action_type.fields}
+        types = {f.name: f.type for f in action_type.fields}
+        steps = []
+        for step in connector_steps:
+            if set(step.sends) - set(GENERIC_FIELDS) - {n for n, t in types.items() if t == "string"} or "title" not in step.sends:
+                raise UnsupportedWorkflow(f"step {step.name!r} sends fields a Jira issue cannot hold")
+            notes = [_value(action, "description")] if "description" in step.sends else []
+            notes += [f"{JIRA_LABELS.get(n) or labels[n]}: {_value(action, n)}" for n in step.sends
+                      if n not in ("title", "description", "due_date") and _value(action, n)]
+            fields: dict[str, Any] = {
+                "project": {"key": destination["project_key"]},
+                "issuetype": {"name": "Task"},
+                "summary": summary,
+                "description": "\n\n".join(n for n in notes if n),
+                "labels": [f"norev-{self.new_id()}"],
+            }
+            if "due_date" in step.sends and _value(action, "due_date"):
+                fields["duedate"] = _value(action, "due_date")
+            payload = {"site": {k: destination[k] for k in ("cloud_id", "url", "name")},
+                       "project": {"key": destination["project_key"], "name": destination["project_name"]},
+                       "issue": {"fields": fields}}
+            steps.append({"step": step.name, "connector": JIRA, "payload": payload})
+        return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
+                "action_type": action.action_type, "steps": steps}

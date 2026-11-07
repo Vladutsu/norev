@@ -3,8 +3,8 @@ User chose, with the stdlib only. The Central Processor calls it only with the e
 and audits each attempt (#22).
 
 - send(): the payload is `{"site", "project", "issue"}`, built at preview by JiraPayloadBuilder
-  (norev/processor/payloads.py); `issue` is the exact body of the create-issue request. The site and
-  project must still be the ones the User chose in the app, otherwise nothing is called. Jira takes
+  (norev/processor/payloads.py) when the User picks Jira for a work item (#72); `issue` is the exact
+  body of the create-issue request, for the project the User approved. Jira takes
   no id made here, so the approved issue carries the label `norev-<id>`: before creating, the
   Connector searches the project for that label, and a manual Retry after an uncertain attempt finds
   the issue Jira already has. Jira indexes a new issue for search within seconds; Retry is manual,
@@ -64,10 +64,6 @@ class ReconnectNeeded(NotConnected):
 
 class AuthorizationFailed(Exception):
     """The sign-in did not complete; the message is a fixed reason code. Nothing was saved."""
-
-
-class DestinationChanged(Exception):
-    """The payload's site or project is not the one chosen in the app now: nothing was sent."""
 
 
 class JiraError(Exception):
@@ -421,10 +417,9 @@ class JiraConnector:
         return "JiraConnector()"
 
     def send(self, payload: dict[str, Any]) -> dict[str, Any]:
+        # the project is the one the User approved for this action (#72): the Central Processor checked
+        # the payload is the approved one; choosing another project later changes only new previews
         site, project, issue, label = _check_payload(payload)
-        chosen = load_destination(self._auth.store)
-        if chosen is None or (chosen["cloud_id"], chosen["project_key"]) != (site["cloud_id"], project["key"]):
-            raise DestinationChanged("the approved Jira project is not the one chosen in the app now")
         api = self._client.api(site["cloud_id"])
         # project key and label are checked against fixed patterns above, so the JQL holds no free text
         jql = f'project = "{project["key"]}" AND labels = "{label}"'

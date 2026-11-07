@@ -115,29 +115,24 @@ class Transcript:
 @dataclass(frozen=True)
 class WorkflowStep:
     """One step of a Workflow; `connector` names the Connector it uses, if any, and `sends` the
-    payload fields that step sends through the Central Processor (domains/README.md)."""
+    payload fields that step sends through the Central Processor (domains/README.md).
+    `alternatives`: other Connectors the User may pick for this step at preview (#72); the approved
+    plan records the one chosen, and only `connector` or one of these is accepted."""
 
     name: str
     connector: str | None = None
     sends: tuple[str, ...] = ()
     label: str = ""
+    alternatives: tuple[str, ...] = ()
+
+    def connectors(self) -> tuple[str, ...]:
+        """The Connectors this step may use: the default first."""
+        return ((self.connector,) + self.alternatives) if self.connector else ()
 
 
 @dataclass(frozen=True)
 class Workflow:
     steps: tuple[WorkflowStep, ...]
-
-
-# The app's (never a Domain's or a model's) Action Types whose destination the User picks:
-# (Domain name, Action Type name) -> the Connectors allowed for its Connector step (#72, #73).
-Destinations = dict[tuple[str, str], tuple[str, ...]]
-
-
-def allowed_connectors(destinations: Destinations, domain: str, action_type: str | None, step: WorkflowStep) -> tuple[str, ...]:
-    """The Connectors an approved plan may use for `step`: the Domain's own, or one of the app's
-    alternatives when the Domain's Connector is among them."""
-    allowed = destinations.get((domain, action_type or ""), ())
-    return allowed if step.connector in allowed else (step.connector,) if step.connector else ()
 
 
 FIELD_TYPES = ("string", "date", "time")  # date: YYYY-MM-DD, time: HH:MM 24-hour

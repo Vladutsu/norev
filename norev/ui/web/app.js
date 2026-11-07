@@ -27,6 +27,10 @@ const ERRORS = {
   invalid_text: "Textul conține caractere care nu pot fi trimise.",
   too_long: "Textul e prea lung.",
   too_many: "Prea mulți destinatari.",
+  unknown_destination: "Destinația aleasă nu e disponibilă. Conecteaz-o întâi.",
+  no_trello_list: "Alege întâi lista din Trello pentru sarcini.",
+  no_jira_project: "Alege întâi proiectul Jira pentru sarcini.",
+  invalid_summary: "Titlul trebuie să fie pe un rând, de cel mult 255 de caractere, pentru Jira.",
 };
 // Why connecting Google Calendar did not work (GoogleAccount.connect, #45)
 const GOOGLE_FAILED = {
@@ -37,19 +41,6 @@ const GOOGLE_FAILED = {
   already_connecting: "Conectarea e deja în curs, în browser.",
   not_configured: "Google Calendar nu e configurat pe acest calculator.",
   unreachable: "Google nu poate fi contactat. Verifică conexiunea la internet.",
-};
-// Why a Jira call did not work (JiraAccount, #73)
-const JIRA_FAILED = {
-  access_denied: "Ai refuzat accesul în Atlassian. Nimic nu s-a salvat.",
-  timeout: "Conectarea a expirat. Încearcă din nou și termină în browser.",
-  no_browser: "Browserul nu a putut fi deschis.",
-  port_in_use: "Portul de conectare e ocupat de alt program. Închide-l și încearcă din nou.",
-  scope_not_granted: "Atlassian nu a dat acces la issue-urile Jira.",
-  already_connecting: "Conectarea e deja în curs, în browser.",
-  not_configured: "Jira nu e configurat pe acest calculator.",
-  not_connected: "Contul Atlassian nu mai e conectat. Conectează-l din nou.",
-  not_accessible: "Proiectul nu mai e accesibil contului conectat.",
-  unreachable: "Atlassian nu poate fi contactat. Verifică conexiunea la internet.",
 };
 const STAGES = {
   transcribing: "Se face transcrierea finală",
@@ -81,7 +72,17 @@ const state = {
   others: { context: "", prompt: "", digest: null },
   sessionId: null, review: null, poll: null, rolesChanged: null,
   list: { kind: "recent", sessions: [], confirming: null },
+  destination: {},  // action id -> the Connector the User picked (#72)
 };
+
+// The destination shown as chosen: the User's pick, else the one already previewed, else the default
+function destinationOf(a) {
+  const ready = a.destinations.filter((d) => d.ready).map((d) => d.connector);
+  const picked = state.destination[a.id];
+  if (picked && ready.includes(picked)) return picked;
+  if (a.plan[0] && ready.includes(a.plan[0].connector)) return a.plan[0].connector;
+  return a.destinations[0].connector;
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -477,17 +478,29 @@ function actionCard(a) {
       h("span", { class: "hint" }, a.error || "Execuția a eșuat."),
       h("button", { type: "button", class: "btn primary", onclick: (e) => call(e.currentTarget, "retry", a.id) }, "Reîncearcă"));
   } else if (open) {
+    // where the work item goes, chosen per action (#72); a new choice needs a new preview
+    const chosen = a.destinations.length ? destinationOf(a) : null;
+    const previewed = a.prepared && (!chosen || (a.plan[0] && a.plan[0].connector === chosen));
     const hint = a.missing.length ? `Completează: ${a.missing.join(", ")}`
-      : a.prepared ? "Se aprobă exact ce vezi mai sus." : "Vezi exact ce se trimite înainte de aprobare.";
-    const next = a.prepared
+      : previewed ? "Se aprobă exact ce vezi mai sus." : "Vezi exact ce se trimite înainte de aprobare.";
+    const next = previewed
       ? h("button", { type: "button", class: "btn primary", disabled: a.missing.length > 0,
           onclick: (e) => act(e.currentTarget, "approve", a.id) }, icon("check", 18), "Aprobă")
       : h("button", { type: "button", class: "btn primary", disabled: a.missing.length > 0,
-          onclick: (e) => act(e.currentTarget, "preview", a.id) }, "Vezi ce se trimite");
-    buttons = h("div", { class: "actions" },
+          onclick: (e) => chosen ? call(e.currentTarget, "preview", a.id, state.review.revision, chosen)
+            : act(e.currentTarget, "preview", a.id) }, "Vezi ce se trimite");
+    const destinations = chosen ? h("div", { class: "stack", style: "gap:.4rem" },
+      h("span", { class: "field-label", id: `${a.id}-dest` }, "Unde trimiți sarcina"),
+      h("div", { class: "segmented", role: "group", "aria-labelledby": `${a.id}-dest` },
+        a.destinations.map((d) => h("button", {
+          type: "button", "aria-pressed": String(d.connector === chosen), disabled: !d.ready,
+          title: d.ready ? "" : `Conectează ${d.label} și alege unde merg sarcinile`,
+          onclick: () => { state.destination[a.id] = d.connector; renderReview(); },
+        }, d.label)))) : null;
+    buttons = h("div", { class: "stack", style: "gap:.8rem" }, destinations, h("div", { class: "actions" },
       h("span", { class: "hint" }, hint),
       h("button", { type: "button", class: "btn", onclick: (e) => act(e.currentTarget, "reject", a.id) }, "Respinge"),
-      next);
+      next));
   }
 
   return h("article", { class: `card raised${a.status === "rejected" ? " rejected" : ""}`, "aria-label": a.title },
@@ -576,6 +589,157 @@ async function openAnalysis(s) {
   await waitAnalysis(s.session_id, false);
 }
 
+// ---------- Trello (#72): shown only when it is set up on this machine
+
+const TRELLO_FAILED = {
+  invalid_token: "Trello nu a acceptat tokenul. Obține unul nou și lipește-l din nou.",
+  not_configured: "Trello nu e configurat pe acest calculator.",
+  not_connected: "Conectează întâi Trello.",
+  no_such_list: "Lista nu mai există în Trello. Alege alta.",
+  no_browser: "Browserul nu a putut fi deschis.",
+  unreachable: "Trello nu poate fi contactat. Verifică conexiunea la internet.",
+  trello_error: "Trello a răspuns cu o eroare. Încearcă din nou.",
+};
+
+async function renderTrello(status) {
+  $("trello").hidden = !status.available;
+  if (!status.available) return;
+  $("trello-connect").hidden = status.connected;
+  $("trello-pick").hidden = !status.connected;
+  $("trello-disconnect").hidden = !status.connected;
+  $("trello-status").textContent = !status.connected ? "Neconectat. Sarcinile pot fi trimise în Trello după conectare."
+    : status.list ? `Sarcinile pot merge în: ${status.list.name}` : "Conectat. Alege lista pentru sarcini.";
+  if (status.connected) {
+    const res = await api("trello_boards");
+    $("trello-list").replaceChildren(...res.boards.map((b) => h("optgroup", { label: b.name },
+      b.lists.map((l) => h("option", { value: l.id, selected: status.list && status.list.id === l.id }, l.name)))));
+    if (res.failed) toast(TRELLO_FAILED[res.failed] || TRELLO_FAILED.trello_error);
+  }
+}
+
+async function trelloAction(button, name, ...args) {
+  // not through `guarded`: Trello answers over the network and must not hold the other actions
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  try {
+    const status = await api(name, ...args);
+    if (status.failed) toast(TRELLO_FAILED[status.failed] || TRELLO_FAILED.trello_error);
+    else if (name === "trello_connect") toast("Trello e conectat. Alege lista pentru sarcini.");
+    else if (name === "trello_choose_list") toast("Lista pentru sarcini a fost salvată.");
+    else if (name === "trello_disconnect") toast(status.revoked ? "Trello a fost deconectat." : "Trello a fost deconectat aici; Trello nu a confirmat revocarea.");
+    if (name === "trello_connect") $("trello-token").value = "";  // the token stays only in the store
+    await renderTrello(status);
+    if (state.review) renderReview();  // which destinations are ready may have changed
+  } catch (err) {
+    fail(err);
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
+function initTrello() {
+  $("trello-authorize").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_authorize"));
+  $("trello-save").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_connect", $("trello-token").value));
+  $("trello-choose").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_choose_list", $("trello-list").value));
+  $("trello-disconnect").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_disconnect"));
+}
+
+// ---------- Jira (#73): shown only when it is set up on this machine. The project chosen here is
+// used when the User picks Jira for a work item (#72); each action is still sent where it was approved.
+
+const JIRA_FAILED = {
+  access_denied: "Ai refuzat accesul în Atlassian. Nimic nu s-a salvat.",
+  timeout: "Conectarea a expirat. Încearcă din nou și termină în browser.",
+  no_browser: "Browserul nu a putut fi deschis.",
+  port_in_use: "Portul de conectare e ocupat de alt program. Închide-l și încearcă din nou.",
+  scope_not_granted: "Atlassian nu a dat acces la issue-urile Jira.",
+  already_connecting: "Conectarea e deja în curs, în browser.",
+  not_configured: "Jira nu e configurat pe acest calculator.",
+  not_connected: "Contul Atlassian nu mai e conectat. Conectează-l din nou.",
+  not_accessible: "Proiectul nu mai e accesibil contului conectat.",
+  unreachable: "Atlassian nu poate fi contactat. Verifică conexiunea la internet.",
+};
+
+function jiraStatusText(status) {
+  if (!status.connected) return "Neconectat. Sarcinile pot fi trimise în Jira după conectare.";
+  const d = status.destination;
+  return d ? `Sarcinile pot merge în: ${d.name} / ${d.project_key} (${d.project_name})`
+    : "Conectat. Alege proiectul pentru sarcini.";
+}
+
+function renderJira(status, sites) {
+  $("jira").hidden = !status.available;
+  $("jira-status").textContent = jiraStatusText(status);
+  $("jira-button").textContent = status.connected ? "Deconectează" : "Conectează";
+  $("jira-button").dataset.connected = String(status.connected);
+  const select = $("jira-project");
+  select.hidden = $("jira-project-label").hidden = !status.connected;
+  if (!status.connected) return;
+  const d = status.destination;
+  const chosen = d ? `${d.cloud_id}|${d.project_key}` : "";
+  const options = [h("option", { value: "", disabled: true }, "Alege proiectul")];
+  for (const site of sites || []) {
+    for (const p of site.projects) {
+      options.push(h("option", { value: `${site.cloud_id}|${p.key}` }, `${site.name} / ${p.key} (${p.name})`));
+    }
+  }
+  if (d && !options.some((o) => o.value === chosen)) {  // the list was not loaded: keep showing the choice
+    options.push(h("option", { value: chosen }, `${d.name} / ${d.project_key} (${d.project_name})`));
+  }
+  select.replaceChildren(...options);
+  select.value = chosen;
+}
+
+async function jiraLoad() {
+  const status = await api("jira_status");
+  if (!status.connected) renderJira(status, []);
+  else {
+    const listed = await api("jira_projects");
+    renderJira(listed, listed.sites);
+    if (listed.failed) toast(JIRA_FAILED[listed.failed] || "Proiectele Jira nu au putut fi încărcate.");
+  }
+  if (state.review) renderReview();  // whether Jira can be picked for a work item may have changed
+}
+
+async function jiraChoose(select) {
+  const [cloudId, key] = select.value.split("|");
+  select.disabled = true;
+  try {
+    const status = await api("jira_choose", cloudId, key);
+    $("jira-status").textContent = jiraStatusText(status);
+    if (status.failed) toast(JIRA_FAILED[status.failed] || "Proiectul nu a putut fi ales.");
+    await jiraLoad();
+  } catch (err) {
+    fail(err);
+  } finally {
+    select.disabled = false;
+  }
+}
+
+async function jiraButton(button) {
+  // not through `guarded`: signing in can take minutes in the browser and must not hold the other actions
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  try {
+    if (button.dataset.connected === "true") {
+      await api("jira_disconnect");
+      toast("Contul Atlassian a fost deconectat aici. Revocă accesul aplicației și în contul Atlassian (Connected apps).");
+    } else {
+      $("jira-status").textContent = "Termină conectarea în browser…";
+      const status = await api("jira_connect");
+      toast(status.failed ? (JIRA_FAILED[status.failed] || "Conectarea la Jira nu a reușit.")
+        : "Jira e conectat. Alege proiectul pentru sarcini.");
+    }
+    await jiraLoad();
+  } catch (err) {
+    fail(err);
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
 // ---------- Google Calendar (#45): shown only when it is set up on this machine
 
 function renderGoogle(status) {
@@ -600,89 +764,6 @@ async function googleButton(button) {
       const status = await api("google_connect");
       renderGoogle(status);
       toast(status.failed ? (GOOGLE_FAILED[status.failed] || "Conectarea la Google nu a reușit.") : "Google Calendar e conectat.");
-    }
-  } catch (err) {
-    fail(err);
-  } finally {
-    button.disabled = false;
-    button.removeAttribute("aria-busy");
-  }
-}
-
-// ---------- Jira (#73): shown only when it is set up on this machine
-
-const LOCAL_DOCUMENT = "";  // the select's value for "work items stay local documents"
-
-function jiraStatusText(status) {
-  if (!status.connected) return "Neconectat. Conectează contul ca să trimiți sarcini de lucru aprobate în Jira.";
-  const d = status.destination;
-  return d ? `Conectat. Sarcinile de lucru aprobate merg în ${d.name} / ${d.project_key} (${d.project_name}).`
-    : "Conectat. Sarcinile de lucru rămân documente locale până alegi un proiect.";
-}
-
-function renderJira(status, sites) {
-  $("jira").hidden = !status.available;
-  $("jira-status").textContent = jiraStatusText(status);
-  $("jira-button").textContent = status.connected ? "Deconectează" : "Conectează";
-  $("jira-button").dataset.connected = String(status.connected);
-  const select = $("jira-project");
-  select.hidden = $("jira-project-label").hidden = !status.connected;
-  if (!status.connected) return;
-  const d = status.destination;
-  const chosen = d ? `${d.cloud_id}|${d.project_key}` : LOCAL_DOCUMENT;
-  const options = [h("option", { value: LOCAL_DOCUMENT }, "Document local")];
-  for (const site of sites || []) {
-    for (const p of site.projects) {
-      options.push(h("option", { value: `${site.cloud_id}|${p.key}` }, `Jira: ${site.name} / ${p.key} (${p.name})`));
-    }
-  }
-  if (d && !options.some((o) => o.value === chosen)) {  // the list was not loaded: keep showing the choice
-    options.push(h("option", { value: chosen }, `Jira: ${d.name} / ${d.project_key} (${d.project_name})`));
-  }
-  select.replaceChildren(...options);
-  select.value = chosen;
-}
-
-async function jiraLoad() {
-  const status = await api("jira_status");
-  if (!status.connected) return renderJira(status, []);
-  const listed = await api("jira_projects");
-  renderJira(listed, listed.sites);
-  if (listed.failed) toast(JIRA_FAILED[listed.failed] || "Proiectele Jira nu au putut fi încărcate.");
-}
-
-async function jiraChoose(select) {
-  const [cloudId, key] = select.value ? select.value.split("|") : [null, null];
-  select.disabled = true;
-  try {
-    const status = await api("jira_choose", cloudId, key);
-    $("jira-status").textContent = jiraStatusText(status);
-    if (status.failed) { toast(JIRA_FAILED[status.failed] || "Proiectul nu a putut fi ales."); await jiraLoad(); }
-  } catch (err) {
-    fail(err);
-  } finally {
-    select.disabled = false;
-  }
-}
-
-async function jiraButton(button) {
-  // not through `guarded`: signing in can take minutes in the browser and must not hold the other actions
-  button.disabled = true;
-  button.setAttribute("aria-busy", "true");
-  try {
-    if (button.dataset.connected === "true") {
-      renderJira(await api("jira_disconnect"), []);
-      toast("Contul Atlassian a fost deconectat aici. Revocă accesul aplicației și în contul Atlassian (Connected apps).");
-    } else {
-      $("jira-status").textContent = "Termină conectarea în browser…";
-      const status = await api("jira_connect");
-      if (status.failed) {
-        renderJira(status, []);
-        toast(JIRA_FAILED[status.failed] || "Conectarea la Jira nu a reușit.");
-      } else {
-        toast("Jira e conectat. Alege proiectul pentru sarcinile de lucru.");
-        await jiraLoad();
-      }
     }
   } catch (err) {
     fail(err);
@@ -720,6 +801,8 @@ async function init() {
     refreshPending();
     $("google-button").addEventListener("click", (e) => googleButton(e.currentTarget));
     renderGoogle(await api("google_status"));
+    initTrello();
+    await renderTrello(await api("trello_status"));
     $("jira-button").addEventListener("click", (e) => jiraButton(e.currentTarget));
     $("jira-project").addEventListener("change", (e) => jiraChoose(e.currentTarget));
     await jiraLoad();
