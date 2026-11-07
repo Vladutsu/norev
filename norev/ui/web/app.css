@@ -169,8 +169,8 @@ blockquote{margin:0;display:flex;gap:.75rem;font-size:.875rem;line-height:1.55;c
 .actions .hint{margin-right:auto;font-size:.8125rem;color:var(--text-3)}
 .card.rejected{opacity:.6}
 .speakers{display:flex;flex-direction:column;gap:.75rem}
-.speakers label{display:flex;align-items:center;justify-content:space-between;gap:.75rem;font-size:.875rem}
-.speakers select{min-height:2.5rem;border:0;border-radius:.75rem;padding:0 .75rem;background:var(--bg);box-shadow:var(--inset)}
+.speakers label{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem .75rem;font-size:.875rem}
+.speakers select{flex:1 1 7.5rem;min-width:0;min-height:2.5rem;border:0;border-radius:.75rem;padding:0 .75rem;background:var(--bg);box-shadow:var(--inset)}
 .suggestion strong{font-size:.875rem}
 .suggestion em{font-size:.8125rem;color:var(--text-3)}
 .list{display:flex;flex-direction:column;gap:1rem}
@@ -218,6 +218,20 @@ main:focus{outline:none}  /* focused by code on each view change, for screen rea
 #actions label{display:flex;flex-direction:column;gap:.35rem}
 #actions .fields{grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:.75rem 1rem}
 .dest{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+/* what is sent: collapsed in the card; the state is also written ("Arată" / "Ascunde"), never only a shape */
+details.payload{padding:.75rem 1.1rem}
+details.payload > summary{cursor:pointer;list-style:none;min-height:1.75rem;flex-wrap:wrap;row-gap:.25rem}
+details.payload > summary::-webkit-details-marker{display:none}
+details.payload > summary::after{content:"Arată";margin-left:.75rem;color:var(--accent-text);font-weight:600}
+details.payload[open] > summary::after{content:"Ascunde"}
+details.payload[open] > summary{margin-bottom:.4rem}
+.payload-note{margin-left:auto;font-weight:500;color:var(--text-3);white-space:nowrap}
+details.payload > summary > *, details.payload > summary{white-space:nowrap}
+/* after Stop: the analysis is a clear state, with the skeleton, until the actions appear */
+.analysis{gap:.5rem}
+.analysis .analysing{display:flex;align-items:center;gap:.6rem;font:700 1.05rem var(--display)}
+.analysis .skeleton{padding-top:.25rem}
+.recdot.busy{background:var(--accent)}  /* red stays for recording only (design.md section 3) */
 .dest .segmented button{min-height:2.75rem;padding:0 1rem}
 /* App shell from ~960 px (like Mail or Notes): the window does not scroll, the content column does,
    so the sidebar (with the privacy note) and the inspector stay whole and nothing moves under the User's hand.
@@ -226,6 +240,7 @@ main:focus{outline:none}  /* focused by code on each view change, for screen rea
   .app{height:100vh;--pad-y:1.5rem;--pad-x:2rem}
   .columns{flex-wrap:nowrap;align-items:stretch;min-height:0;gap:0}
   .sidebar{flex:0 0 15rem;max-width:none;justify-content:flex-start}
+  .inspector{flex-basis:18.75rem}
   .sidebar,.inspector{overflow:auto}
   .sidebar > .privacy:last-child{margin-top:auto;position:sticky;bottom:0}
   main{overflow:auto;padding:var(--pad-y) var(--pad-x) 2rem}

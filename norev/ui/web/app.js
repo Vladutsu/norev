@@ -6,7 +6,7 @@ const ERRORS = {
   prompt_not_confirmed: "Confirmă promptul înainte de analiză.",
   mode_unavailable: "Modul ales nu e disponibil încă.",
   required: "Completează câmpurile obligatorii.",
-  preview_required: "Vezi întâi ce se trimite.",
+  preview_required: "Ce se trimite nu e pregătit încă. Încearcă din nou într-o clipă.",
   preview_changed: "Ce se trimite s-a schimbat. Verifică din nou.",
   invalid_date: "Data se scrie AAAA-LL-ZZ, de exemplu 2026-11-13.",
   invalid_time: "Ora se scrie HH:MM, de exemplu 09:30.",
@@ -73,6 +73,8 @@ const state = {
   sessionId: null, review: null, poll: null, rolesChanged: null, transcriptChanged: null,
   list: { kind: "recent", sessions: [], confirming: null },
   destination: {},  // action id -> the Connector the User picked (#72)
+  previewRefused: {},  // previewKey -> error code: why this action cannot be approved as it is (#87)
+  payloadOpen: {},  // "action id:step" -> whether the User opened what is sent
 };
 
 // The destination shown as chosen: the User's pick, else the one already previewed, else the default
@@ -145,10 +147,15 @@ function show(view) {
   $("inspector-new").hidden = view !== "new" && view !== "list";
   $("inspector-recording").hidden = view !== "recording";
   $("inspector-review").hidden = view !== "review";
-  $("inspector-heading").textContent = view === "review" ? "De luat în seamă" : "Din conversație";
   const recording = view === "recording";
   for (const b of document.querySelectorAll(".navbtn")) b.disabled = recording;
   $("main").focus({ preventScroll: true });
+}
+
+// While a Session records or is analysed, the nav says so instead of offering a new one (#87)
+function sessionInProgress(on) {
+  $("nav-new-label").textContent = on ? "Sesiune în curs" : "Sesiune nouă";
+  if (on) setNav("new");
 }
 
 function setNav(name) {
@@ -261,6 +268,8 @@ function initNew() {
     $("rec-meta").textContent = `${LANGS[state.lang]} · fișier importat`;
     $("live").replaceChildren();
     $("rec-controls").hidden = true;
+    $("rec-status").replaceChildren("Fișier importat");
+    sessionInProgress(true);
     show("recording");
     await waitAnalysis(session_id);
   }));
@@ -278,6 +287,7 @@ function startRecording(sessionId) {
   $("analysis").hidden = true;
   $("rec-controls").hidden = false;
   $("stop").disabled = false;
+  sessionInProgress(true);
   show("recording");
   pollLive();
   state.poll = setInterval(pollLive, 800);
@@ -331,6 +341,8 @@ function initRecording() {
     stopPolling();
     $("view-recording").classList.remove("recording");
     $("rec-controls").hidden = true;
+    // #87: after Stop the chip no longer says "Se înregistrează"; the analysis below says what happens now
+    $("rec-status").replaceChildren(h("span", { class: "pausedot", "aria-hidden": "true" }), "Înregistrare oprită");
     await waitAnalysis(state.sessionId);
   }));
 }
@@ -340,7 +352,10 @@ function initRecording() {
 async function waitAnalysis(sessionId, start = true) {
   const line = $("analysis");
   line.hidden = false;
-  const busy = (text) => line.replaceChildren(h("span", { class: "recdot pulse", "aria-hidden": "true" }), `${text}…`);
+  const busy = (text) => line.replaceChildren(
+    h("strong", { class: "analysing" }, h("span", { class: "recdot busy pulse", "aria-hidden": "true" }), `${text}…`),
+    h("span", { class: "small muted" }, "Acțiunile propuse apar când se termină analiza. Poate dura câteva minute."),
+    h("div", { class: "skeleton", "aria-hidden": "true" }, h("span"), h("span", { style: "width:82%" }), h("span", { style: "width:60%" })));
   busy(STAGES.transcribing);
   try {
     if (start) await api("stop", sessionId);
@@ -370,6 +385,8 @@ async function waitAnalysis(sessionId, start = true) {
 async function openReview(sessionId) {
   state.sessionId = sessionId;
   state.quoted = null;
+  state.previewRefused = {};
+  sessionInProgress(false);
   state.review = await api("review", sessionId);
   renderReview();
   setNav(null);
@@ -452,6 +469,39 @@ function renderReview() {
   $("suggestions").replaceChildren(...(r.suggestions.length ? r.suggestions.map((s) => h("div", { class: "well inset suggestion" },
     h("strong", {}, s.text), s.transcript_excerpt ? quote(s, "em") : null))
     : [h("p", { class: "small muted" }, "Nimic de semnalat.")]));
+  autoPreview();
+}
+
+// #87: what an action sends is prepared (preview) as soon as it can be approved, so its card always shows the
+// exact payload and "Aprobă" approves exactly that (ADR 0002). An edit or a new destination clears it in the
+// backend and it is prepared again; a refusal (a Connector not set up, a title too long) is shown on the card.
+const chosenOf = (a) => (a.destinations.length ? destinationOf(a) : null);
+const previewKey = (a, chosen) => `${a.id}|${state.review.revision}|${chosen || ""}`;
+const isPreviewed = (a, chosen) => a.prepared && (!chosen || (a.plan[0] && a.plan[0].connector === chosen));
+let previewing = false;
+function autoPreview() {
+  const r = state.review;
+  if (previewing || !r) return;
+  const a = r.actions.find((x) => x.status === "proposed" && !x.missing.length && !isPreviewed(x, chosenOf(x))
+    && !(previewKey(x, chosenOf(x)) in state.previewRefused));
+  if (!a) return;
+  const chosen = chosenOf(a);
+  const key = previewKey(a, chosen);
+  previewing = true;
+  guarded(null, async () => {
+    if (state.review !== r) return;  // re-rendered meanwhile: that render prepares what is still missing
+    try {
+      state.review = await api("preview", r.session_id, a.id, r.revision, ...(chosen ? [chosen] : []));
+      const now = state.review.actions.find((x) => x.id === a.id);
+      if (now && now.status === "proposed" && !isPreviewed(now, chosen)) state.previewRefused[previewKey(now, chosen)] = "internal";
+    } catch (err) {
+      if (err.code === "stale") state.review = await api("review", r.session_id);
+      else state.previewRefused[key] = err.code;
+    }
+  }).finally(() => {
+    previewing = false;
+    if (state.review && state.review.session_id === r.session_id) renderReview();
+  });
 }
 
 const regenerateButton = () => h("button", { type: "button", class: "btn", onclick: (e) => regenerate(e.currentTarget) }, "Regenerează acțiunile");
@@ -596,8 +646,12 @@ function actionCard(a) {
       (v) => ({ fields: { [f.name]: v || null } }), f.missing, f.required)),
   ];
 
-  const plan = a.plan.map((step) => h("div", { class: "payload inset" },
-    h("span", { class: "payload-head" }, icon("arrow", 16), `Ce se trimite · ${step.connector_label}`),
+  const plan = a.plan.map((step) => h("details", {
+    class: "payload inset", open: state.payloadOpen[`${a.id}:${step.step}`] || null,
+    ontoggle: (e) => { state.payloadOpen[`${a.id}:${step.step}`] = e.currentTarget.open; },
+  },
+    h("summary", { class: "payload-head" }, icon("arrow", 16), `Ce se trimite · ${step.connector_label}`,
+      h("span", { class: "payload-note" }, open ? "se aprobă exact asta" : a.status === "approved" ? "aprobat" : "")),
     // an email draft (#61): To, Subject and text decoded from the file, then the exact file below
     step.readable ? h("pre", { class: "readable" },
       `Către: ${step.readable.to}\nSubiect: ${step.readable.subject}\n\n${step.readable.body}`) : null,
@@ -631,17 +685,17 @@ function actionCard(a) {
       h("span", { class: "hint" }, a.error || "Execuția a eșuat."),
       h("button", { type: "button", class: "btn primary", onclick: (e) => call(e.currentTarget, "retry", a.id) }, "Reîncearcă"));
   } else if (open) {
-    // where the work item goes, chosen per action (#72); a new choice needs a new preview
-    const chosen = a.destinations.length ? destinationOf(a) : null;
-    const previewed = a.prepared && (!chosen || (a.plan[0] && a.plan[0].connector === chosen));
-    const hint = a.missing.length ? `Completează: ${a.missing.join(", ")}`
-      : previewed ? "Se aprobă exact ce vezi mai sus." : "Vezi exact ce se trimite înainte de aprobare.";
-    const next = previewed
-      ? h("button", { type: "button", class: "btn primary", disabled: a.missing.length > 0,
-          onclick: (e) => act(e.currentTarget, "approve", a.id) }, icon("check", 18), "Aprobă")
-      : h("button", { type: "button", class: "btn primary", disabled: a.missing.length > 0,
-          onclick: (e) => chosen ? call(e.currentTarget, "preview", a.id, state.review.revision, chosen)
-            : act(e.currentTarget, "preview", a.id) }, "Vezi ce se trimite");
+    // where the work item goes, chosen per action (#72); a new choice is prepared again (#87)
+    const chosen = chosenOf(a);
+    const previewed = isPreviewed(a, chosen);
+    const refused = !a.missing.length && !previewed ? state.previewRefused[previewKey(a, chosen)] : null;
+    // #87: "Aprobă" approves the payload prepared above; when it cannot, the button says why (design.md section 5)
+    const ready = previewed && !a.missing.length;
+    const label = a.missing.length ? `Completează: ${a.missing.join(", ")}`
+      : ready ? "Aprobă" : refused ? "Nu se poate aproba" : "Se pregătește…";
+    const hint = refused ? (ERRORS[refused] || ERRORS.internal) : "";
+    const next = h("button", { type: "button", class: "btn primary", disabled: !ready,
+      onclick: (e) => act(e.currentTarget, "approve", a.id) }, ready ? icon("check", 18) : null, label);
     const destinations = chosen ? h("div", { class: "dest" },
       h("span", { class: "field-label", id: `${a.id}-dest` }, "Unde trimiți"),
       h("div", { class: "segmented", role: "group", "aria-labelledby": `${a.id}-dest` },
@@ -736,6 +790,7 @@ async function openAnalysis(s) {
   state.sessionId = s.session_id;
   $("rec-title").textContent = s.contact || "Fără contact";
   $("rec-meta").textContent = new Date(s.started_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  $("rec-status").replaceChildren("Analiză neterminată");
   $("live").replaceChildren();
   $("rec-controls").hidden = true;
   setNav(null);
