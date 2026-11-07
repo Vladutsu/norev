@@ -137,6 +137,16 @@ class RecordAndAnalyseTest(Case):
         self.assertEqual(self.llm_runs, ["start", "stop"])
         self.assertGreaterEqual(self.audio.closed, 1)
 
+    def test_review_shows_the_final_transcript_spoken_and_translated(self):
+        transcript = self.ok(self.bridge.review(self.recorded()))["transcript"]
+        self.assertEqual(
+            [(s["speaker_id"], s["start"], s["text"]) for s in transcript["spoken"]],
+            [("S1", 0.0, "Trimit raportul vineri."), ("S2", 2.0, "Bine, mulțumesc.")])
+        self.assertEqual(transcript["spoken_language"], "ro")
+        self.assertEqual([(s["speaker_id"], s["text"], s["untranslated"]) for s in transcript["translated"]],
+                         [("S1", "I will send the report on Friday.", False), ("S2", "Fine, thanks.", False)])
+        self.assertEqual(transcript["translated_language"], "en")
+
     def test_summary_is_kept_and_shown(self):
         session_id = self.recorded()
         self.assertEqual(self.store.load_summary(session_id), "Ședință despre raportul de vineri.")

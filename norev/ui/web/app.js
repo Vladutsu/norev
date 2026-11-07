@@ -399,6 +399,7 @@ function renderReview() {
   $("decided").textContent = `${decided} din ${r.actions.length} decise`;
   $("decided-bar").style.width = r.actions.length ? `${Math.round((decided / r.actions.length) * 100)}%` : "0";
   $("summary").textContent = r.summary || "—";
+  renderFinalTranscript(r);
   const partial = r.untranslated ? h("p", { class: "small muted", role: "note" },
     `Rezultat parțial: ${r.untranslated} intervenții n-au putut fi traduse și au rămas în limba vorbită.`) : null;
   $("actions").replaceChildren(...[partial, ...r.actions.map(actionCard)].filter(Boolean));
@@ -424,6 +425,36 @@ function renderReview() {
   $("suggestions").replaceChildren(...(r.suggestions.length ? r.suggestions.map((s) => h("div", { class: "well inset suggestion" },
     h("strong", {}, s.text), s.transcript_excerpt ? h("em", {}, `„${s.transcript_excerpt}”`) : null))
     : [h("p", { class: "small muted" }, "Nimic de semnalat.")]));
+}
+
+const LANGUAGES = { ro: "Română", en: "Engleză", de: "Germană", fr: "Franceză", it: "Italiană", es: "Spaniolă", hu: "Maghiară" };
+
+// The final Transcript (after Stop, whole audio, with Speakers), as spoken and as the analysis read it
+function renderFinalTranscript(r) {
+  const t = r.transcript || { spoken: [], translated: [] };
+  const versions = [["spoken", t.spoken_language], ...(t.translated.length ? [["translated", t.translated_language]] : [])];
+  if (!versions.some(([k]) => k === state.transcriptVersion)) state.transcriptVersion = "spoken";
+  const shown = t[state.transcriptVersion];
+  const order = r.speakers.map((s) => s.id);
+  const roleLabel = Object.fromEntries(r.roles.map((role) => [role.name, role.label]));
+  const label = (id) => {
+    const speaker = r.speakers.find((s) => s.id === id);
+    return speaker && speaker.role ? roleLabel[speaker.role] || speaker.role : `Vorbitor ${order.indexOf(id) + 1}`;
+  };
+  const time = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+  $("final-meta").textContent = `${t.spoken.length} intervenții`;
+  $("final-versions").replaceChildren(versions.length > 1 ? h("div", { class: "segmented", role: "group", "aria-label": "Varianta transcrierii" },
+    versions.map(([key, lang]) => h("button", {
+      type: "button", "aria-pressed": String(key === state.transcriptVersion),
+      onclick: () => { state.transcriptVersion = key; renderFinalTranscript(r); },
+    }, key === "spoken" ? `Original (${LANGUAGES[lang] || lang || "?"})` : `Tradus (${LANGUAGES[lang] || lang || "?"}), folosit la analiză`))) : "");
+  $("final-lines").replaceChildren(...(shown.length ? shown.map((s) => {
+    const n = order.indexOf(s.speaker_id);
+    return h("div", { class: "line" },
+      h("span", { class: "time" }, time(s.start)),
+      s.speaker_id == null ? null : h("span", { class: `speaker s${(n < 0 ? 0 : n) % 3}` }, label(s.speaker_id)),
+      h("p", {}, s.text, s.untranslated ? h("span", { class: "small muted" }, " (netradus)") : null));
+  }) : [h("p", { class: "small muted" }, "Transcrierea e goală.")]));
 }
 
 function actionCard(a) {
