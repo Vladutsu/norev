@@ -66,6 +66,7 @@ class InMemorySessionStore:
         self._revisions: dict[str, int] = {}
         self._sessions: dict[str, Session] = {}
         self._transcripts: dict[str, Transcript] = {}
+        self._transcripts_made = 0  # refs are never reused, like the real store's random ones
         self._actions: dict[str, list[ProposedAction]] = {}
         self._suggestions: dict[str, list[Suggestion]] = {}
         self._audio: dict[str, bytes] = {}
@@ -94,15 +95,47 @@ class InMemorySessionStore:
 
     def save_transcript(self, session_id: str, transcript: Transcript) -> str:
         with self._lock:
-            ref = f"transcript-{len(self._transcripts) + 1}"
+            ref = self._new_transcript_ref()
             self._transcripts[ref] = copy.deepcopy(transcript)
             return ref
+
+    def _new_transcript_ref(self) -> str:
+        self._transcripts_made += 1
+        return f"transcript-{self._transcripts_made}"
 
     def load_transcript(self, transcript_ref: str) -> Transcript:
         with self._lock:
             if transcript_ref not in self._transcripts:
                 raise KeyError("Transcript does not exist")
             return copy.deepcopy(self._transcripts[transcript_ref])
+
+    def save_translation(self, session_id: str, transcript: Transcript) -> str:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise LookupError("Session does not exist")
+            spoken = session.transcript_ref
+            if not spoken or session.source_transcript_ref not in (None, spoken):
+                raise ValueError("Session has no spoken Transcript waiting for translation")
+            ref = self._new_transcript_ref()
+            self._transcripts[ref] = copy.deepcopy(transcript)
+            self._sessions[session_id] = dataclasses.replace(session, source_transcript_ref=spoken, transcript_ref=ref)
+            self._revisions[session_id] += 1
+            return ref
+
+    def correct_transcript(self, session_id: str, transcript: Transcript) -> None:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise LookupError("Session does not exist")
+            spoken = session.source_transcript_ref or session.transcript_ref
+            if not spoken:
+                raise ValueError("Session has no Transcript")
+            if session.transcript_ref != spoken:
+                self._transcripts.pop(session.transcript_ref, None)
+            self._transcripts[spoken] = copy.deepcopy(transcript)
+            self._sessions[session_id] = dataclasses.replace(session, transcript_ref=spoken)
+            self._revisions[session_id] += 1
 
     def _revision(self, session_id: str) -> int:
         if session_id not in self._sessions:

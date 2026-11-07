@@ -35,6 +35,7 @@ class Bridge:
     def stop(self, session_id): return self._call(self._backend.stop, session_id)
     def review(self, session_id): return self._call(self._backend.review, session_id)
     def set_role(self, session_id, speaker_id, role): return self._call(self._backend.set_role, session_id, speaker_id, role)
+    def edit_transcript(self, session_id, index, text): return self._call(self._backend.edit_transcript, session_id, index, text)
     def regenerate(self, session_id): return self._call(self._backend.regenerate, session_id)
     def edit(self, session_id, action_id, changes, revision): return self._call(self._backend.edit, session_id, action_id, changes, revision)
     def preview(self, session_id, action_id, revision, destination=None): return self._call(self._backend.preview, session_id, action_id, revision, destination)

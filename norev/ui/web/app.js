@@ -70,7 +70,7 @@ const ICON = {
 const state = {
   modes: [], mode: null, lang: "ro",
   others: { context: "", prompt: "", digest: null },
-  sessionId: null, review: null, poll: null, rolesChanged: null,
+  sessionId: null, review: null, poll: null, rolesChanged: null, transcriptChanged: null,
   list: { kind: "recent", sessions: [], confirming: null },
   destination: {},  // action id -> the Connector the User picked (#72)
 };
@@ -369,6 +369,7 @@ async function regenerate(button) {
       await new Promise((r) => setTimeout(r, 1000));
     }
     state.rolesChanged = null;
+    state.transcriptChanged = null;
     if (state.sessionId === sessionId) await reloadReview();
   });
 }
@@ -412,8 +413,7 @@ function renderReview() {
   const unknown = r.speakers.some((s) => !s.role) ? h("p", { class: "small muted", role: "note" },
     "Rolul unor vorbitori nu e cunoscut, așa că responsabilul acțiunilor lor rămâne gol. Alege rolul mai jos.") : null;
   const again = state.rolesChanged === r.session_id && r.can_execute ? h("div", { class: "actions" },
-    h("span", { class: "hint" }, "Acțiunile deja decise rămân neschimbate."),
-    h("button", { type: "button", class: "btn", onclick: (e) => regenerate(e.currentTarget) }, "Regenerează acțiunile")) : null;
+    h("span", { class: "hint" }, "Acțiunile deja decise rămân neschimbate."), regenerateButton()) : null;
   $("speakers").replaceChildren(...[unknown, ...r.speakers.map((s, i) => {
     const select = h("select", { id: `role-${s.id}`, onchange: (e) => guarded(e.target, async () => {
       state.review = await api("set_role", state.sessionId, s.id, e.target.value);
@@ -426,6 +426,8 @@ function renderReview() {
     h("strong", {}, s.text), s.transcript_excerpt ? h("em", {}, `„${s.transcript_excerpt}”`) : null))
     : [h("p", { class: "small muted" }, "Nimic de semnalat.")]));
 }
+
+const regenerateButton = () => h("button", { type: "button", class: "btn", onclick: (e) => regenerate(e.currentTarget) }, "Regenerează acțiunile");
 
 const LANGUAGES = { ro: "Română", en: "Engleză", de: "Germană", fr: "Franceză", it: "Italiană", es: "Spaniolă", hu: "Maghiară" };
 
@@ -441,6 +443,12 @@ function renderFinalTranscript(r) {
     const speaker = r.speakers.find((s) => s.id === id);
     return speaker && speaker.role ? roleLabel[speaker.role] || speaker.role : `Vorbitor ${order.indexOf(id) + 1}`;
   };
+  // #82: a corrected Segment changes the actions only on the User's click, like a Role
+  const corrected = (state.transcriptChanged === r.session_id || r.retranslate) && r.can_execute ? h("div", { class: "actions" },
+    h("span", { class: "hint" }, "Acțiunile deja decise rămân neschimbate. Până la regenerare, citatele acțiunilor rămân cele vechi."),
+    regenerateButton()) : null;
+  if (corrected) $("final-transcript").open = true;  // the button is in the card: never hidden in a collapsed one
+  const editable = state.transcriptVersion === "spoken";  // the User corrects only the spoken text (#82)
   const time = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
   $("final-meta").textContent = `${t.spoken.length} intervenții`;
   $("final-versions").replaceChildren(versions.length > 1 ? h("div", { class: "segmented", role: "group", "aria-label": "Varianta transcrierii" },
@@ -453,26 +461,55 @@ function renderFinalTranscript(r) {
     return h("div", { class: "line" },
       h("span", { class: "time" }, time(s.start)),
       s.speaker_id == null ? null : h("span", { class: `speaker s${(n < 0 ? 0 : n) % 3}` }, label(s.speaker_id)),
-      h("p", {}, s.text, s.untranslated ? h("span", { class: "small muted" }, " (netradus)") : null));
-  }) : [h("p", { class: "small muted" }, "Transcrierea e goală.")]));
+      h("p", {}, editable ? h("button", { type: "button", class: "segment", title: "Corectează textul",
+        onclick: (e) => editSegment(e.currentTarget.parentElement, s, label(s.speaker_id)) }, s.text) : s.text,
+        s.untranslated ? h("span", { class: "small muted" }, " (netradus)") : null));
+  }) : [h("p", { class: "small muted" }, "Transcrierea e goală.")]), ...(corrected ? [corrected] : []));
+}
+
+// One spoken Segment in place: saved on leaving the box, Escape cancels; only its text changes (#82)
+function editSegment(node, seg, label) {
+  const area = h("textarea", { class: "field", "aria-label": `Corectează textul, ${label}` }, seg.text);
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const text = area.value.trim();
+    if (save && text !== seg.text) {
+      await guarded(area, async () => {
+        state.review = await api("edit_transcript", state.sessionId, seg.index, text);
+        state.transcriptChanged = state.sessionId;
+      });
+    }
+    const other = [...document.querySelectorAll("#final-lines textarea")].some((t) => t !== area);
+    if (!other) renderReview();  // never close another Segment the User opened meanwhile; it renders when done
+  };
+  area.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); finish(false); } });
+  area.addEventListener("blur", () => finish(true));
+  node.replaceWith(area);
+  area.focus();
 }
 
 function actionCard(a) {
   const open = a.status === "proposed";
   const [statusLabel, statusClass] = STATUS[a.status] || [a.status, ""];
-  const input = (id, label, value, placeholder, change, missing = false, required = false) => h("label", { for: id },
+  // change gets the trimmed text; owner, due date and Domain fields send null when empty, title and description ""
+  const input = (id, label, value, placeholder, change, missing = false, required = false, multiline = false) => h("label", { for: id },
     h("span", { class: "field-label" }, label, missing ? h("span", { class: "need" }, "De completat") : null),
-    h("input", {
-      id, class: missing ? "field missing" : "field", value, placeholder,
+    h(multiline ? "textarea" : "input", {
+      id, class: missing ? "field missing" : "field", value: multiline ? null : value, placeholder,
       disabled: !open, "aria-required": String(required), "aria-invalid": String(missing),
-      onchange: (e) => act(e.target, "edit", a.id, change(e.target.value.trim() || null)),
-    }));
+      onchange: (e) => act(e.target, "edit", a.id, change(e.target.value.trim())),
+    }, multiline ? value : null));
+  const text = h("div", { class: "stack", style: "gap:1rem" },
+    input(`${a.id}-title`, "Titlu", a.title, "", (v) => ({ title: v }), !a.title.trim(), true),
+    input(`${a.id}-description`, "Descriere", a.description, "", (v) => ({ description: v }), false, false, true));
   const fields = [
-    input(`${a.id}-owner`, "Responsabil", a.owner, "", (v) => ({ owner: v })),
-    input(`${a.id}-due`, "Termen", a.due_date, "AAAA-LL-ZZ", (v) => ({ due_date: v })),
+    input(`${a.id}-owner`, "Responsabil", a.owner, "", (v) => ({ owner: v || null })),
+    input(`${a.id}-due`, "Termen", a.due_date, "AAAA-LL-ZZ", (v) => ({ due_date: v || null })),
     ...a.fields.map((f) => input(`${a.id}-${f.name}`, f.label, f.value,
       f.type === "date" ? "AAAA-LL-ZZ" : f.type === "time" ? "HH:MM" : "",
-      (v) => ({ fields: { [f.name]: v } }), f.missing, f.required)),
+      (v) => ({ fields: { [f.name]: v || null } }), f.missing, f.required)),
   ];
 
   const plan = a.plan.map((step) => h("div", { class: "payload inset" },
@@ -535,14 +572,14 @@ function actionCard(a) {
       next));
   }
 
-  return h("article", { class: `card raised${a.status === "rejected" ? " rejected" : ""}`, "aria-label": a.title },
+  return h("article", { class: `card raised${a.status === "rejected" ? " rejected" : ""}`, "aria-label": a.title || "Fără titlu" },
     h("div", { class: "card-head" },
       h("div", { class: "brand" },
         h("span", { class: "typeicon" }, icon(a.action_type === "medication_reminder" ? "pill"
           : a.action_type === "follow_up_email" ? "mail" : "calendar", 22)),
-        h("div", { class: "stack", style: "gap:.2rem" }, h("span", { class: "typename" }, a.type_label), h("span", { class: "atitle" }, a.title))),
+        h("div", { class: "stack", style: "gap:.2rem" }, h("span", { class: "typename" }, a.type_label), h("span", { class: "atitle" }, a.title || "Fără titlu"))),
       h("span", { class: `chip ${statusClass}` }, statusLabel)),
-    a.description ? h("p", { class: "small", style: "margin:0;color:var(--text-2)" }, a.description) : null,
+    text,
     h("div", { class: "fields" }, fields),
     a.transcript_excerpt ? h("blockquote", {}, icon("quote", 18), h("span", {}, `„${a.transcript_excerpt}”`)) : null,
     plan,

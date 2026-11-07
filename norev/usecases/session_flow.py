@@ -87,14 +87,14 @@ def run_session(
         domain = others_domain(domain, prompt)
 
     transcript = store.load_transcript(session.transcript_ref)
-    if not session.source_transcript_ref:  # first analysis: transcript_ref is still the spoken Transcript
+    # first analysis, or after the User corrected the spoken Transcript (#82): transcript_ref is the spoken one
+    if not session.source_transcript_ref or session.transcript_ref == session.source_transcript_ref:
         if translate and transcript.language != "en":
             transcript = translator.translate(transcript, transcript.language or "")
-            ref = store.save_transcript(session_id, transcript)
-        else:
-            ref = session.transcript_ref
-        session = dataclasses.replace(session, source_transcript_ref=session.transcript_ref, transcript_ref=ref)
-        store.save_session(session)
+            store.save_translation(session_id, transcript)  # one write: no orphan translation if it fails
+        else:  # no-op after a correction: the spoken Transcript is already both refs
+            store.save_session(dataclasses.replace(session, source_transcript_ref=session.transcript_ref))
+        session = _session(session_id, store)
 
     # Both stages run before one compare-and-set write: if either fails, the previous Proposed
     # Actions and Suggestions stay as they were (no generic-only list in between).

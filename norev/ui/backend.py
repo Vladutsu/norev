@@ -21,6 +21,7 @@ from norev.core.models import (
 from norev.core.ports import Clock, SessionStore
 from norev.processor.payloads import email_preview
 from norev.usecases.approve import approve_action, domain_digest, edit_action, preview_action, reject_action
+from norev.usecases.transcript_correction import correct_transcript
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DEMO = Path(__file__).resolve().parent / "demo_session.json"
@@ -296,6 +297,9 @@ class DemoBackend:
         domain = self.domain(session.domain)
         snapshot = self.store.load_actions_snapshot(session_id)
         transcript = self.store.load_transcript(session.transcript_ref)
+        # the spoken Transcript (#82); before translation, or for an English Session, it is the same one
+        spoken_ref = session.source_transcript_ref or session.transcript_ref
+        spoken = transcript if spoken_ref == session.transcript_ref else self.store.load_transcript(spoken_ref)
         return {
             "session_id": session_id,
             "revision": snapshot.revision,
@@ -305,7 +309,12 @@ class DemoBackend:
             "summary": self._summary(session_id),
             "speakers": self._speakers(session_id, transcript),
             "untranslated": self._partial(session_id, transcript),
-            "transcript": self._transcript_view(session, transcript),
+            "transcript": self._transcript_view(spoken, transcript if spoken_ref != session.transcript_ref else None),
+            # a correction dropped the translation (#82): the actions come from the old text until regenerated
+            # shortcut: an English Session keeps no trace of a correction, so after a restart only a Role change
+            # brings the button back; store a marker if that shows up in practice.
+            "retranslate": bool(session.source_transcript_ref) and spoken_ref == session.transcript_ref
+                           and spoken.language != "en",
             "can_execute": self.can_execute,
             "roles": [{"name": r.name, "label": r.label or r.name} for r in domain.roles],
             "actions": [self._action_view(a, domain) for a in snapshot.actions],
@@ -315,17 +324,14 @@ class DemoBackend:
     def _summary(self, session_id: str) -> str:
         return self._state(session_id)["summary"]
 
-    def _transcript_view(self, session: Session, transcript: Transcript) -> dict[str, Any]:
-        """The final Transcript, made after Stop from the whole audio, with Speakers: as spoken, and the
-        English one the analysis read when it was translated (read-only here; editing it is #82)."""
-        lines = lambda t: [{"speaker_id": s.speaker_id, "start": s.start, "end": s.end, "text": s.text,
-                            "untranslated": s.untranslated} for s in t.segments]
-        if session.source_transcript_ref and session.source_transcript_ref != session.transcript_ref:
-            spoken = self.store.load_transcript(session.source_transcript_ref)
-            return {"spoken": lines(spoken), "spoken_language": spoken.language,
-                    "translated": lines(transcript), "translated_language": transcript.language}
-        return {"spoken": lines(transcript), "spoken_language": transcript.language,
-                "translated": [], "translated_language": None}
+    def _transcript_view(self, spoken: Transcript, translated: Transcript | None) -> dict[str, Any]:
+        """The final Transcript, made after Stop from the whole audio, with Speakers: as spoken (`index` is what
+        edit_transcript corrects, #82), and the English one the analysis read when it was translated."""
+        lines = lambda t: [{"index": i, "speaker_id": s.speaker_id, "start": s.start, "end": s.end, "text": s.text,
+                            "untranslated": s.untranslated} for i, s in enumerate(t.segments)]
+        return {"spoken": lines(spoken), "spoken_language": spoken.language,
+                "translated": lines(translated) if translated else [],
+                "translated_language": translated.language if translated else None}
 
     def _speakers(self, session_id: str, transcript: Transcript) -> list[dict[str, Any]]:
         roles = self._state(session_id)["roles"]
@@ -353,7 +359,8 @@ class DemoBackend:
             "type_label": action_type.label if action_type else "",
             "status": action.status.value,
             "fields": fields,
-            "missing": [f["label"] for f in fields if f["missing"]],
+            # an empty title is refused only at preview ('required'), so it is shown missing like a required field
+            "missing": ([] if action.title.strip() else ["Titlu"]) + [f["label"] for f in fields if f["missing"]],
             "plan": [{"step": s["step"], "connector": s["connector"],
                       "connector_label": CONNECTOR_LABELS.get(s["connector"], s["connector"]),
                       "payload": s["payload"],
@@ -382,6 +389,11 @@ class DemoBackend:
         if role not in {r.name for r in domain.roles}:
             raise ValueError("unknown role")
         state["roles"][str(speaker_id)] = role
+        return self.review(session_id)
+
+    def edit_transcript(self, session_id: str, index: int, text: str) -> dict[str, Any]:
+        """The User's correction of one spoken Segment (#82); actions change only on "Regenerează"."""
+        correct_transcript(session_id, index, text, self.store)
         return self.review(session_id)
 
     def edit(self, session_id: str, action_id: str, changes: dict[str, Any], revision: int) -> dict[str, Any]:

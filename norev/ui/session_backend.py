@@ -36,6 +36,7 @@ from norev.usecases import others_prompt
 from norev.usecases.session_flow import run_session
 from norev.usecases.speaker_roles import set_speaker_role
 from norev.usecases.transcribe import transcribe_session
+from norev.usecases.transcript_correction import correct_transcript
 
 log = logging.getLogger(__name__)
 
@@ -319,6 +320,13 @@ class SessionBackend(DemoBackend):
             self._progress[session_id] = {"stage": "starting_llm", "failed": None, "untranslated": 0}
         self.run_in_background(lambda: self._analyse(session_id, "", regenerate=True))
         return {"session_id": session_id}
+
+    def edit_transcript(self, session_id: str, index: int, text: str) -> dict[str, Any]:
+        """Never while the Session records or is analysed: the analysis reads the Transcript."""
+        with self._lock:
+            self._refuse_if_busy(session_id)
+            correct_transcript(session_id, index, text, self.store)
+        return self.review(session_id)
 
     def delete(self, session_id: str) -> dict[str, Any]:
         """Only while nothing runs on the Session (recording or analysis)."""
