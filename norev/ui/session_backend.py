@@ -65,7 +65,8 @@ def open_with_system(path: Path) -> None:
 
 class SessionBackend(DemoBackend):
     """`processor` is the Central Processor (transcriber, diarizer, LLM and Connectors, #22).
-    `llm_session()` keeps llama-server running for one block and yields the model alias (#43).
+    `llm_session()` wraps the LLM stages and yields the translation model; llama-server is stopped at
+    its end (#43, #62).
     `record_source()` gives the microphone's PCM blocks; `pick_file()` the audio file the User chose.
     `builder` makes the previews (default: local documents only); `google` is the User's GoogleAccount
     for connect/disconnect (#45), None when Google Calendar is not set up; `trello` the TrelloLink (#72)

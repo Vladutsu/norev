@@ -164,8 +164,9 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `NOREV_LANGUAGES` | empty (auto-detect) | Whisper language codes to choose from, e.g. `ro,en,de` |
 | `NOREV_TRANSLATE` | `auto` | `auto` translates non-English Sessions, `0` extracts from the original language |
 | `LLAMACPP_MODEL` | Qwen3-8B (see above) | default model for the analysis |
-| `NOREV_EXTRACT_MODEL` | `$LLAMACPP_MODEL` | GGUF the whole analysis runs on (translation, extraction, Domain stage) |
-| `NOREV_TRANSLATE_MODEL` | `$LLAMACPP_MODEL` | ignored for now, with a warning when it differs: one model per run |
+| `NOREV_EXTRACT_MODEL` | `$LLAMACPP_MODEL` | GGUF for extraction; the Domain stage uses the Domain's `[model]` (domain.toml) |
+| `NOREV_TRANSLATE_MODEL` | `$NOREV_EXTRACT_MODEL` | GGUF for translation; llama-server restarts only when the next stage's model differs |
+| `NOREV_MODELS_DIR` | `~/models` (norev.sh), `%LOCALAPPDATA%\norev\models` | where a Domain's `[model] gguf` is looked up, subfolders included |
 | `LLM_PARALLEL` | `4` | concurrent requests (llama-server slots) per stage |
 | `LLM_SECOND_PASS` | `0` | `1`: second look for missed Proposed Actions (more found, but more wrong owners; ~3x slower extraction) |
 | `LLM_TEMPERATURE` | `0` | sampling temperature |

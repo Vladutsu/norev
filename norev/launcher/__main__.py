@@ -175,16 +175,15 @@ def setup_models(paths: AppPaths) -> int:
 
 
 def process(paths: AppPaths, media: str, language: str | None) -> int:
-    from norev.launcher.llama import LlamaError, server_from_environment
+    from norev.launcher.llama import server_from_environment
 
     if not os.environ.get("NOREV_STORE_KEY_FILE"):
         print("Lipsește cheia store-ului. Rulează: norev.cmd new-key")
         return 1
     for name, value in LLM_DEFAULTS.items():
         os.environ.setdefault(name, value)
-    server = server_from_environment(paths.logs / "llama-server.log")
-    os.environ.setdefault("LLAMACPP_URL", server.url)
-    os.environ["LLM_MODEL"] = server.alias
+    os.environ.setdefault("LLAMACPP_URL", server_from_environment(paths.logs / "llama-server.log").url)
+    os.environ["LLM_MODEL"] = os.environ["NOREV_EXTRACT_MODEL"]  # the model extraction asks for (#62)
     session = [sys.executable, "-m", "norev.session"]
 
     print(f"[1/3] Transcriu {media}")
@@ -197,13 +196,10 @@ def process(paths: AppPaths, media: str, language: str | None) -> int:
     session_id = result.stdout.strip().splitlines()[-1]
 
     print("[2/3] Traduc, extrag acțiunile propuse și rulez etapa Domain")
-    try:
-        with server:  # Whisper finished, so the GPU is free for the LLM
-            code = subprocess.run([*session, "analyse", session_id], cwd=ROOT).returncode
-    except LlamaError as e:
-        print(f"{e}. Rulează norev.cmd doctor.")
-        return 1
+    # Whisper finished, so the GPU is free; analyse starts llama-server with each stage's model (#62)
+    code = subprocess.run([*session, "analyse", session_id], cwd=ROOT).returncode
     if code:
+        print("Analiza nu s-a terminat. Rulează norev.cmd doctor.")
         return code
     print("[3/3] Rezultat")
     return subprocess.run([*session, "show", session_id], cwd=ROOT).returncode

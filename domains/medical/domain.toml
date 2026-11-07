@@ -4,8 +4,9 @@ name = "medical"
 label = "Medicină de familie"
 
 [model]
-# Candidate only: the medical model is not chosen yet (OPEN-QUESTIONS #10).
-gguf = "medgemma-4b-it-Q4_K_M.gguf"
+# Candidate named by the owner in #62 (OPEN-QUESTIONS #10): Meditron-3 (Qwen2.5-7B), Apache-2.0, research-only
+# and not for clinical use; Medical stays an example. On the synthetic consults it is weaker than Qwen3-8B (#80).
+gguf = "Meditron3-Qwen2.5-7B.Q4_K_M.gguf"
 context = 8192
 
 [prompts]

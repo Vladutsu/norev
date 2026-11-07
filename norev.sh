@@ -6,7 +6,7 @@
 #   3. show                   the Proposed Actions waiting for review (... show)
 #
 # llama-server starts only after Whisper and diarization finished, so they never share the GPU;
-# the whole analysis runs on one GGUF model (NOREV_EXTRACT_MODEL).
+# each stage runs on its own GGUF model, one at a time (#62).
 #
 # Usage: ./norev.sh <audio_or_video_file> [language]
 #        NOREV_LANGUAGES=ro,en,de ./norev.sh session.mp4
@@ -26,8 +26,8 @@ die()  { echo -e "${RED}[norev] ERROR:${NC} $*" >&2; exit 1; }
 # ── config (override from the environment) ────────────────────────────────────
 
 LLAMA_SERVER="${LLAMA_SERVER:-$HOME/Repositories/llama.cpp/build/bin/llama-server}"
-# Qwen3-8B for both stages: best translation and extraction in the test Sessions, and one model
-# means no reload between stages
+# Qwen3-8B for translation and extraction: best in the test Sessions, and the same model means no
+# reload between them. The Domain stage uses the Domain's [model] (domain.toml).
 LLAMACPP_MODEL="${LLAMACPP_MODEL:-$HOME/models/qwen3-8b/Qwen3-8B-Q4_K_M.gguf}"
 NOREV_EXTRACT_MODEL="${NOREV_EXTRACT_MODEL:-$LLAMACPP_MODEL}"
 NOREV_TRANSLATE_MODEL="${NOREV_TRANSLATE_MODEL:-$LLAMACPP_MODEL}"
@@ -141,14 +141,16 @@ log "Session $SESSION transcribed into the encrypted store"
 
 # ── 2-3. Translation per Speaker turn, extraction and Domain stage ─────────────
 
-# shortcut: one llama-server for the whole analysis; per-stage models come back with model swaps in the Central Processor
-[[ "$NOREV_TRANSLATE_MODEL" == "$NOREV_EXTRACT_MODEL" ]] || warn "NOREV_TRANSLATE_MODEL is ignored: the analysis runs on NOREV_EXTRACT_MODEL"
-use_model "$NOREV_EXTRACT_MODEL"
+# analyse starts llama-server itself with each stage's model, one at a time (#62): translation,
+# extraction, then the Domain's [model] (domain.toml, looked up under NOREV_MODELS_DIR)
+export LLAMA_SERVER NOREV_TRANSLATE_MODEL NOREV_EXTRACT_MODEL LLAMACPP_PORT LLAMACPP_CTX LLAMACPP_GPU_LAYERS
+export NOREV_MODELS_DIR="${NOREV_MODELS_DIR:-$HOME/models}"
+export LLM_MODEL="$NOREV_EXTRACT_MODEL"
+[[ -x "$LLAMA_SERVER" ]] || die "llama-server not found at $LLAMA_SERVER. Set LLAMA_SERVER."
 ANALYSE_ARGS=()
 [[ "$NOREV_TRANSLATE" == 0 ]] && ANALYSE_ARGS+=(--no-translate)
-log "[2/3] Translating, extracting Proposed Actions and running the Domain stage (LLM: $LLM_MODEL)"
+log "[2/3] Translating ($(model_name "$NOREV_TRANSLATE_MODEL")), extracting Proposed Actions ($(model_name "$NOREV_EXTRACT_MODEL")) and running the Domain stage"
 "$PYTHON" -m norev.session analyse "$SESSION" "${ANALYSE_ARGS[@]}"
-stop_llama_server
 
 log "[3/3] Result"
 "$PYTHON" -m norev.session show "$SESSION"

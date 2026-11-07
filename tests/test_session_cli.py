@@ -13,6 +13,7 @@ from LLM import pipeline
 from norev import session as cli
 from norev.adapters.store.encrypted import StoreSettings, create_key_file, open_store
 from norev.core.models import Session
+from norev.launcher.llama import ModelMissing
 from norev.testing.fakes import FakeActionExtractor, FakeLlmClient
 from test_usecases_session_flow import ANSWERS, GENERIC, ROLES, SPOKEN, TRANSLATION, TURNS
 
@@ -148,6 +149,29 @@ class SessionCliTest(unittest.TestCase):
         code, _, err = self._main("analyse", "s-new")
         self.assertEqual(code, 1)
         self.assertIn("not transcribed yet; run `transcribe` first", err)
+
+    def test_with_llama_server_analyse_starts_the_models_and_always_stops_them(self):
+        """#62: a missing stage model is named in the one-line error; llama-server is stopped anyway."""
+        session_id = self._main("transcribe", str(self.audio))[1].strip()
+
+        class Models:
+            stopped = 0
+
+            def stop(self):
+                Models.stopped += 1
+
+        class MissingModel(FakeProcessor):
+            def generate_json(self, prompt, **kw):
+                raise ModelMissing("modelul GGUF medgemma.gguf nu există")
+
+        self.processor = MissingModel([])
+        with patch("norev.launcher.llama.models_from_environment", lambda log_file: Models()):
+            code, _, err = self._main("analyse", session_id, env={**self.env, "LLAMA_SERVER": "llama-server",
+                                                                  "NOREV_HOME": self.tmp.name})
+        self.assertEqual(code, 1)
+        self.assertEqual(err.strip(), "norev.session analyse failed: ModelMissing: modelul GGUF medgemma.gguf nu există")
+        self.assertIsInstance(self.models["models"], Models)
+        self.assertEqual(Models.stopped, 1)
 
     def test_failure_is_one_line_without_model_details(self):
         session_id = self._main("transcribe", str(self.audio))[1].strip()  # no answers: the translation call fails

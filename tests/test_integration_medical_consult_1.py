@@ -155,7 +155,7 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
 
     def test_domain_stage_uses_the_medical_model_and_schema(self):
         [(_prompt, model, schema)] = self.domain_llm.calls
-        self.assertEqual(model, "medgemma-4b-it-Q4_K_M.gguf")
+        self.assertEqual(model, "Meditron3-Qwen2.5-7B.Q4_K_M.gguf")
         self.assertEqual(model, self.domain.model)
         self.assertEqual(schema, json.loads((MEDICAL / "prompts" / "domain_stage.schema.json").read_text("utf-8")))
 

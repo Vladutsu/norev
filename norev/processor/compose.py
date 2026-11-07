@@ -49,6 +49,7 @@ def build_central_processor(
     settings: DeepSeekSettings | None = None,
     identity: LocalUser | None = None,
     clock: Clock | None = None,
+    models=None,
 ) -> CentralProcessor:
     """The real processor. The LLM settings come from the environment (README.md); building it does
     not connect to anything. There is no default audit log: without one nothing can be sent."""
@@ -60,6 +61,7 @@ def build_central_processor(
         connectors=connectors,
         transcriber=transcriber,
         diarizer=diarizer,
+        models=models,
     )
 
 
@@ -73,14 +75,14 @@ LOCAL_STEPS = {"build_document": lambda action: None, "build_event": lambda acti
 def build_desktop_processor(
     store: ExecutionAuditLog, export_dir: Path, *, transcriber: Transcriber | None = None, diarizer: Diarizer | None = None,
     calendar: GoogleCalendarConnector | None = None, trello: TrelloConnector | None = None,
-    jira: JiraConnector | None = None,
+    jira: JiraConnector | None = None, models=None,
 ) -> CentralProcessor:
     """The desktop app's processor (#43): the local Connectors (document, email draft #61) write into
     `export_dir`; `calendar`, `trello` and `jira` are the Google Calendar (#45), Trello (#72) and Jira
     (#73) Connectors when they are set up (build_google_calendar, build_trello, build_jira)."""
     connectors = [LocalDocumentConnector(export_dir), EmailDraftConnector(export_dir)]
     connectors += [c for c in (calendar, trello, jira) if c is not None]
-    return build_central_processor(store, connectors=connectors, transcriber=transcriber, diarizer=diarizer)
+    return build_central_processor(store, connectors=connectors, transcriber=transcriber, diarizer=diarizer, models=models)
 
 
 def desktop_payload_builder(export_dir: Path, *, calendar: bool, trello: TrelloLink | None = None,

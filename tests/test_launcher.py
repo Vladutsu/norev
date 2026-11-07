@@ -4,6 +4,7 @@ import os
 import socket
 import subprocess
 import tempfile
+import threading
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -12,7 +13,7 @@ from unittest import mock
 from norev.adapters.store.encrypted import StoreSettings, create_key_file
 from norev.launcher import __main__ as launcher
 from norev.launcher.doctor import Check, Probes, ready, report, run_checks
-from norev.launcher.llama import LlamaError, LlamaServer
+from norev.launcher.llama import LlamaError, LlamaModels, LlamaServer, ModelMissing
 from norev.launcher.keys import create_protected_key
 from norev.launcher.paths import AppPaths, apply_defaults, cuda_dll_dirs
 from norev.testing.fakes import fake_dpapi
@@ -235,6 +236,96 @@ class LlamaServerTest(unittest.TestCase):
         with self.assertRaisesRegex(LlamaError, "nu a pornit în 3 s"):
             with self.server(lambda url: False, timeout=3):
                 pass
+
+
+class FakeGpu:
+    """llama-server processes on one port: healthy while one runs; records starts and stops."""
+
+    def __init__(self, external=False):
+        self.events, self.running, self.external = [], [], external
+
+    def popen(self, args, **kwargs):
+        if self.running or self.external:
+            raise AssertionError("two models on the GPU")
+        name = Path(args[args.index("-m") + 1]).name
+        gpu = self
+
+        class Process(FakeProcess):
+            def terminate(self):
+                gpu.running.remove(name)
+                gpu.events.append(("stop", name))
+        self.running.append(name)
+        self.events.append(("start", name))
+        return Process()
+
+    def health(self, url):
+        return bool(self.running) or self.external
+
+
+class LlamaModelsTest(unittest.TestCase):
+    """#62: one llama-server per stage's model, restarted only when the model changes."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+        (self.dir / "llama-server.exe").write_bytes(b"exe")
+        self.models_dir = self.dir / "models"
+        for path in ("qwen3/Qwen3-8B-Q4_K_M.gguf", "medgemma-4b-it-Q4_K_M.gguf"):
+            (self.models_dir / path).parent.mkdir(parents=True, exist_ok=True)
+            (self.models_dir / path).write_bytes(b"gguf")
+        self.qwen = self.models_dir / "qwen3" / "Qwen3-8B-Q4_K_M.gguf"
+
+    def models(self, gpu):
+        template = LlamaServer(self.dir / "llama-server.exe", self.qwen, self.dir / "logs" / "llama.log",
+                               popen=gpu.popen, health=gpu.health, sleep=lambda s: None)
+        return LlamaModels(template, self.models_dir)
+
+    def test_the_server_restarts_only_when_the_model_changes(self):
+        gpu = FakeGpu()
+        models = self.models(gpu)
+        self.assertEqual(models.load(str(self.qwen)), "Qwen3-8B-Q4_K_M")  # translation, by path
+        models.load("Qwen3-8B-Q4_K_M")  # extraction, by alias: the same file, no restart
+        self.assertEqual(models.load("medgemma-4b-it-Q4_K_M.gguf"), "medgemma-4b-it-Q4_K_M")  # Domain stage
+        models.stop()
+        models.stop()  # nothing left to stop
+        self.assertEqual(gpu.events, [("start", "Qwen3-8B-Q4_K_M.gguf"), ("stop", "Qwen3-8B-Q4_K_M.gguf"),
+                                      ("start", "medgemma-4b-it-Q4_K_M.gguf"), ("stop", "medgemma-4b-it-Q4_K_M.gguf")])
+        self.assertEqual(gpu.running, [])
+
+    def test_a_missing_model_is_a_clear_error_and_starts_nothing(self):
+        gpu = FakeGpu()
+        models = self.models(gpu)
+        with self.assertRaisesRegex(ModelMissing, "missing-7b.gguf nu există"):
+            models.load("missing-7b.gguf")
+        with self.assertRaisesRegex(ModelMissing, "niciun model"):
+            models.load(None)
+        (self.models_dir / "copy").mkdir()
+        (self.models_dir / "copy" / "medgemma-4b-it-Q4_K_M.gguf").write_bytes(b"gguf")
+        with self.assertRaisesRegex(ModelMissing, "de mai multe ori"):
+            models.load("medgemma-4b-it-Q4_K_M")
+        self.assertEqual(gpu.events, [])
+
+    def test_a_server_started_outside_norev_serves_only_its_own_model(self):
+        gpu = FakeGpu(external=True)
+        models = self.models(gpu)
+        models.load("Qwen3-8B-Q4_K_M")
+        models.load("Qwen3-8B-Q4_K_M")
+        with self.assertRaisesRegex(LlamaError, "pornit din afara norev"):
+            models.load("medgemma-4b-it-Q4_K_M")
+        models.stop()  # never stops a server norev did not start
+        self.assertEqual(gpu.events, [])
+
+    def test_parallel_calls_for_one_model_start_it_once(self):
+        gpu = FakeGpu()
+        models = self.models(gpu)
+        threads = [threading.Thread(target=models.load, args=("Qwen3-8B-Q4_K_M",)) for _ in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(5)
+        self.assertEqual(gpu.events, [("start", "Qwen3-8B-Q4_K_M.gguf")])
+        models.stop()
 
 
 class LauncherTest(unittest.TestCase):

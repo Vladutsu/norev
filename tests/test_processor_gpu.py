@@ -115,6 +115,26 @@ class ClosingDiarizer:
         self.order.append("close diarizer")
 
 
+class FakeModels:
+    """launcher.llama.LlamaModels without llama-server: names resolve to a file stem."""
+
+    def __init__(self, order: list) -> None:
+        self.order = order
+
+    def resolve(self, name):
+        stem = name.rsplit("/", 1)[-1].removesuffix(".gguf")
+        if stem == "missing":
+            raise LookupError("modelul GGUF missing.gguf nu există")
+        return stem
+
+    def load(self, name):
+        self.order.append(f"load {self.resolve(name)}")
+        return self.resolve(name)
+
+    def stop(self) -> None:
+        self.order.append("stop")
+
+
 class ProcessorGpuOrderTest(unittest.TestCase):
     def test_whisper_diarization_and_llm_take_turns_on_the_gpu(self) -> None:
         order: list[str] = []
@@ -134,6 +154,24 @@ class ProcessorGpuOrderTest(unittest.TestCase):
         self.assertEqual(processor.generate_json("p", model="qwen"), '{"ok": true}')
         self.assertEqual(order, ["transcribe", "close transcriber", "diarize", "close diarizer"])
         self.assertEqual(len(llm.calls), 1)
+
+    def test_each_stage_model_is_loaded_after_the_previous_one_is_stopped(self) -> None:
+        """#62: the Central Processor starts each call's model in llama-server; one model at a time."""
+        order: list[str] = []
+        transcript = Transcript((Segment(0.0, 1.0, "Bună ziua."),), language="ro")
+        llm = FakeLlmClient(['{}'] * 4)
+        models = FakeModels(order)
+        processor = CentralProcessor(llm, None, identity=LocalUser("u"), clock=FixedClock(None),
+                                     transcriber=ClosingTranscriber(order, {"a1": transcript}), models=models)
+
+        processor.generate_json("translate", model="/models/qwen.gguf")
+        processor.generate_json("extract", model="qwen")  # the same file: no restart
+        processor.generate_json("domain", model="medgemma.gguf")
+        processor.transcribe("a1")  # the LLM is stopped before Whisper loads
+        with self.assertRaises(LookupError):
+            processor.generate_json("domain", model="missing.gguf")
+        self.assertEqual(order, ["load qwen", "load qwen", "stop", "load medgemma", "stop", "transcribe"])
+        self.assertEqual([c[1] for c in llm.calls], ["qwen", "qwen", "medgemma"])  # the alias llama-server answers to
 
     def test_missing_transcriber_or_diarizer_is_an_error_not_a_default(self) -> None:
         processor = CentralProcessor(FakeLlmClient([]), None, identity=LocalUser("u"), clock=FixedClock(None))

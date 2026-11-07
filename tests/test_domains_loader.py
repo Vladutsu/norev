@@ -18,7 +18,7 @@ class LoadMedicalDomainTest(unittest.TestCase):
     def test_top_level_and_model(self):
         self.assertEqual(self.domain.name, "medical")
         self.assertEqual(self.domain.label, "Medicină de familie")
-        self.assertEqual(self.domain.model, "medgemma-4b-it-Q4_K_M.gguf")
+        self.assertEqual(self.domain.model, "Meditron3-Qwen2.5-7B.Q4_K_M.gguf")
         self.assertEqual(self.domain.context, 8192)
 
     def test_roles_in_order(self):

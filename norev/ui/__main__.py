@@ -34,7 +34,7 @@ def session_backend(store, approved_by: str, pick_file):
     from norev.adapters.recorder.recorder import capture, resolve_device
     from norev.adapters.child_process import ChildProcessAdapter
     from norev.launcher.__main__ import LLM_DEFAULTS
-    from norev.launcher.llama import server_from_environment
+    from norev.launcher.llama import models_from_environment
     from norev.launcher.paths import AppPaths
     from norev.processor.compose import (
         build_desktop_processor, build_google_calendar, build_jira, build_trello, desktop_payload_builder,
@@ -45,9 +45,9 @@ def session_backend(store, approved_by: str, pick_file):
     paths = AppPaths.from_environment()
     for name, value in LLM_DEFAULTS.items():
         os.environ.setdefault(name, value)
-    llama = server_from_environment(paths.logs / "llama-server.log")
-    os.environ.setdefault("LLAMACPP_URL", llama.url)
-    os.environ.setdefault("LLM_MODEL", llama.alias)  # the alias llama-server answers to
+    models = models_from_environment(paths.logs / "llama-server.log")
+    os.environ.setdefault("LLAMACPP_URL", models.template.url)
+    os.environ["LLM_MODEL"] = os.environ["NOREV_EXTRACT_MODEL"]  # the model extraction asks for (#62)
     # Whisper and diarization each in a child process that ends before llama-server starts, so their
     # CUDA contexts do not stay on the GPU during the LLM stage (#65)
     try:
@@ -63,21 +63,24 @@ def session_backend(store, approved_by: str, pick_file):
     jira, jira_connector = build_jira(store)  # none without NOREV_JIRA_CLIENT_ID/SECRET and the encrypted store
     processor = build_desktop_processor(store, export_dir, transcriber=ChildProcessAdapter(store, child_process.whisper),
                                         diarizer=diarizer, calendar=calendar, trello=trello_connector,
-                                        jira=jira_connector)
+                                        jira=jira_connector, models=models)
     return SessionBackend(
         store, approved_by=approved_by, processor=processor, export_dir=export_dir,
         builder=desktop_payload_builder(export_dir, calendar=calendar is not None, trello=trello, jira=jira),
         google=google, trello=trello, jira=jira,
-        llm_session=lambda: _alias(llama),
+        llm_session=lambda: _llm_session(models),
         record_source=lambda: capture(resolve_device(os.environ.get("NOREV_INPUT_DEVICE"))),
         pick_file=pick_file, workers=WORKERS,
     )
 
 
 @contextmanager
-def _alias(server):
-    with server:
-        yield server.alias
+def _llm_session(models):
+    """Yields the translation model; each call starts its own stage's model, all stopped at the end (#62)."""
+    try:
+        yield os.environ["NOREV_TRANSLATE_MODEL"]
+    finally:
+        models.stop()
 
 
 def main(argv: list[str]) -> int:
