@@ -1,0 +1,14 @@
+# The host's microphone in the dev and gpu containers (devenv/README.md, Microphone). Linux hosts with
+# PipeWire or PulseAudio; it mounts their PulseAudio socket, so nothing else on the host is shared.
+#   docker compose -f docker-compose.yml -f devenv/microphone.yml run --rm dev python -m norev.adapters.recorder /tmp/a.wav
+services:
+  dev:
+    volumes:
+      - ${XDG_RUNTIME_DIR:?Linux host with PipeWire or PulseAudio}/pulse/native:/run/pulse/native
+    environment:
+      - PULSE_SERVER=unix:/run/pulse/native
+  gpu:
+    volumes:
+      - ${XDG_RUNTIME_DIR:?Linux host with PipeWire or PulseAudio}/pulse/native:/run/pulse/native
+    environment:
+      - PULSE_SERVER=unix:/run/pulse/native

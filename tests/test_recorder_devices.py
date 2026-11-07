@@ -36,3 +36,39 @@ class RecorderDevicesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AlsaDefaultsTest(unittest.TestCase):
+    """PyAV's bundled ALSA gets the system's configuration and plugins, so "default" reaches PipeWire."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.config = self.root / "alsa.conf"
+        self.plugins = self.root / "alsa-lib"
+
+    def defaults(self, env):
+        from norev.adapters.recorder.recorder import alsa_defaults
+
+        alsa_defaults(env, configs=(self.root / "missing.conf", self.config),
+                      plugin_dirs=(self.root / "missing", self.plugins))
+        return env
+
+    def test_the_first_existing_config_and_plugin_folder_are_set(self):
+        self.config.write_text("")
+        self.plugins.mkdir()
+        self.assertEqual(self.defaults({}), {"ALSA_CONFIG_PATH": str(self.config), "ALSA_PLUGIN_DIR": str(self.plugins)})
+
+    def test_what_the_user_set_is_kept(self):
+        self.config.write_text("")
+        self.plugins.mkdir()
+        env = self.defaults({"ALSA_CONFIG_PATH": "/mine.conf"})
+        self.assertEqual(env["ALSA_CONFIG_PATH"], "/mine.conf")
+        self.assertEqual(env["ALSA_PLUGIN_DIR"], str(self.plugins))
+
+    def test_nothing_is_set_without_alsa_files(self):
+        self.assertEqual(self.defaults({}), {})

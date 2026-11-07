@@ -6,8 +6,11 @@ ARG CUDA_VERSION=12.8.1
 
 # ── dev ───────────────────────────────────────────────────────────────────────
 FROM docker.io/library/python:3.12-slim-bookworm AS dev
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+# Microphone (devenv/README.md, Microphone): ALSA's config and its PulseAudio plugin, with "default" going to
+# the host's PipeWire/PulseAudio socket that devenv/microphone.yml mounts. PyAV's own ALSA loads them.
+RUN apt-get update && apt-get install -y --no-install-recommends curl libasound2-plugins \
+    && rm -rf /var/lib/apt/lists/* \
+    && printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > /etc/asound.conf
 WORKDIR /workspace
 COPY requirements.txt /tmp/requirements.txt
 # The venv sits where norev.sh and check.sh look for it (.venv in the repo); CUDA wheels only in gpu, like CI
@@ -51,6 +54,10 @@ COPY requirements.txt requirements-diarization.txt /tmp/
 RUN python3.12 -m venv /workspace/.venv \
     && /workspace/.venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/requirements-diarization.txt
 COPY --from=llamacpp /build/bin/llama-server /opt/llama.cpp/llama-server
+# Microphone, as in dev; its own layer after the large install, so changing it does not reinstall torch
+RUN apt-get update && apt-get install -y --no-install-recommends libasound2-plugins \
+    && rm -rf /var/lib/apt/lists/* \
+    && printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > /etc/asound.conf
 ENV PATH=/workspace/.venv/bin:$PATH \
     NOREV_DATA_DIR=/data \
     LLAMA_SERVER=/opt/llama.cpp/llama-server \
