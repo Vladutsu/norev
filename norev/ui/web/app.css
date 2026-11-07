@@ -107,6 +107,11 @@ textarea.field.mono{font-family:var(--mono);font-size:.82rem}
 .chip.ok{color:var(--success-text)}
 .chip.rec{color:var(--text)}
 .transcript{border-radius:1.4rem;padding:1.5rem;display:flex;flex-direction:column;gap:1.1rem;max-height:26rem;overflow:auto}
+.final-transcript > summary{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;cursor:pointer;list-style:none}
+.final-transcript > summary::-webkit-details-marker{display:none}
+.final-transcript[open] > summary{margin-bottom:.75rem}
+.final-transcript #final-versions{margin-bottom:.75rem}
+.line .time{flex:none;font-size:.75rem;color:var(--text-3);padding-top:.35rem;font-variant-numeric:tabular-nums}
 .empty{align-items:center;text-align:center;padding:2.5rem 1.5rem}
 .empty strong{font-size:1.05rem}
 .line{display:flex;gap:.9rem;align-items:flex-start}

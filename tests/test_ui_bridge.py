@@ -112,6 +112,13 @@ class ReviewTest(BridgeCase):
         self.assertTrue(review["suggestions"])
         self.assertFalse(any(name for name in dir(self.bridge) if "suggestion" in name and not name.startswith("_")))
 
+    def test_review_shows_the_demo_transcript_with_speakers(self):
+        session_id = self.ok(self.bridge.import_example("medical", "ro", "Maria Ionescu"))["session_id"]
+        transcript = self.ok(self.bridge.review(session_id))["transcript"]
+        self.assertTrue(transcript["spoken"])
+        self.assertTrue(all(s["text"] and s["speaker_id"] for s in transcript["spoken"]))
+        self.assertEqual(transcript["translated"], [])  # the demo is not translated
+
     def test_payload_is_shown_before_approval_and_approval_keeps_exactly_it(self):
         session_id, review = self.reviewed()
         visit = self.action(review, "Control pentru tensiune")

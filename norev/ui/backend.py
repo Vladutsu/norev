@@ -305,6 +305,7 @@ class DemoBackend:
             "summary": self._summary(session_id),
             "speakers": self._speakers(session_id, transcript),
             "untranslated": self._partial(session_id, transcript),
+            "transcript": self._transcript_view(session, transcript),
             "can_execute": self.can_execute,
             "roles": [{"name": r.name, "label": r.label or r.name} for r in domain.roles],
             "actions": [self._action_view(a, domain) for a in snapshot.actions],
@@ -313,6 +314,18 @@ class DemoBackend:
 
     def _summary(self, session_id: str) -> str:
         return self._state(session_id)["summary"]
+
+    def _transcript_view(self, session: Session, transcript: Transcript) -> dict[str, Any]:
+        """The final Transcript, made after Stop from the whole audio, with Speakers: as spoken, and the
+        English one the analysis read when it was translated (read-only here; editing it is #82)."""
+        lines = lambda t: [{"speaker_id": s.speaker_id, "start": s.start, "end": s.end, "text": s.text,
+                            "untranslated": s.untranslated} for s in t.segments]
+        if session.source_transcript_ref and session.source_transcript_ref != session.transcript_ref:
+            spoken = self.store.load_transcript(session.source_transcript_ref)
+            return {"spoken": lines(spoken), "spoken_language": spoken.language,
+                    "translated": lines(transcript), "translated_language": transcript.language}
+        return {"spoken": lines(transcript), "spoken_language": transcript.language,
+                "translated": [], "translated_language": None}
 
     def _speakers(self, session_id: str, transcript: Transcript) -> list[dict[str, Any]]:
         roles = self._state(session_id)["roles"]
