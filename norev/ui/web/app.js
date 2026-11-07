@@ -576,13 +576,18 @@ function actionCard(a) {
   const input = (id, label, value, placeholder, change, missing = false, required = false, multiline = false) => h("label", { for: id },
     h("span", { class: "field-label" }, label, missing ? h("span", { class: "need" }, "De completat") : null),
     h(multiline ? "textarea" : "input", {
-      id, class: missing ? "field missing" : "field", value: multiline ? null : value, placeholder,
+      id, class: missing ? "field missing" : "field", value: multiline ? null : value, placeholder, rows: multiline ? 2 : null,
       disabled: !open, "aria-required": String(required), "aria-invalid": String(missing),
       onchange: (e) => act(e.target, "edit", a.id, change(e.target.value.trim())),
     }, multiline ? value : null));
-  const text = h("div", { class: "stack", style: "gap:1rem" },
-    input(`${a.id}-title`, "Titlu", a.title, "", (v) => ({ title: v }), !a.title.trim(), true),
-    input(`${a.id}-description`, "Descriere", a.description, "", (v) => ({ description: v }), false, false, true));
+  // #87: the title is edited in the card head, not shown twice; an empty one is marked like a required field
+  const titleMissing = !a.title.trim();
+  const title = h("input", {
+    id: `${a.id}-title`, class: titleMissing ? "field atitle missing" : "field atitle", value: a.title, "aria-label": "Titlu",
+    disabled: !open, "aria-required": "true", "aria-invalid": String(titleMissing),
+    onchange: (e) => act(e.target, "edit", a.id, { title: e.target.value.trim() }),
+  });
+  const text = input(`${a.id}-description`, "Descriere", a.description, "", (v) => ({ description: v }), false, false, true);
   const fields = [
     input(`${a.id}-owner`, "Responsabil", a.owner, "", (v) => ({ owner: v || null })),
     input(`${a.id}-due`, "Termen", a.due_date, "AAAA-LL-ZZ", (v) => ({ due_date: v || null })),
@@ -637,18 +642,18 @@ function actionCard(a) {
       : h("button", { type: "button", class: "btn primary", disabled: a.missing.length > 0,
           onclick: (e) => chosen ? call(e.currentTarget, "preview", a.id, state.review.revision, chosen)
             : act(e.currentTarget, "preview", a.id) }, "Vezi ce se trimite");
-    const destinations = chosen ? h("div", { class: "stack", style: "gap:.4rem" },
-      h("span", { class: "field-label", id: `${a.id}-dest` }, "Unde trimiți sarcina"),
+    const destinations = chosen ? h("div", { class: "dest" },
+      h("span", { class: "field-label", id: `${a.id}-dest` }, "Unde trimiți"),
       h("div", { class: "segmented", role: "group", "aria-labelledby": `${a.id}-dest` },
         a.destinations.map((d) => h("button", {
           type: "button", "aria-pressed": String(d.connector === chosen), disabled: !d.ready,
           title: d.ready ? "" : `Conectează ${d.label} și alege unde merg sarcinile`,
           onclick: () => { state.destination[a.id] = d.connector; renderReview(); },
         }, d.label)))) : null;
-    buttons = h("div", { class: "stack", style: "gap:.8rem" }, destinations, h("div", { class: "actions" },
+    buttons = h("div", { class: "actions" }, destinations,
       h("span", { class: "hint" }, hint),
       h("button", { type: "button", class: "btn", onclick: (e) => act(e.currentTarget, "reject", a.id) }, "Respinge"),
-      next));
+      next);
   }
 
   return h("article", { class: `card raised${a.status === "rejected" ? " rejected" : ""}`, "aria-label": a.title || "Fără titlu" },
@@ -656,7 +661,8 @@ function actionCard(a) {
       h("div", { class: "brand" },
         h("span", { class: "typeicon" }, icon(a.action_type === "medication_reminder" ? "pill"
           : a.action_type === "follow_up_email" ? "mail" : "calendar", 22)),
-        h("div", { class: "stack", style: "gap:.2rem" }, h("span", { class: "typename" }, a.type_label), h("span", { class: "atitle" }, a.title || "Fără titlu"))),
+        h("div", { class: "stack grow", style: "gap:.2rem" },
+          h("span", { class: "typename" }, a.type_label, titleMissing ? h("span", { class: "need" }, "Titlu de completat") : null), title)),
       h("span", { class: `chip ${statusClass}` }, statusLabel)),
     text,
     h("div", { class: "fields" }, fields),
