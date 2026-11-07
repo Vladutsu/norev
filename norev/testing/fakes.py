@@ -8,7 +8,7 @@ from typing import Any
 
 from norev.core.models import (
     ActionStatus, ActionsSnapshot, AuditEvent, Domain, OthersPrompt, ProposedAction, SendResult, Session, Speaker, SpeakerTurn, StaleRevision,
-    StepRecord, Suggestion, Transcript,
+    StepRecord, Suggestion, Transcript, Invitation, Member, Team,
 )
 from norev.core.models import check_decisions_kept
 from norev.core.speakers import merge_speakers
@@ -74,6 +74,9 @@ class InMemorySessionStore:
         self._steps: dict[str, dict[str, StepRecord]] = {}
         self._summaries: dict[str, str] = {}
         self._completions: dict[str, str] = {}
+        self._team: Team | None = None
+        self._members: dict[str, Member] = {}
+        self._invitations: dict[str, Invitation] = {}
 
     def save_session(self, session: Session) -> None:
         with self._lock:
@@ -249,6 +252,41 @@ class InMemorySessionStore:
     def load_completion(self, session_id: str) -> str:
         with self._lock:
             return self._completions.get(session_id, "")
+
+    # --- TeamStore (ADR 0006); frozen values, so no copies are needed
+
+    def get_team(self) -> Team | None:
+        return self._team
+
+    def save_team(self, team: Team) -> None:
+        self._team = team
+
+    def list_members(self) -> list[Member]:
+        with self._lock:
+            return sorted(self._members.values(), key=lambda m: m.name.lower())
+
+    def get_member(self, email: str) -> Member | None:
+        return self._members.get(email.strip().lower())
+
+    def save_member(self, member: Member) -> None:
+        with self._lock:
+            self._members[member.email.strip().lower()] = member
+
+    def delete_member(self, email: str) -> None:
+        with self._lock:
+            self._members.pop(email.strip().lower(), None)
+
+    def list_invitations(self) -> list[Invitation]:
+        with self._lock:
+            return sorted(self._invitations.values(), key=lambda i: i.expires_at)
+
+    def save_invitation(self, invitation: Invitation) -> None:
+        with self._lock:
+            self._invitations[invitation.email.strip().lower()] = invitation
+
+    def delete_invitation(self, email: str) -> None:
+        with self._lock:
+            self._invitations.pop(email.strip().lower(), None)
 
     def delete_session(self, session_id: str) -> None:
         with self._lock:

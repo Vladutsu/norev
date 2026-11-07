@@ -11,8 +11,10 @@ from typing import Any, Callable
 from norev.core.models import InvalidTransition, StaleRevision, UnsupportedWorkflow, ValidationError
 from norev.launcher.llama import LlamaError
 from norev.processor.workflow import AlreadyRunning, ExecutionRefused
+from norev.ui.accounts import NotSignedIn, SignedInElsewhere
 from norev.ui.backend import DemoBackend, ExecutionPending, ModeUnavailable, PromptNotConfirmed
 from norev.ui.session_backend import MicrophoneUnavailable, SessionBusy
+from norev.usecases.team import NotTeamLeader
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +23,23 @@ class Bridge:
     def __init__(self, backend: DemoBackend) -> None:
         self._backend = backend
 
+    # sign-in and the Team (ADR 0006); the demo has no Users, so it answers {"accounts": false}
+    def auth_status(self): return self._call(self._backend.auth_status)
+    def sign_up(self, email, name, password, skills, code=""): return self._call(self._team("sign_up"), email, name, password, skills, code)
+    def sign_in(self, email, password): return self._call(self._team("sign_in"), email, password)
+    def sign_out(self): return self._call(self._team("sign_out"))
+    def team(self): return self._call(self._team("team"))
+    def team_invite(self, email): return self._call(self._team("team_invite"), email)
+    def team_cancel_invitation(self, email): return self._call(self._team("team_cancel_invitation"), email)
+    def team_remove(self, email): return self._call(self._team("team_remove"), email)
+    def team_rename(self, name): return self._call(self._team("team_rename"), name)
+    def profile_save(self, name, skills): return self._call(self._team("profile_save"), name, skills)
+    def profile_jira_connect(self): return self._call(self._team("profile_jira_connect"))
+    def profile_trello_connect(self): return self._call(self._team("profile_trello_connect"))
+    def profile_unlink(self, service): return self._call(self._team("profile_unlink"), service)
+    def team_trello_members(self): return self._call(self._team("team_trello_members"))
+    def team_link_trello(self, email, member_id): return self._call(self._team("team_link_trello"), email, member_id)
+    def legacy_key_delete(self): return self._call(self._team("legacy_key_delete"))
     def modes(self): return self._call(self._backend.modes)
     def sessions(self): return self._call(self._backend.sessions)
     def others_completion_prompt(self, completion): return self._call(self._backend.others_completion_prompt, completion)
@@ -53,6 +72,8 @@ class Bridge:
     def trello_status(self): return self._call(self._backend.trello_status)
     def trello_authorize(self): return self._call(self._backend.trello_authorize)
     def trello_connect(self, token): return self._call(self._backend.trello_connect, token)
+    def trello_sign_in(self): return self._call(self._backend.trello_sign_in)
+    def trello_set_key(self, key): return self._call(self._backend.trello_set_key, key)
     def trello_boards(self): return self._call(self._backend.trello_boards)
     def trello_choose_list(self, list_id): return self._call(self._backend.trello_choose_list, list_id)
     def trello_disconnect(self): return self._call(self._backend.trello_disconnect)
@@ -63,6 +84,16 @@ class Bridge:
     def jira_choose(self, cloud_id, project_key): return self._call(self._backend.jira_choose, cloud_id, project_key)
     def google_connect(self): return self._call(self._backend.google_connect)
     def google_disconnect(self): return self._call(self._backend.google_disconnect)
+
+    def _team(self, name: str) -> Callable[..., Any]:
+        """A sign-in or Team call; a backend without Users (the demo) refuses it."""
+        method = getattr(self._backend, name, None)
+        if method is not None:
+            return method
+
+        def unavailable(*args: Any) -> Any:
+            raise NotSignedIn()
+        return unavailable
 
     def _executing(self, name: str) -> Callable[..., Any]:
         if self._backend.can_execute:
@@ -94,6 +125,12 @@ class Bridge:
             return _error("execution_pending", "session")
         except MicrophoneUnavailable:
             return _error("no_microphone", "device")
+        except NotSignedIn:
+            return _error("signed_out", "")
+        except NotTeamLeader:
+            return _error("not_team_leader", "")
+        except SignedInElsewhere:
+            return _error("session_busy", "session")
         except AlreadyRunning:
             return _error("already_running", "action")
         except ExecutionRefused:

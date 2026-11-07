@@ -339,6 +339,42 @@ class RecordAndAnalyseTest(Case):
         self.assertEqual(self.ok(self.bridge.progress(session_id))["stage"], "ready")
         self.assertEqual(len(self.ok(self.bridge.review(session_id))["actions"]), 1)
 
+    def test_a_file_imported_again_is_not_analysed_again(self):
+        audio = self.root / "pitch.wav"
+        audio.write_bytes(b"RIFF the same meeting")
+        self.picked = str(audio)
+        first = self.ok(self.bridge.import_file("corporate", "ro", "Pitch"))["session_id"]
+        calls = len(self.llm.calls)
+        before = self.ok(self.bridge.review(first))
+        self.ok(self.bridge.reject(first, before["actions"][0]["id"], before["revision"]))  # decided in the first one
+
+        again = self.ok(self.bridge.import_file("corporate", "ro", "Pitch"))["session_id"]
+        self.assertEqual(len(self.llm.calls), calls)  # no model call, no wait
+        self.assertEqual(self.ok(self.bridge.progress(again)), {"stage": "ready", "failed": None})
+        self.ok(self.bridge.stop(again))  # what the UI calls after an import: it starts nothing
+        self.assertEqual(len(self.llm.calls), calls)
+        review = self.ok(self.bridge.review(again))
+        for key in ("transcript", "speakers", "summary", "suggestions"):
+            self.assertEqual(review[key], before[key], key)
+        self.assertEqual([(a["id"], a["title"], a["status"]) for a in review["actions"]],
+                         [(f"{again}-1", before["actions"][0]["title"], "proposed")])
+
+        other = self.root / "other.wav"
+        other.write_bytes(b"RIFF another meeting")
+        self.picked = str(other)
+        self.llm.calls.clear()
+        fresh = self.ok(self.bridge.import_file("corporate", "ro", ""))["session_id"]
+        self.assertTrue(self.llm.calls)  # another file is analysed (the fake has no answers left)
+        self.assertEqual(self.ok(self.bridge.progress(fresh))["failed"], "AssertionError")
+
+        self.picked = str(audio)
+        self.ok(self.bridge.delete(first))  # the copy stands on its own
+        self.assertEqual(self.ok(self.bridge.progress(self.ok(self.bridge.import_file("corporate", "ro", ""))["session_id"]))["stage"], "ready")
+        for session in self.store.list_sessions():
+            self.ok(self.bridge.delete(session.id))
+        for session_id in (first, again):
+            self.assertIsNone(self.store.load_secret(f"analysis.{session_id}"))  # deleted with its Session
+
     def test_a_failed_stage_is_reported_and_stop_runs_it_again(self):
         self.audio.fail = OSError("CUDA out of memory while decoding Session audio")
         session_id = self.recorded()

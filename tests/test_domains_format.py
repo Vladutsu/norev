@@ -128,6 +128,11 @@ def check_domain(folder: Path) -> None:
             "completion prompt must use {{transcript}}, {{session_date}} and {{user_completion}} once each"
         completion_schema = json.loads((folder / prompts["completion_schema"]).read_text(encoding="utf-8"))
         assert completion_schema.get("required") == ["output"], "completion schema must require output"
+    if "assign" in prompts:  # ADR 0006: only the Members and the Proposed Actions, nothing else
+        assign = re.findall(r"\{\{(.*?)\}\}", (folder / prompts["assign"]).read_text(encoding="utf-8"))
+        assert sorted(assign) == ["actions", "members"], "assign prompt must use {{members}} and {{actions}} once each"
+        assign_schema = json.loads((folder / prompts["assign_schema"]).read_text(encoding="utf-8"))
+        assert assign_schema.get("required") == ["assignments"], "assign schema must require assignments"
     assert used <= PLACEHOLDERS, f"unknown placeholders {sorted(used - PLACEHOLDERS)}"
     assert REQUIRED_PLACEHOLDERS <= used, f"prompt must use {sorted(REQUIRED_PLACEHOLDERS - used)}"
 

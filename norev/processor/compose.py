@@ -3,9 +3,10 @@
 UI routes and use cases get the CentralProcessor, never a network client or a real Connector;
 tests/test_processor_composition.py fails if another module under norev/ imports one.
 """
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from LLM.AI_Model.client import build_llm_client
 from LLM.AI_Model.settings import DeepSeekSettings
@@ -86,7 +87,8 @@ def build_desktop_processor(
 
 
 def desktop_payload_builder(export_dir: Path, *, calendar: bool, trello: TrelloLink | None = None,
-                            jira: JiraAccount | None = None) -> PayloadBuilder:
+                            jira: JiraAccount | None = None,
+                            member_of: Callable[[str], Any] = lambda email: None) -> PayloadBuilder:
     """The previews of the desktop app (#18): the builder of each Workflow's Connector, or of the
     destination the User chose (#72). Without Google Calendar or Trello set up, nothing can be
     previewed for them (UnsupportedWorkflow), so nothing is approved that could not be sent. The same
@@ -95,10 +97,10 @@ def desktop_payload_builder(export_dir: Path, *, calendar: bool, trello: TrelloL
                                            "email_draft": EmailDraftPayloadBuilder(export_dir)}
     if calendar:
         builders["google_calendar"] = GoogleCalendarPayloadBuilder.from_environment()
-    if trello is not None and trello.status()["available"]:
-        builders["trello"] = TrelloPayloadBuilder.from_environment(trello.chosen_list)
+    if trello is not None and trello.status().get("key_settable"):  # usable once it is connected with a list
+        builders["trello"] = TrelloPayloadBuilder.from_environment(trello.chosen_list, member_of)
     if jira is not None and jira.status()["available"]:
-        builders["jira"] = JiraPayloadBuilder(jira.destination)
+        builders["jira"] = JiraPayloadBuilder(jira.destination, member_of=member_of)
     return ConnectorPayloadBuilder(builders)
 
 
@@ -118,10 +120,11 @@ def build_google_calendar(
 
 def build_trello(store: object, settings: TrelloSettings | None = None) -> tuple[TrelloLink, TrelloConnector | None]:
     """The User's Trello account (token, list, for the UI) and the Trello Connector (#72), which the app
-    gives to build_desktop_processor. Without NOREV_TRELLO_API_KEY, or without a store that keeps
-    secrets encrypted, there is no Connector and the account is unavailable. Connects to nothing."""
+    gives to build_desktop_processor. Without a store that keeps secrets encrypted there is none. The
+    app's key comes from NOREV_TRELLO_API_KEY or is entered in the app by the Team Leader (ADR 0006);
+    until then the account says it is not available. Connects to nothing."""
     settings = settings or TrelloSettings.from_environment()
-    if not settings.api_key or not isinstance(store, SecretStore):
+    if not isinstance(store, SecretStore):  # the key may also come later, entered in the app (ADR 0006)
         return TrelloLink(None), None
     account = TrelloAccount(settings, store)
     return TrelloLink(account), TrelloConnector(account)

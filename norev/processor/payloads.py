@@ -265,14 +265,17 @@ class TrelloPayloadBuilder:
     """
 
     def __init__(self, chosen_list: Callable[[], dict[str, str] | None], time_zone: str = DEFAULT_TIME_ZONE, *,
-                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex) -> None:
+                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex,
+                 member_of: Callable[[str], Any] = lambda email: None) -> None:
         self.chosen_list = chosen_list
+        self.member_of = member_of  # ADR 0006: the assignee's Member, for their verified Trello id
         self.zone = ZoneInfo(time_zone)
         self.new_id = new_id
 
     @classmethod
-    def from_environment(cls, chosen_list: Callable[[], dict[str, str] | None]) -> "TrelloPayloadBuilder":
-        return cls(chosen_list, os.environ.get("NOREV_TIMEZONE") or DEFAULT_TIME_ZONE)
+    def from_environment(cls, chosen_list: Callable[[], dict[str, str] | None],
+                         member_of: Callable[[str], Any] = lambda email: None) -> "TrelloPayloadBuilder":
+        return cls(chosen_list, os.environ.get("NOREV_TIMEZONE") or DEFAULT_TIME_ZONE, member_of=member_of)
 
     def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
         action_type = domain.action_type(action.action_type)
@@ -302,6 +305,9 @@ class TrelloPayloadBuilder:
             card: dict[str, Any] = {"name": action.title.strip(), "desc": "\n\n".join(lines + [marker])}
             if "due_date" in step.sends and action.due_date:
                 card["due"] = datetime.combine(action.due_date, time(12, 0), tzinfo=self.zone).isoformat()
+            member = self.member_of(action.assignee) if "owner" in step.sends and action.assignee else None
+            if member is not None and member.trello_member_id:
+                card["idMembers"] = member.trello_member_id
             steps.append({"step": step.name, "connector": trello.NAME,
                           "payload": {"list": {"id": target["id"], "name": target["name"]}, "card": card}})
         return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
@@ -326,8 +332,10 @@ class JiraPayloadBuilder:
     """
 
     def __init__(self, destination: Callable[[], dict[str, str] | None], *,
-                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex) -> None:
+                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex,
+                 member_of: Callable[[str], Any] = lambda email: None) -> None:
         self.destination = destination
+        self.member_of = member_of  # ADR 0006: the assignee's Member, for their verified Jira accountId
         self.new_id = new_id
 
     def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
@@ -364,6 +372,9 @@ class JiraPayloadBuilder:
             }
             if "due_date" in step.sends and _value(action, "due_date"):
                 fields["duedate"] = _value(action, "due_date")
+            member = self.member_of(action.assignee) if "owner" in step.sends and action.assignee else None
+            if member is not None and member.jira_account_id:
+                fields["assignee"] = {"accountId": member.jira_account_id}
             payload = {"site": {k: destination[k] for k in ("cloud_id", "url", "name")},
                        "project": {"key": destination["project_key"], "name": destination["project_name"]},
                        "issue": {"fields": fields}}

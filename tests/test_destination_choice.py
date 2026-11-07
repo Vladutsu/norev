@@ -138,15 +138,31 @@ class CoreTest(unittest.TestCase):
 
 
 class CompositionTest(unittest.TestCase):
-    def test_no_trello_without_an_api_key_or_an_encrypted_store(self) -> None:
-        link, connector = build_trello(MemorySecrets(), TrelloSettings(None))
-        self.assertIsNone(connector)
-        self.assertEqual(link.status(), {"available": False, "connected": False, "list": None})
+    def test_no_trello_without_an_encrypted_store_and_not_available_without_a_key(self) -> None:
         link, connector = build_trello(InMemorySessionStore(), TrelloSettings(KEY))
         self.assertIsNone(connector)
+        self.assertEqual(link.status()["key_settable"], False)
         link, connector = build_trello(MemorySecrets(), TrelloSettings(KEY))
         self.assertIsInstance(connector, TrelloConnector)
-        self.assertEqual(link.status(), {"available": True, "connected": False, "list": None})
+        self.assertEqual(link.status(), {"available": True, "connected": False, "list": None, "key_settable": True,
+                                         "key_in_app": False})
+
+    def test_the_team_leader_enters_the_key_in_the_app(self) -> None:  # ADR 0006
+        secrets = MemorySecrets()
+        link, connector = build_trello(secrets, TrelloSettings(None))
+        self.assertEqual(link.status(), {"available": False, "connected": False, "list": None, "key_settable": True,
+                                         "key_in_app": False})
+        for bad in ("", "x" * 32, "a" * 31, None, "a" * 65, "a" * 32 + " b"):
+            self.assertEqual(link.set_key(bad)["failed"], "invalid_key")
+        self.assertEqual(secrets.values, {})
+        status = link.set_key(" " + "Ab12" * 8 + " ")
+        self.assertEqual((status["failed"], status["available"]), (None, True))
+        self.assertEqual(secrets.values, {"trello.api_key": "Ab12" * 8})
+        self.assertTrue(status["key_in_app"])
+        self.assertEqual(link.set_key("cd34" * 8)["failed"], None)  # changed while not connected
+        secrets.values["trello.token"] = "t" * 40
+        self.assertEqual(link.set_key("ef56" * 8)["failed"], "disconnect_first")
+        self.assertEqual(secrets.values["trello.api_key"], "cd34" * 8)
 
 
 class DesktopTrelloTest(unittest.TestCase):
@@ -201,7 +217,8 @@ class DesktopTrelloTest(unittest.TestCase):
         self.assertEqual(status["list"], CHOSEN)
 
     def test_trello_becomes_a_ready_destination_once_connected_with_a_list(self) -> None:
-        self.assertEqual(self.ok(self.bridge.trello_status()), {"available": True, "connected": False, "list": None})
+        self.assertEqual(self.ok(self.bridge.trello_status()), {"available": True, "connected": False, "list": None,
+                                                               "key_settable": True, "key_in_app": False})
         self.assertEqual(self.destinations(), [
             {"connector": "local_document", "label": "Document local", "ready": True},
             {"connector": "trello", "label": "Trello", "ready": False},

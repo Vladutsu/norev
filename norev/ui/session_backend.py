@@ -9,7 +9,10 @@ Review, edit, preview, approve and reject are DemoBackend's, on the real store. 
 - Execute, Retry and reconcile go through the WorkflowExecutor, so through the Central Processor.
   Nothing here holds a Connector.
 """
+import dataclasses
+import hashlib
 import io
+import json
 import logging
 import os
 import subprocess
@@ -19,14 +22,17 @@ import time
 import uuid
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import AbstractContextManager
+from datetime import date
 from pathlib import Path
 from typing import Any
 
-from norev.adapters.domains.loader import load_completion, load_others
+from norev.adapters.domains.loader import load_assign, load_completion, load_others
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.recorder.recorder import Recorder
-from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction, Session, StepState
+from norev.core.models import (
+    ActionStatus, Domain, OthersPrompt, ProposedAction, Segment, Session, Speaker, StepState, Suggestion, Transcript,
+)
 from norev.core.ports import Clock, PayloadBuilder, SessionStore
 from norev.processor.payloads import LocalDocumentPayloadBuilder
 from norev.processor.workflow import ExecutionRefused, WorkflowExecutor
@@ -104,6 +110,7 @@ class SessionBackend(DemoBackend):
         self._progress: dict[str, dict[str, Any]] = {}
         self._recordings: dict[str, dict[str, Any]] = {}
         self._others: dict[str, OthersPrompt] = {}  # confirmed prompts by digest, until a Session takes one
+        self._imported: dict[str, str] = {}  # imported Sessions being analysed -> their reuse key
         self._executors: dict[str, WorkflowExecutor] = {}  # one per Domain, so a double click runs once
 
     # --- modes and Others (#21: generated with the local model)
@@ -227,9 +234,73 @@ class SessionBackend(DemoBackend):
         audio = Path(path).read_bytes()
         if not audio:
             raise ValueError("empty file")
+        key = self._reuse_key(audio, session, str(language))
         self._save_new(session, audio)
+        if self._reuse(session.id, key):  # this exact file was analysed before in this store: no wait
+            return {"session_id": session.id}
+        with self._lock:
+            self._imported[session.id] = key
         self._analyse_in_background(session.id, str(language))
         return {"session_id": session.id}
+
+    # --- an imported file analysed before is not analysed again
+
+    def _reuse_key(self, audio: bytes, session: Session, language: str) -> str:
+        """The same audio, Domain, language and (Others) confirmed prompt give the same analysis."""
+        prompt = session.others_prompt.prompt if session.others_prompt else ""
+        return hashlib.sha256(hashlib.sha256(audio).digest() + f"\0{session.domain}\0{language}\0{prompt}".encode()).hexdigest()
+
+    def _remember(self, session_id: str, key: str) -> None:
+        """Keeps what the first analysis of an imported file produced, encrypted in the store, for the next
+        import of the same file. It belongs to that Session: deleting the Session deletes it."""
+        if not hasattr(self.store, "save_secret"):
+            return
+        session = self.store.get_session(session_id)
+        spoken = self.store.load_transcript(session.source_transcript_ref)
+        translated = self.store.load_transcript(session.transcript_ref) if session.transcript_ref != session.source_transcript_ref else None
+        keep = ("title", "description", "transcript_excerpt", "owner", "due_date", "action_type", "fields", "assignee")
+        snapshot = {
+            "spoken": dataclasses.asdict(spoken), "translated": dataclasses.asdict(translated) if translated else None,
+            "speakers": [dataclasses.asdict(sp) for sp in self.store.load_speakers(session_id)],
+            "summary": self.store.load_summary(session_id), "completion": self.store.load_completion(session_id),
+            "suggestions": [dataclasses.asdict(sg) for sg in self.store.load_suggestions(session_id)],
+            "actions": [{**{k: getattr(a, k) for k in keep}, "due_date": a.due_date.isoformat() if a.due_date else None}
+                        for a in self.store.load_actions(session_id)],
+            "untranslated": self._progress.get(session_id, {}).get("untranslated", 0),
+        }
+        self.store.save_secret(f"analysis.{session_id}", json.dumps(snapshot, ensure_ascii=False))
+        self.store.save_secret(f"analysis_index.{key}", session_id)
+
+    def _reuse(self, session_id: str, key: str) -> bool:
+        """The new Session gets the earlier analysis of this file: the Transcript as spoken and translated,
+        Speakers with Roles, summary, Suggestions and the Proposed Actions, all undecided."""
+        if not hasattr(self.store, "load_secret"):
+            return False
+        source = self.store.load_secret(f"analysis_index.{key}")
+        raw = self.store.load_secret(f"analysis.{source}") if source else None
+        if raw is None:  # never analysed, or that Session was deleted
+            return False
+        d = json.loads(raw)
+        transcript = lambda t: Transcript(tuple(Segment(**seg) for seg in t["segments"]), t["language"])  # noqa: E731
+        spoken_ref = self.store.save_transcript(session_id, transcript(d["spoken"]))
+        session = dataclasses.replace(self.store.get_session(session_id), transcript_ref=spoken_ref)
+        self.store.save_session(session)
+        if d["translated"]:
+            self.store.save_translation(session_id, transcript(d["translated"]))
+        else:
+            self.store.save_session(dataclasses.replace(session, source_transcript_ref=spoken_ref))
+        self.store.save_speakers(session_id, [Speaker(**sp) for sp in d["speakers"]])
+        actions = [ProposedAction(id=f"{session_id}-{i}", **{**a, "due_date": date.fromisoformat(a["due_date"]) if a["due_date"] else None})
+                   for i, a in enumerate(d["actions"], 1)]
+        revision = self.store.load_actions_snapshot(session_id).revision
+        self.store.save_actions(session_id, actions, expected_revision=revision,
+                                suggestions=[Suggestion(**sg) for sg in d["suggestions"]])
+        self.store.save_summary(session_id, d["summary"])
+        self.store.save_completion(session_id, d["completion"])
+        self._remember(session_id, key)  # this one stands on its own: deleting the first keeps it working
+        with self._lock:
+            self._progress[session_id] = {"stage": "ready", "failed": None, "untranslated": d["untranslated"]}
+        return True
 
     def import_example(self, mode: str, language: str, contact: str, others: dict[str, Any] | None = None):
         raise ModeUnavailable("example")  # examples are the demo's (python -m norev.ui --demo)
@@ -263,13 +334,23 @@ class SessionBackend(DemoBackend):
                         translator=TurnTranslator(self.processor, model=model, workers=self.workers),
                         extractor=self.make_extractor(self.processor, workers=self.workers), llm=self.processor,
                         regenerate=regenerate,
-                        completion=load_completion(self.domains_dir / "others") if session.domain == "others" else None)
+                        completion=load_completion(self.domains_dir / "others") if session.domain == "others" else None,
+                        assign=self._assign(session.domain))
                 self._progress[session_id]["untranslated"] = len(result.untranslated)
+            key = None if regenerate else self._imported.pop(session_id, None)
+            if key is not None:
+                self._remember(session_id, key)
             self._set_stage(session_id, "ready")
         except Exception as e:  # the stage and the error class only: messages can quote Session content
             log.error("analysis of a Session failed at %s: %s", stage, type(e).__name__)
             with self._lock:
                 self._progress[session_id].update(stage=stage, failed=type(e).__name__)
+
+    def _assign(self, domain: str) -> tuple[str, dict, list] | None:
+        """The Domain's assign prompt and the Team (ADR 0006); None without either (Medical, or no Team)."""
+        members = self.store.list_members() if hasattr(self.store, "list_members") else []
+        prompt = load_assign(self.domains_dir / domain) if members else None
+        return (*prompt, members) if prompt else None
 
     def _set_stage(self, session_id: str, stage: str) -> str:
         with self._lock:
@@ -332,6 +413,11 @@ class SessionBackend(DemoBackend):
         action.approve({"steps": [{"step": "save_result", "connector": "local_document", "payload": payload}]})
         return {"saved": self.processor.send(action, "local_document", payload, step="save_result")}
 
+    def busy(self) -> bool:
+        """A Session records or is analysed: signing out now would close the store under it (ADR 0006)."""
+        with self._lock:
+            return bool(self._recordings) or any(p["stage"] != "ready" and not p["failed"] for p in self._progress.values())
+
     def _refuse_if_busy(self, session_id: str) -> None:
         """Nothing else may start while the Session records or is analysed; the caller holds the lock."""
         progress = self._progress.get(session_id)
@@ -364,6 +450,8 @@ class SessionBackend(DemoBackend):
         with self._lock:
             self._refuse_if_busy(session_id)
         super().delete(session_id)
+        if hasattr(self.store, "delete_secret"):  # its kept analysis goes with it
+            self.store.delete_secret(f"analysis.{session_id}")
         with self._lock:
             self._progress.pop(session_id, None)
         return {"deleted": session_id}

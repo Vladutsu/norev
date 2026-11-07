@@ -131,6 +131,17 @@ Nothing is written to `Outputs/` except `llama-server.log`. The old stages
 .venv/bin/python -m norev.ui --demo    # synthetic examples, reviewed but never executed
 ```
 
+The window opens on sign-in (ADR 0006). The first User to sign up creates the store (or takes over the
+key of an existing one from `NOREV_STORE_KEY_FILE`) and becomes the Team Leader; from then on each User's
+password opens the store, through their key slot in `keys/norev.slots` under `NOREV_HOME`. The Team
+Leader invites a Member by email from **Echipa** and gives them the one-time code shown there (valid 7
+days); the Member signs up with it under **Cont nou**. A forgotten password cannot be recovered. In
+Corporate and Others the local model suggests the Member who takes each Proposed Action from the
+Team's Skills (or nobody), the Team Leader can pick another, and the Member's Jira or Trello user is
+sent as the assignee. Each Member links theirs once from **Echipa** by signing in there (nothing of that
+sign-in is kept); for Jira, the Atlassian OAuth app also needs the `read:jira-user` scope. `norev.sh` and `norev.cmd process` still open the store with the key
+file, so they stop working once the Team Leader deletes it.
+
 Same flow as `norev.sh`, started from the window: the audio is sealed in the store (never written to
 a file), Whisper and diarization run first, each in a child process that ends before the next model
 loads (so no CUDA context stays on the GPU), then the app starts `llama-server` for the analysis and
@@ -175,6 +186,7 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `NOREV_GOOGLE_CLIENT_ID` / `NOREV_GOOGLE_CLIENT_SECRET` | empty (Google Calendar off) | OAuth client of your Google Cloud project, type "Desktop app"; never commit them. The User's refresh token goes into the encrypted store |
 | `NOREV_JIRA_CLIENT_ID` / `NOREV_JIRA_CLIENT_SECRET` | empty (Jira off) | OAuth 2.0 (3LO) app from the Atlassian developer console, scopes `read:jira-work write:jira-work offline_access`; never commit them. The refresh token and the chosen project go into the encrypted store |
 | `NOREV_JIRA_REDIRECT_PORT` | `8765` | loopback port of the Jira sign-in; register `http://127.0.0.1:<port>` as the app's callback URL |
+| `NOREV_TRELLO_REDIRECT_PORT` | `8766` | loopback port Trello sends the browser back to with the token (no paste); add `http://localhost:<port>` to the API key's allowed origins at trello.com/power-ups/admin |
 | `LLAMA_SERVER` | `~/Repositories/llama.cpp/build/bin/llama-server` | llama.cpp server binary |
 | `LLAMACPP_PORT` / `LLAMACPP_CTX` / `LLAMACPP_GPU_LAYERS` | `8080` / `4096` / `99` | server options (`LLAMACPP_CTX` is per slot) |
 | `WHISPER_MODEL` | `large-v3-turbo` | `small`, `medium`, `large-v3-turbo`, … |

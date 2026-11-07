@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "assignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string"},
+          "member": {"type": ["string", "null"]}
+        },
+        "required": ["action", "member"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["assignments"],
+  "additionalProperties": false
+}

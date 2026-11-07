@@ -9,10 +9,11 @@ Central Processor; this module only orders the stages and saves through the Sess
 import dataclasses
 from dataclasses import dataclass
 
-from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction, Segment, Session, Suggestion
+from norev.core.models import ActionStatus, Domain, Member, OthersPrompt, ProposedAction, Segment, Session, Suggestion
 from norev.core.ports import ActionExtractor, LlmClient, SessionStore, Translator
 from norev.usecases.domain_stage import ask_domain
 from norev.usecases.extract import to_proposed_actions
+from norev.usecases.assign_by_skills import FAILED as ASSIGN_FAILED, assign_by_skills
 from norev.usecases.others_completion import FAILED, check_template, complete
 from norev.usecases.others_prompt import others_domain
 from norev.usecases.speaker_roles import propose_speaker_roles
@@ -57,6 +58,7 @@ def run_session(
     regenerate: bool = False,
     others_prompt: OthersPrompt | None = None,
     completion: tuple[str, dict] | None = None,
+    assign: tuple[str, dict, list[Member]] | None = None,
 ) -> SessionResult:
     """Analyse a Session transcribed by usecases.transcribe.transcribe_session and save the result for review.
 
@@ -123,6 +125,11 @@ def run_session(
     # Domain's model: it is loaded next for the Domain stage anyway
     speakers = propose_speaker_roles(session_id, store, domain, llm, model=domain.model)
     actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date, speakers, id_prefix=prefix)
+    if assign is not None:  # ADR 0006: the Member who takes each one, from the Team's Skills
+        template, schema, members = assign
+        actions, assigned = assign_by_skills(llm, template, schema, actions, members, model=domain.model)
+        if not assigned:
+            suggestions = [*suggestions, ASSIGN_FAILED]
     result = ""
     if domain.name == "others" and prompt.completion:
         result = complete(llm, *completion, prompt, transcript, session_date, model=domain.model)

@@ -82,6 +82,20 @@ class JiraAccount:
             self._auth.disconnect()
         return self.status()
 
+    def identify(self, wait: float = CONNECT_WAIT) -> dict[str, Any]:
+        """A Member's own Jira user (ADR 0006), from a sign-in in their browser that keeps nothing:
+        `{account_id, name, failed}`, `failed` None or a fixed code."""
+        if self._auth is None:
+            return {"failed": "not_configured"}
+        if not self._connecting.acquire(blocking=False):
+            return {"failed": "already_connecting"}
+        try:
+            return {**self._auth.identify(wait=wait), "failed": None}
+        except Exception as exc:
+            return {"failed": _failure(exc)}
+        finally:
+            self._connecting.release()
+
     def projects(self) -> dict[str, Any]:
         """Every site the account can write to, with its projects, for the User to choose from."""
         if self._auth is None:

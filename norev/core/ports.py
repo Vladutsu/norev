@@ -6,7 +6,10 @@ which is the only module that holds real `LlmClient` and `Connector` implementat
 from datetime import date, datetime
 from typing import Any, Protocol, runtime_checkable
 
-from norev.core.models import ActionsSnapshot, Domain, AuditEvent, OthersPrompt, ProposedAction, SendResult, Session, Speaker, SpeakerTurn, StepRecord, Suggestion, Transcript
+from norev.core.models import (
+    ActionsSnapshot, AuditEvent, Domain, Invitation, Member, OthersPrompt, ProposedAction, SendResult, Session, Speaker,
+    SpeakerTurn, StepRecord, Suggestion, Team, Transcript,
+)
 
 
 @runtime_checkable
@@ -215,3 +218,27 @@ class ExecutionAuditLog(Protocol):
 @runtime_checkable
 class Clock(Protocol):
     def now(self) -> datetime: ...
+
+
+@runtime_checkable
+class TeamStore(Protocol):
+    """The one local Team (ADR 0006): its name, Members and pending Invitations, encrypted like Sessions.
+    Members and Invitations are found by email, lower-case."""
+
+    def get_team(self) -> Team | None: ...
+
+    def save_team(self, team: Team) -> None: ...
+
+    def list_members(self) -> list[Member]: ...
+
+    def get_member(self, email: str) -> Member | None: ...
+
+    def save_member(self, member: Member) -> None: ...
+
+    def delete_member(self, email: str) -> None: ...
+
+    def list_invitations(self) -> list[Invitation]: ...
+
+    def save_invitation(self, invitation: Invitation) -> None: ...
+
+    def delete_invitation(self, email: str) -> None: ...

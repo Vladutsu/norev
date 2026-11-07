@@ -11,6 +11,9 @@ context = 8192
 [prompts]
 domain_stage = "prompts/domain_stage.md"
 domain_stage_schema = "prompts/domain_stage.schema.json"
+# ADR 0006: which Member of the Team takes each Proposed Action, from their Skills
+assign = "prompts/assign.md"
+assign_schema = "prompts/assign.schema.json"
 
 [[roles]]
 name = "organizer"

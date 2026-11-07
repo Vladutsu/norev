@@ -8,6 +8,30 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
+<div class="auth" id="auth" hidden>
+  <section class="auth-card raised" aria-labelledby="auth-title">
+    <div class="brand">
+      <svg width="26" height="20" viewBox="0 0 26 20" fill="none" stroke="#2477F2" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 8v4M7 4v12M12 1v18M17 5v10M22 8v4"/></svg>
+      <span class="brand-name">norev</span>
+    </div>
+    <h1 class="title" id="auth-title">Intră în cont</h1>
+    <div class="segmented" role="group" aria-label="Alege" id="auth-tabs">
+      <button type="button" data-tab="in" aria-pressed="true">Intră</button>
+      <button type="button" data-tab="up" aria-pressed="false">Cont nou</button>
+    </div>
+    <p class="small muted" id="auth-note"></p>
+    <form class="stack" id="auth-form" novalidate>
+      <label for="a-email"><span class="field-label">Email</span><input id="a-email" class="field" type="email" autocomplete="username" required></label>
+      <label for="a-code" class="up-only invited-only"><span class="field-label">Codul de invitație</span><input id="a-code" class="field" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX"></label>
+      <label for="a-name" class="up-only"><span class="field-label">Nume</span><input id="a-name" class="field" autocomplete="name"></label>
+      <label for="a-password"><span class="field-label">Parola</span><input id="a-password" class="field" type="password" autocomplete="current-password" required></label>
+      <label for="a-password2" class="up-only"><span class="field-label">Parola, încă o dată</span><input id="a-password2" class="field" type="password" autocomplete="new-password"></label>
+      <label for="a-skills" class="up-only"><span class="field-label">Skill-uri, separate prin virgulă</span><input id="a-skills" class="field" autocomplete="off" placeholder="de exemplu: backend, design, testare"></label>
+      <p class="reason" id="auth-error" role="alert"></p>
+      <button type="submit" class="btn primary" id="auth-submit">Intră</button>
+    </form>
+  </section>
+</div>
 <div class="app">
 
 <header class="topbar raised">
@@ -38,34 +62,15 @@
       <span class="grow">De verificat</span>
       <span class="badge" id="pending-count" aria-label="acțiuni de verificat">0</span>
     </button>
+    <button class="navbtn" data-view="team" id="nav-team" hidden>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>
+      <span class="grow">Echipa</span>
+    </button>
   </div>
-  <div class="privacy inset" id="trello" aria-labelledby="trello-title" hidden>
-    <strong id="trello-title">Trello</strong>
-    <span id="trello-status" role="status"></span>
-    <div id="trello-connect" class="stack" style="gap:.4rem" hidden>
-      <button type="button" class="btn link" id="trello-authorize">Obține tokenul din Trello</button>
-      <label for="trello-token"><span class="small">Lipește tokenul aici</span>
-        <input id="trello-token" class="field" type="password" autocomplete="off" spellcheck="false"></label>
-      <button type="button" class="btn" id="trello-save">Conectează</button>
-    </div>
-    <div id="trello-pick" class="stack" style="gap:.4rem" hidden>
-      <label for="trello-list"><span class="small">Lista pentru sarcini</span>
-        <select id="trello-list" class="field"></select></label>
-      <button type="button" class="btn" id="trello-choose">Alege lista</button>
-    </div>
-    <button type="button" class="btn" id="trello-disconnect" hidden>Deconectează</button>
-  </div>
-  <div class="privacy inset" id="google" aria-labelledby="google-title" hidden>
-    <strong id="google-title">Google Calendar</strong>
-    <span id="google-status" role="status"></span>
-    <button type="button" class="btn" id="google-button"></button>
-  </div>
-  <div class="privacy inset" id="jira" aria-labelledby="jira-title" hidden>
-    <strong id="jira-title">Jira</strong>
-    <span id="jira-status" role="status"></span>
-    <label for="jira-project" id="jira-project-label" hidden><span>Proiectul pentru sarcinile trimise în Jira</span></label>
-    <select id="jira-project" class="jira-project" hidden></select>
-    <button type="button" class="btn" id="jira-button"></button>
+  <div class="me inset" id="me" hidden>
+    <span class="small muted">Conectat ca</span>
+    <strong id="me-name"></strong>
+    <button type="button" class="btn link" id="sign-out">Ieși din cont</button>
   </div>
   <div class="privacy inset">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#13A26B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
@@ -219,6 +224,94 @@
       <label for="f-to"><span class="field-label">Până la</span><input id="f-to" class="field" type="date"></label>
     </div>
     <div class="list" id="session-list" aria-live="polite"></div>
+  </section>
+
+  <section id="view-team" aria-labelledby="team-title" hidden>
+    <div class="stack">
+      <span class="eyebrow">Echipa</span>
+      <h1 class="title" id="team-title"></h1>
+      <div class="row" id="team-rename" hidden>
+        <label class="stack grow" for="team-name"><span class="field-label">Numele echipei</span>
+          <input id="team-name" class="field" autocomplete="off"></label>
+        <button type="button" class="btn" id="team-rename-save">Salvează numele</button>
+      </div>
+    </div>
+
+    <section class="card raised" aria-labelledby="profile-title">
+      <span class="overline" id="profile-title">Profilul tău</span>
+      <label class="stack" for="p-name"><span class="field-label">Nume</span><input id="p-name" class="field" autocomplete="name"></label>
+      <label class="stack" for="p-skills"><span class="field-label">Skill-uri, separate prin virgulă</span>
+        <input id="p-skills" class="field" autocomplete="off" placeholder="de exemplu: backend, design, testare"></label>
+      <div class="actions">
+        <span class="hint">Skill-urile ajută la propunerea responsabilului unei acțiuni.</span>
+        <button type="button" class="btn primary" id="profile-save">Salvează profilul</button>
+      </div>
+      <div class="connections">
+        <div class="privacy inset">
+          <strong>Contul tău Jira</strong>
+          <span id="link-jira-status" role="status"></span>
+          <button type="button" class="btn" id="link-jira"></button>
+        </div>
+        <div class="privacy inset">
+          <strong>Contul tău Trello</strong>
+          <span id="link-trello-status" role="status"></span>
+          <button type="button" class="btn" id="link-trello"></button>
+        </div>
+      </div>
+      <p class="small muted" style="margin:0">Te conectezi o singură dată, ca aplicația să știe cine ești în Jira și Trello. Nu păstrează accesul tău: sarcinile se trimit prin conexiunea Team Leader-ului, cu tine ca responsabil.</p>
+    </section>
+
+    <section class="card raised" aria-labelledby="members-title">
+      <span class="overline" id="members-title">Membri</span>
+      <div class="list" id="members"></div>
+    </section>
+
+    <section class="card raised" aria-labelledby="invite-title" id="team-invite" hidden>
+      <span class="overline" id="invite-title">Adaugă un membru</span>
+      <div class="row">
+        <label class="stack grow" for="invite-email"><span class="field-label">Email</span>
+          <input id="invite-email" class="field" type="email" autocomplete="off"></label>
+        <button type="button" class="btn primary" id="invite-send">Creează invitația</button>
+      </div>
+      <div id="invite-code" class="well inset" role="status" hidden></div>
+      <div class="list" id="invitations"></div>
+    </section>
+
+    <section class="card raised" aria-labelledby="connections-title" id="team-connections" hidden>
+      <span class="overline" id="connections-title">Conexiuni</span>
+      <p class="small muted" style="margin:0">Doar Team Leader-ul conectează conturile prin care echipa trimite sarcini.</p>
+      <div class="connections">
+        <div class="privacy inset" id="trello" aria-labelledby="trello-title" hidden>
+    <strong id="trello-title">Trello</strong>
+    <span id="trello-status" role="status"></span>
+    <div id="trello-key" class="stack" style="gap:.4rem" hidden>
+          <label for="trello-key-input"><span class="small">Cheia API a aplicației, din trello.com/power-ups/admin (tab-ul API key). Acolo, la Allowed origins, adaugă http://localhost:8766.</span>
+            <input id="trello-key-input" class="field" autocomplete="off" spellcheck="false" placeholder="de obicei 32 de caractere"></label>
+          <button type="button" class="btn" id="trello-key-save">Salvează cheia</button>
+        </div>
+        <button type="button" class="btn" id="trello-sign-in" hidden>Conectează Trello</button>
+        <button type="button" class="btn link" id="trello-key-change" hidden>Schimbă cheia API</button>
+    <div id="trello-pick" class="stack" style="gap:.4rem" hidden>
+      <label for="trello-list"><span class="small">Lista pentru sarcini</span>
+        <select id="trello-list" class="field"></select></label>
+      <button type="button" class="btn" id="trello-choose">Alege lista</button>
+    </div>
+    <button type="button" class="btn" id="trello-disconnect" hidden>Deconectează</button>
+  </div>
+        <div class="privacy inset" id="google" aria-labelledby="google-title" hidden>
+    <strong id="google-title">Google Calendar</strong>
+    <span id="google-status" role="status"></span>
+    <button type="button" class="btn" id="google-button"></button>
+  </div>
+        <div class="privacy inset" id="jira" aria-labelledby="jira-title" hidden>
+    <strong id="jira-title">Jira</strong>
+    <span id="jira-status" role="status"></span>
+    <label for="jira-project" id="jira-project-label" hidden><span>Proiectul pentru sarcinile trimise în Jira</span></label>
+    <select id="jira-project" class="jira-project" hidden></select>
+    <button type="button" class="btn" id="jira-button"></button>
+  </div>
+      </div>
+    </section>
   </section>
 
 </main>

@@ -69,6 +69,8 @@ def _validate_action(action: ProposedAction, domain: Domain, *, complete: bool) 
         raise ValidationError('required', 'title')
     if action.owner is not None and not isinstance(action.owner, str):
         raise ValidationError('invalid_string', 'owner')
+    if action.assignee is not None and not isinstance(action.assignee, str):
+        raise ValidationError('invalid_string', 'assignee')
     if action.due_date is not None and type(action.due_date) is not date:
         raise ValidationError('invalid_date', 'due_date')
     fields = action.fields
@@ -142,7 +144,7 @@ def _save(session_id: str, snapshot: ActionsSnapshot, store: SessionStore) -> Ac
 def edit_action(session_id: str, action_id: str, changes: dict[str, Any], *,
                 expected_revision: int, store: SessionStore, domain: Domain) -> ActionsSnapshot:
     snapshot, action = _load(session_id, action_id, expected_revision, store, domain)
-    if not isinstance(changes, dict) or set(changes) - {'title', 'description', 'owner', 'due_date', 'fields'}:
+    if not isinstance(changes, dict) or set(changes) - {'title', 'description', 'owner', 'due_date', 'fields', 'assignee'}:
         raise ValidationError('unknown_changes', 'changes')
     for name, value in changes.items():
         if name == 'due_date':

@@ -69,3 +69,12 @@ def load_completion(folder: Path) -> tuple[str, dict]:
     """The Others completion prompt and schema (#83): the result the User asks for, from the Transcript."""
     prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
     return _read_inside(folder, prompts["completion"]), json.loads(_read_inside(folder, prompts["completion_schema"]))
+
+
+def load_assign(folder: Path) -> tuple[str, dict] | None:
+    """The prompt and schema that suggest the Member taking each Proposed Action (ADR 0006), or None
+    for a Domain without Team assignment (Medical)."""
+    prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
+    if "assign" not in prompts:
+        return None
+    return _read_inside(folder, prompts["assign"]), json.loads(_read_inside(folder, prompts["assign_schema"]))

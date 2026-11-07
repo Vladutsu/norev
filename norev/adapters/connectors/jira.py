@@ -38,6 +38,7 @@ from norev.adapters.connectors.google_calendar import SecretStore, _Callback
 
 NAME = "jira"
 SCOPES = ("read:jira-work", "write:jira-work", "offline_access")  # create and search issues, list projects
+IDENTITY_SCOPES = ("read:jira-user",)  # ADR 0006: a Member's own user (rest/api/3/myself), nothing else
 REFRESH_TOKEN = "jira.refresh_token"  # SecretStore names
 DESTINATION = "jira.destination"  # the site and project the User chose, as JSON
 DEFAULT_REDIRECT_PORT = 8765
@@ -195,6 +196,40 @@ class JiraAuth:
     def connect(self, wait: float = 300) -> None:
         """Sign in in the User's browser and keep the refresh token. Blocks until the browser comes
         back to the app or `wait` seconds pass."""
+        tokens = self._authorize(SCOPES, wait)
+        refresh = tokens.get("refresh_token")
+        if not isinstance(refresh, str) or not refresh:
+            raise AuthorizationFailed("no_refresh_token")
+        with self._lock:
+            try:
+                self._keep(tokens)  # checked before anything is saved
+            except JiraError:
+                raise AuthorizationFailed("no_access_token") from None
+            self._store.save_secret(REFRESH_TOKEN, refresh)
+
+    def identify(self, wait: float = 300) -> dict[str, str]:
+        """A Member signs in once so the app learns their Jira user (ADR 0006): `{account_id, name}` on
+        the site the Team Leader chose (or the Member's only site). Nothing of the sign-in is kept."""
+        tokens = self._authorize(IDENTITY_SCOPES, wait)
+        access = tokens.get("access_token")
+        if not isinstance(access, str) or not access:
+            raise AuthorizationFailed("no_access_token")
+        get = lambda url: _call(urllib.request.Request(url, headers={  # noqa: E731
+            "Authorization": f"Bearer {access}", "Accept": "application/json"}), self._timeout)
+        sites = [s["id"] for s in get(self._endpoints.resources) or [] if isinstance(s, dict)
+                 and isinstance(s.get("id"), str) and CLOUD_ID.fullmatch(s["id"])]
+        chosen = load_destination(self._store)
+        cloud = chosen["cloud_id"] if chosen and chosen["cloud_id"] in sites else sites[0] if len(sites) == 1 else None
+        if cloud is None:
+            raise AuthorizationFailed("no_site")
+        me = get(f"{self._endpoints.api}/{cloud}/rest/api/3/myself")
+        account = me.get("accountId") if isinstance(me, dict) else None
+        if not isinstance(account, str) or not ACCOUNT_ID.fullmatch(account):
+            raise JiraError(200, "unexpected_user")
+        return {"account_id": account, "name": " ".join(str(me.get("displayName") or account).split())[:80]}
+
+    def _authorize(self, scopes: tuple[str, ...], wait: float) -> dict[str, Any]:
+        """The browser sign-in and the code exchange; the tokens, with every scope in `scopes` granted."""
         client = self._client()
         state = secrets.token_urlsafe(32)
         redirect = self._settings.redirect_uri
@@ -204,7 +239,7 @@ class JiraAuth:
             raise AuthorizationFailed("port_in_use") from None
         with server:
             url = self._endpoints.auth + "?" + urllib.parse.urlencode({
-                "audience": "api.atlassian.com", "client_id": client["client_id"], "scope": " ".join(SCOPES),
+                "audience": "api.atlassian.com", "client_id": client["client_id"], "scope": " ".join(scopes),
                 "redirect_uri": redirect, "state": state, "response_type": "code", "prompt": "consent",
             })
             if not self._open_browser(url):
@@ -227,17 +262,9 @@ class JiraAuth:
         if not isinstance(tokens, dict):
             raise AuthorizationFailed("no_access_token")
         granted = str(tokens.get("scope", "")).split()
-        if any(scope not in granted for scope in SCOPES):
+        if any(scope not in granted for scope in scopes):
             raise AuthorizationFailed("scope_not_granted")
-        refresh = tokens.get("refresh_token")
-        if not isinstance(refresh, str) or not refresh:
-            raise AuthorizationFailed("no_refresh_token")
-        with self._lock:
-            try:
-                self._keep(tokens)  # checked before anything is saved
-            except JiraError:
-                raise AuthorizationFailed("no_access_token") from None
-            self._store.save_secret(REFRESH_TOKEN, refresh)
+        return tokens
 
     def disconnect(self) -> None:
         """Delete the local token and the chosen destination. Atlassian has no revocation API for 3LO:
@@ -382,7 +409,8 @@ def clear_destination(store: SecretStore) -> None:
 
 # ── send ──────────────────────────────────────────────────────────────────────
 
-ISSUE_FIELDS = {"project", "issuetype", "summary", "description", "duedate", "labels"}
+ISSUE_FIELDS = {"project", "issuetype", "summary", "description", "duedate", "labels", "assignee"}
+ACCOUNT_ID = re.compile(r"[A-Za-z0-9:_-]{1,128}")  # a Jira Cloud accountId
 
 
 def _check_payload(payload: Any) -> tuple[dict[str, str], dict[str, str], dict[str, Any], str]:
@@ -398,6 +426,10 @@ def _check_payload(payload: Any) -> tuple[dict[str, str], dict[str, str], dict[s
         raise ValueError("jira issue has unexpected or missing fields")
     if fields["project"] != {"key": project.get("key")}:
         raise ValueError("jira issue is for another project than the payload's")
+    if "assignee" in fields and (not isinstance(fields["assignee"], dict) or set(fields["assignee"]) != {"accountId"}
+                                 or not isinstance(fields["assignee"]["accountId"], str)
+                                 or not ACCOUNT_ID.fullmatch(fields["assignee"]["accountId"])):
+        raise ValueError("jira issue has an invalid assignee")
     labels = fields["labels"]
     ours = [label for label in labels if isinstance(label, str) and LABEL.fullmatch(label)] if isinstance(labels, list) else []
     if len(ours) != 1:

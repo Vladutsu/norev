@@ -25,8 +25,28 @@ One recorded conversation from start to stop, with everything derived from it. I
 _Avoid_: Meeting, recording, consultation (as a core term)
 
 **User**:
-The single professional who operates the app and records Sessions (e.g. the family doctor, the journalist). Also a Speaker in every Session.
+A person who signs in to the app with their email and password and records Sessions (e.g. the family doctor, the journalist). One User is signed in at a time and decides the Proposed Actions; also a Speaker in every Session.
 _Avoid_: Operator, account, doctor (as a core term)
+
+**Team**:
+The Users who share one store: a Team Leader and the Members they invited. Sessions belong to the Team.
+_Avoid_: Group, organisation, workspace
+
+**Team Leader**:
+The User who created the Team. Invites and removes Members, connects Jira and Trello, and picks which Member takes a Proposed Action.
+_Avoid_: Admin, owner, manager
+
+**Member**:
+A User of the Team, the Team Leader included. Lists their Skills and links their own Jira and Trello users by signing in there once.
+_Avoid_: Employee, participant, teammate
+
+**Skill**:
+Something a Member lists that they can do (e.g. "backend", "design"). The local model uses the Skills to suggest which Member takes a Proposed Action.
+_Avoid_: Competence, tag, expertise
+
+**Invitation**:
+The one-time code the Team Leader gives a new Member so they can sign up and join the Team; it expires after 7 days.
+_Avoid_: Invite link, token
 
 **Contact**:
 The person the User talks with in a Session, chosen or created before recording starts and kept in a local address book (e.g. the Patient, the Interviewee).

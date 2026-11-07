@@ -152,6 +152,13 @@ class DemoBackend:
 
     # --- Google account (#45): connect and disconnect from the app
 
+    def auth_status(self) -> dict[str, Any]:
+        """No Users here (the demo, or a store opened without the sign-in gate): the UI skips sign-in."""
+        return {"accounts": False, "signed_in": False}
+
+    def busy(self) -> bool:
+        return False
+
     def google_status(self) -> dict[str, Any]:
         return self.google.status() if self.google is not None else {"available": False, "connected": False}
 
@@ -180,6 +187,13 @@ class DemoBackend:
 
     def trello_connect(self, token: Any) -> dict[str, Any]:
         return self._trello().connect(token)
+
+    def trello_set_key(self, key: Any) -> dict[str, Any]:
+        return self._trello().set_key(key)
+
+    def trello_sign_in(self) -> dict[str, Any]:
+        """Connects Trello through the browser, which comes back to the app with the token (no paste)."""
+        return self._trello().connect_in_browser()
 
     def trello_boards(self) -> dict[str, Any]:
         return self._trello().boards()
@@ -375,6 +389,7 @@ class DemoBackend:
             "description": action.description,
             "transcript_excerpt": action.transcript_excerpt,
             "owner": action.owner or "",
+            "assignee": action.assignee,
             "due_date": action.due_date.isoformat() if action.due_date else "",
             "action_type": action.action_type,
             "type_label": action_type.label if action_type else "",

@@ -211,6 +211,8 @@ class ProposedAction:
     prepared_payload: dict[str, Any] | None = None
     approved_by: str | None = None
     approved_at: datetime | None = None
+    # the Member who takes it (their email, ADR 0006): picked by the Team Leader, or suggested from Skills
+    assignee: str | None = None
 
     def approve(self, payload: dict[str, Any]) -> None:
         """The User's approval of this exact payload. Out of Failed only retry() is allowed."""
@@ -277,6 +279,42 @@ class Suggestion:
 
     def __repr__(self) -> str:
         return f"Suggestion(text_len={len(self.text)})"
+
+
+@dataclass(frozen=True)
+class Member:
+    """A User of the Team (ADR 0006), the Team Leader included. `email` is lower-case and identifies them.
+
+    `jira_user` and `trello_user` are what the Member typed; `jira_account_id` and `trello_member_id`
+    are set only once Jira or Trello confirmed that user, and only those are sent as an assignee."""
+
+    email: str
+    name: str
+    skills: tuple[str, ...] = ()
+    leader: bool = False
+    jira_user: str = ""
+    jira_account_id: str | None = None
+    trello_user: str = ""
+    trello_member_id: str | None = None
+
+    def __repr__(self) -> str:  # personal data: lengths only
+        return f"Member(email_len={len(self.email)}, skills={len(self.skills)}, leader={self.leader})"
+
+
+@dataclass(frozen=True)
+class Team:
+    name: str
+
+
+@dataclass(frozen=True)
+class Invitation:
+    """A new Member's way in (ADR 0006): the code itself is never kept, only the key slot it opens."""
+
+    email: str
+    expires_at: datetime
+
+    def __repr__(self) -> str:
+        return f"Invitation(email_len={len(self.email)}, expires_at={self.expires_at.isoformat()})"
 
 
 @dataclass(frozen=True)

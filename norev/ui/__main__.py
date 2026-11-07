@@ -3,8 +3,8 @@
   python -m norev.ui           record or import a Session and analyse it locally (Whisper, llama-server)
   python -m norev.ui --demo    the synthetic examples, reviewed but never executed
 
-With NOREV_STORE_KEY_FILE set, Sessions go to the encrypted store (#26); otherwise they stay in
-memory and are gone when the window closes. Approved Proposed Actions are exported to
+The window opens on sign-in (ADR 0006): a User's password opens the encrypted store (#26) through
+their key slot; the first sign-up creates the store, or takes over the key of NOREV_STORE_KEY_FILE. Approved Proposed Actions are exported to
 NOREV_EXPORT_DIR (default: Documents/norev); with NOREV_GOOGLE_CLIENT_ID/SECRET and the encrypted
 store, the User can connect Google Calendar and send approved events to it (#45); with
 NOREV_TRELLO_API_KEY, Trello for work items (#72); with NOREV_JIRA_CLIENT_ID/SECRET, Jira Cloud (#73).
@@ -18,7 +18,7 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
-from norev.adapters.store.encrypted import StoreKeyError, StoreSettings, open_store
+from norev.adapters.store.encrypted import StoreSettings
 from norev.processor.identity import LocalUser
 from norev.testing.fakes import InMemorySessionStore
 from norev.ui.backend import DemoBackend
@@ -59,14 +59,15 @@ def session_backend(store, approved_by: str, pick_file):
         diarizer = _NoSpeakers()
     export_dir = Path(os.environ.get("NOREV_EXPORT_DIR") or Path.home() / "Documents" / "norev").resolve()
     google, calendar = build_google_calendar(store)  # no Connector without an OAuth client and the encrypted store
-    trello, trello_connector = build_trello(store)  # none without NOREV_TRELLO_API_KEY and the encrypted store
+    trello, trello_connector = build_trello(store)  # its key from NOREV_TRELLO_API_KEY or entered in the app
     jira, jira_connector = build_jira(store)  # none without NOREV_JIRA_CLIENT_ID/SECRET and the encrypted store
     processor = build_desktop_processor(store, export_dir, transcriber=ChildProcessAdapter(store, child_process.whisper),
                                         diarizer=diarizer, calendar=calendar, trello=trello_connector,
                                         jira=jira_connector, models=models)
     return SessionBackend(
         store, approved_by=approved_by, processor=processor, export_dir=export_dir,
-        builder=desktop_payload_builder(export_dir, calendar=calendar is not None, trello=trello, jira=jira),
+        builder=desktop_payload_builder(export_dir, calendar=calendar is not None, trello=trello, jira=jira,
+                                        member_of=getattr(store, "get_member", lambda email: None)),
         google=google, trello=trello, jira=jira,
         llm_session=lambda: _llm_session(models),
         record_source=lambda: capture(resolve_device(os.environ.get("NOREV_INPUT_DEVICE"))),
@@ -99,24 +100,24 @@ def main(argv: list[str]) -> int:
         print("pywebview is not installed: pip install -r requirements-ui.txt", file=sys.stderr)
         return 1
 
-    if os.environ.get("NOREV_STORE_KEY_FILE"):
-        try:
-            store = open_store(StoreSettings.from_environment())
-        except StoreKeyError as e:
-            print(f"store: {e}", file=sys.stderr)
-            return 1
-    else:
-        print("NOREV_STORE_KEY_FILE is not set: Sessions are kept in memory only", file=sys.stderr)
-        store = InMemorySessionStore()
-
     windows = []
 
     def pick_file() -> str | None:
         chosen = windows[0].create_file_dialog(webview.FileDialog.OPEN, file_types=AUDIO_TYPES)
         return chosen[0] if chosen else None
 
-    approved_by = LocalUser.from_os().id
-    backend = DemoBackend(store, approved_by=approved_by) if args.demo else session_backend(store, approved_by, pick_file)
+    if args.demo:
+        backend = DemoBackend(InMemorySessionStore(), approved_by=LocalUser.from_os().id)
+    else:  # ADR 0006: the store opens only with a User's password; the real backend is built then
+        from norev.adapters.store.slots import KeySlots
+        from norev.launcher.paths import AppPaths
+        from norev.ui.accounts import Gate
+
+        paths = AppPaths.from_environment()
+        settings = StoreSettings.from_environment()
+        backend = Gate(store_path=settings.path, slots=KeySlots(paths.root / "keys" / "norev.slots"),
+                       legacy_key_file=settings.key_file,
+                       build=lambda store, member: session_backend(store, member.email, pick_file))
     windows.append(webview.create_window("norev", url=str(INDEX), js_api=Bridge(backend), width=1360, height=900,
                                          min_size=(980, 680), background_color="#E7ECF3"))
     webview.start()

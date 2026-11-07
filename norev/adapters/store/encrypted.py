@@ -10,6 +10,7 @@ wrong key stops the store before it writes anything. Losing the key loses the da
 recovery, so back the key file up separately from the store.
 """
 import dataclasses
+import hashlib
 import json
 import os
 import sqlite3
@@ -28,6 +29,8 @@ from norev.core.models import (
     ActionsSnapshot,
     ActionStatus,
     AuditEvent,
+    Invitation,
+    Member,
     OthersPrompt,
     ProposedAction,
     Segment,
@@ -38,6 +41,7 @@ from norev.core.models import (
     StepRecord,
     StepState,
     Suggestion,
+    Team,
     Transcript,
 )
 from norev.core.models import check_decisions_kept
@@ -394,6 +398,49 @@ class EncryptedStore:
         with self._transaction():  # secure_delete is on: the deleted blob is overwritten in the file
             self._db.execute("DELETE FROM records WHERE kind = 'secret' AND id = ?", (name,))
 
+    # --- TeamStore (ADR 0006). Record ids are a hash of the email: ids are in clear, emails are not.
+
+    def get_team(self) -> Team | None:
+        d = self._get("team", "team")
+        return Team(**d) if d is not None else None
+
+    def save_team(self, team: Team) -> None:
+        self._put("team", "team", dataclasses.asdict(team))
+
+    def list_members(self) -> list[Member]:
+        return sorted((m for m in (self.get_member_by_id(i) for i in self._ids("member")) if m), key=lambda m: m.name.lower())
+
+    def get_member(self, email: str) -> Member | None:
+        return self.get_member_by_id(_email_id(email))
+
+    def get_member_by_id(self, record_id: str) -> Member | None:
+        d = self._get("member", record_id)
+        return Member(**{**d, "skills": tuple(d["skills"])}) if d is not None else None
+
+    def save_member(self, member: Member) -> None:
+        self._put("member", _email_id(member.email), dataclasses.asdict(member))
+
+    def delete_member(self, email: str) -> None:
+        with self._transaction():
+            self._db.execute("DELETE FROM records WHERE kind = 'member' AND id = ?", (_email_id(email),))
+
+    def list_invitations(self) -> list[Invitation]:
+        found = (self._get("invitation", i) for i in self._ids("invitation"))
+        return sorted((Invitation(d["email"], datetime.fromisoformat(d["expires_at"])) for d in found if d),
+                      key=lambda i: i.expires_at)
+
+    def save_invitation(self, invitation: Invitation) -> None:
+        self._put("invitation", _email_id(invitation.email),
+                  {"email": invitation.email, "expires_at": invitation.expires_at.isoformat()})
+
+    def delete_invitation(self, email: str) -> None:
+        with self._transaction():
+            self._db.execute("DELETE FROM records WHERE kind = 'invitation' AND id = ?", (_email_id(email),))
+
+    def _ids(self, kind: str) -> list[str]:
+        with self._lock:
+            return [row[0].decode() for row in self._db.execute("SELECT id FROM records WHERE kind = ?", (kind,))]
+
     # --- AuditLog
 
     def record(self, event: AuditEvent) -> None:
@@ -521,6 +568,10 @@ class _Transaction:
 
 def _encode(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False).encode()
+
+
+def _email_id(email: str) -> str:
+    return "e-" + hashlib.sha256(f"norev-member\0{email.strip().lower()}".encode()).hexdigest()[:32]
 
 
 def _aad(kind: str, record_id: str) -> bytes:

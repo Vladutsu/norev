@@ -31,7 +31,31 @@ const ERRORS = {
   no_trello_list: "Alege întâi lista din Trello pentru sarcini.",
   no_jira_project: "Alege întâi proiectul Jira pentru sarcini.",
   invalid_summary: "Titlul trebuie să fie pe un rând, de cel mult 255 de caractere, pentru Jira.",
+  not_team_leader: "Doar Team Leader-ul poate face asta.",
+  signed_out: "Ai ieșit din cont. Intră din nou.",
 };
+// Sign-in and the Team (ADR 0006): checked before ERRORS, whose codes mean other fields elsewhere
+const TEAM_ERRORS = {
+  sign_in_failed: "Emailul sau parola nu sunt corecte.",
+  weak_password: "Parola trebuie să aibă cel puțin 8 caractere.",
+  password_mismatch: "Parolele nu sunt la fel.",
+  invalid_email: "Scrie o adresă de email validă.",
+  invalid_name: "Scrie un nume de cel mult 80 de caractere.",
+  invalid_skills: "Un skill are cel mult 40 de caractere.",
+  too_many_skills: "Cel mult 30 de skill-uri.",
+  invalid_code: "Codul de invitație nu e corect pentru acest email.",
+  invitation_expired: "Codul a expirat. Cere Team Leader-ului o invitație nouă.",
+  already_member: "Există deja un cont cu acest email.",
+  no_invitation: "Nu există o invitație pentru acest email.",
+  store_without_key: "Datele de pe acest calculator nu se deschid fără cheia lor (norev.cmd import-key).",
+  cannot_remove_self: "Nu te poți elimina din echipă.",
+  unknown_member: "Membrul nu mai e în echipă.",
+  invalid_user: "Utilizatorul Jira sau Trello nu e valid.",
+  not_on_board: "Persoana aleasă nu mai e pe boardul Trello. Reîncarcă pagina Echipa.",
+  session_busy: "O sesiune se înregistrează sau se analizează; ieși după ce se termină.",
+};
+const teamError = (err) => TEAM_ERRORS[err.code] || ERRORS[err.code] || ERRORS.internal;
+const TEAM_DOMAINS = ["corporate", "others"];  // where the owner is a Member of the Team
 // Why connecting Google Calendar did not work (GoogleAccount.connect, #45)
 const GOOGLE_FAILED = {
   access_denied: "Ai refuzat accesul în Google. Nimic nu s-a salvat.",
@@ -75,6 +99,9 @@ const state = {
   destination: {},  // action id -> the Connector the User picked (#72)
   previewRefused: {},  // previewKey -> error code: why this action cannot be approved as it is (#87)
   payloadOpen: {},  // "action id:step" -> whether the User opened what is sent
+  me: null, team: null, legacyKey: false,  // the signed-in User and their Team (ADR 0006); null in the demo
+  boardMembers: null,  // the people on the Trello board, for the Team Leader to link Members; null until loaded
+  available: { jira: false, trello: false },  // whether Jira and Trello are set up on this machine
 };
 
 // The destination shown as chosen: the User's pick, else the one already previewed, else the default
@@ -131,7 +158,10 @@ function toast(text) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.hidden = true; }, 4500);
 }
-const fail = (err) => toast(ERRORS[err.code] || ERRORS.internal);
+const fail = (err) => {
+  if (err.code === "signed_out" && state.me) { location.reload(); return; }
+  toast(ERRORS[err.code] || ERRORS.internal);
+};
 
 let queue = Promise.resolve();
 function guarded(button, work) {
@@ -143,8 +173,8 @@ function guarded(button, work) {
 }
 
 function show(view) {
-  for (const id of ["new", "recording", "review", "list"]) $("view-" + id).hidden = id !== view;
-  $("inspector-new").hidden = view !== "new" && view !== "list";
+  for (const id of ["new", "recording", "review", "list", "team"]) $("view-" + id).hidden = id !== view;
+  $("inspector-new").hidden = view !== "new" && view !== "list" && view !== "team";
   $("inspector-recording").hidden = view !== "recording";
   $("inspector-review").hidden = view !== "review";
   const recording = view === "recording";
@@ -633,6 +663,21 @@ async function previewResult() {
   box.hidden = false;
 }
 
+// ADR 0006: the owner is a Member; the Team Leader picks them, everyone else sees who it is
+function ownerPick(a, open) {
+  const t = state.team;
+  if (!t.leader) {
+    return h("label", { for: `${a.id}-owner` }, h("span", { class: "field-label" }, "Responsabil"),
+      h("input", { id: `${a.id}-owner`, class: "field", value: a.owner || "—", disabled: true, title: "Doar Team Leader-ul alege responsabilul" }));
+  }
+  const known = t.members.some((m) => m.email === a.assignee);
+  return h("label", { for: `${a.id}-owner`, class: "owner-pick" }, h("span", { class: "field-label" }, "Responsabil"),
+    h("select", { id: `${a.id}-owner`, class: "field", disabled: !open,
+      onchange: (e) => act(e.target, "edit", a.id, { assignee: e.target.value || null }) },
+    h("option", { value: "", selected: !known }, a.owner && !known ? `— (${a.owner}, nu e în echipă)` : "— nimeni"),
+    t.members.map((m) => h("option", { value: m.email, selected: m.email === a.assignee }, m.name))));
+}
+
 function actionCard(a) {
   const open = a.status === "proposed";
   const [statusLabel, statusClass] = STATUS[a.status] || [a.status, ""];
@@ -653,7 +698,8 @@ function actionCard(a) {
   });
   const text = input(`${a.id}-description`, "Descriere", a.description, "", (v) => ({ description: v }), false, false, true);
   const fields = [
-    input(`${a.id}-owner`, "Responsabil", a.owner, "", (v) => ({ owner: v || null })),
+    state.team && TEAM_DOMAINS.includes(state.review.domain.name) ? ownerPick(a, open)
+      : input(`${a.id}-owner`, "Responsabil", a.owner, "", (v) => ({ owner: v || null })),
     input(`${a.id}-due`, "Termen", a.due_date, "AAAA-LL-ZZ", (v) => ({ due_date: v || null })),
     ...a.fields.map((f) => input(`${a.id}-${f.name}`, f.label, f.value,
       f.type === "date" ? "AAAA-LL-ZZ" : f.type === "time" ? "HH:MM" : "",
@@ -739,6 +785,244 @@ function actionCard(a) {
     buttons);
 }
 
+// ---------- Sign-in (ADR 0006): the store opens only with a User's password
+
+const auth = { status: null };
+
+function showAuth(status) {
+  auth.status = status;
+  document.querySelector(".app").hidden = true;
+  $("auth").hidden = false;
+  setAuthTab(status.first_run ? "up" : "in");
+}
+
+function setAuthTab(tab) {
+  const s = auth.status;
+  const box = $("auth");
+  box.dataset.tab = tab;
+  if (tab === "up" && !s.first_run) box.dataset.invited = ""; else delete box.dataset.invited;
+  for (const b of $("auth-tabs").querySelectorAll("button")) {
+    b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
+    b.disabled = s.first_run && b.dataset.tab === "in";  // nobody to sign in as yet
+  }
+  $("auth-title").textContent = tab === "in" ? "Intră în cont" : s.first_run ? "Creează echipa" : "Cont nou";
+  $("auth-note").textContent = s.locked_out ? TEAM_ERRORS.store_without_key
+    : tab === "in" ? "Parola ta deschide datele de pe acest calculator."
+    : s.first_run ? `Primul cont creează echipa pe acest calculator; vei fi Team Leader.${s.legacy_key ? " Datele existente rămân și se deschid de acum cu parola ta." : ""} Parola nu poate fi recuperată: păstreaz-o.`
+    : "Ai nevoie de codul de invitație primit de la Team Leader.";
+  $("auth-submit").textContent = tab === "in" ? "Intră" : s.first_run ? "Creează echipa" : "Creează contul";
+  $("auth-submit").disabled = Boolean(s.locked_out);
+  $("a-password").autocomplete = tab === "in" ? "current-password" : "new-password";
+  $("auth-error").textContent = "";
+}
+
+function initAuth() {
+  for (const b of $("auth-tabs").querySelectorAll("button")) b.addEventListener("click", () => setAuthTab(b.dataset.tab));
+  $("auth-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const button = $("auth-submit");
+    const up = $("auth").dataset.tab === "up";
+    $("auth-error").textContent = "";
+    if (up && $("a-password").value !== $("a-password2").value) {
+      $("auth-error").textContent = TEAM_ERRORS.password_mismatch;
+      return;
+    }
+    button.disabled = true;
+    try {
+      const status = up
+        ? await api("sign_up", $("a-email").value, $("a-name").value, $("a-password").value, $("a-skills").value, $("a-code").value)
+        : await api("sign_in", $("a-email").value, $("a-password").value);
+      for (const id of ["a-password", "a-password2", "a-code"]) $(id).value = "";
+      await startApp(status);
+    } catch (err) {
+      $("auth-error").textContent = teamError(err);
+    } finally {
+      button.disabled = false;
+    }
+  });
+  $("sign-out").addEventListener("click", (e) => guarded(e.currentTarget, async () => {
+    try {
+      await api("sign_out");
+      location.reload();  // nothing of the signed-out User stays in the page
+    } catch (err) {
+      toast(teamError(err));
+    }
+  }));
+}
+
+// ---------- Team dashboard (ADR 0006)
+
+async function showTeam() {
+  state.team = await api("team");
+  const me = state.team.members.find((m) => m.email === state.team.me);
+  $("p-name").value = me.name;
+  $("p-skills").value = me.skills.join(", ");
+  $("invite-code").hidden = true;
+  renderTeam();
+  setNav("team");
+  show("team");
+  // the Team Leader can say which person on the Trello board each Member is (no email to match by)
+  state.boardMembers = null;
+  if (state.team.leader) {
+    api("team_trello_members").then((r) => { state.boardMembers = r.failed ? null : r.members; renderTeam(); }).catch(() => {});
+  }
+}
+
+function trelloPick(m) {
+  const people = state.boardMembers;
+  const known = people.some((p) => p.id === m.trello_id);
+  return h("label", { class: "stack", style: "gap:.25rem", for: `trello-of-${m.email}` },
+    h("span", { class: "small" }, "Pe boardul Trello"),
+    h("select", { id: `trello-of-${m.email}`, class: "field", onchange: (e) => guarded(e.target, async () => {
+      try {
+        const r = await api("team_link_trello", m.email, e.target.value || null);
+        state.team = r;
+        if (r.failed) toast(TRELLO_FAILED[r.failed] || TRELLO_FAILED.trello_error);
+        else toast(e.target.value ? `${m.name} va fi pus pe cardurile Trello care îi revin.` : `${m.name} nu mai e legat de Trello.`);
+      } catch (err) {
+        toast(teamError(err));
+      }
+      renderTeam();
+    }) },
+    h("option", { value: "", selected: !m.trello_id }, "— nelegat"),
+    !known && m.trello_id ? h("option", { value: m.trello_id, selected: true }, `${m.trello_user} (nu mai e pe board)`) : null,
+    people.map((p) => h("option", { value: p.id, selected: p.id === m.trello_id }, p.name ? `${p.name} (@${p.username})` : `@${p.username}`))));
+}
+
+const confirmingMember = { email: null };
+
+function renderTeam() {
+  const t = state.team;
+  $("team-title").textContent = t.name || "Echipa";
+  $("team-rename").hidden = !t.leader;
+  if (document.activeElement !== $("team-name")) $("team-name").value = t.name;
+  $("team-invite").hidden = !t.leader;
+  $("team-connections").hidden = !t.leader;
+  const user = (label, name) => `${label}: ${name ? `${name} ✓` : "—"}`;
+  const me = t.members.find((m) => m.email === t.me);
+  // a service not set up on this machine offers no button that can only fail
+  const notSetUp = "Nu e configurat pe acest calculator.";
+  $("link-jira-status").textContent = me.jira_user ? `Conectat ca ${me.jira_user}.` : state.available.jira ? "Neconectat." : notSetUp;
+  $("link-jira").textContent = me.jira_user ? "Deconectează" : "Conectează Jira";
+  $("link-jira").hidden = !me.jira_user && !state.available.jira;
+  $("link-trello-status").textContent = me.trello_user ? `Conectat ca @${me.trello_user}.` : state.available.trello ? "Neconectat." : notSetUp;
+  $("link-trello").textContent = me.trello_user ? "Deconectează" : "Conectează Trello";
+  $("link-trello").hidden = !me.trello_user && !state.available.trello;
+  $("members").replaceChildren(...t.members.map((m) => {
+    const remove = !t.leader || m.email === t.me ? []
+      : confirmingMember.email === m.email
+        ? [h("button", { type: "button", class: "btn", onclick: () => { confirmingMember.email = null; renderTeam(); } }, "Renunță"),
+           h("button", { type: "button", class: "btn danger", onclick: (e) => guarded(e.currentTarget, async () => {
+             state.team = await api("team_remove", m.email);
+             confirmingMember.email = null;
+             renderTeam();
+             toast(`${m.name} nu mai e în echipă.`);
+           }) }, "Confirmă eliminarea")]
+        : [h("button", { type: "button", class: "btn", "aria-label": `Elimină ${m.name}`,
+            onclick: () => { confirmingMember.email = m.email; renderTeam(); } }, "Elimină")];
+    return h("div", { class: "member" },
+      h("div", { class: "who" }, h("strong", {}, m.name, m.email === t.me ? " (tu)" : ""), h("span", {}, m.email)),
+      m.leader ? h("span", { class: "chip ok" }, "Team Leader") : null,
+      h("div", { class: "skills", "aria-label": "Skill-uri" },
+        m.skills.length ? m.skills.map((s) => h("span", { class: "chip" }, s)) : h("span", { class: "small muted" }, "fără skill-uri")),
+      h("div", { class: "tools" }, user("Jira", m.jira_user), h("br"), user("Trello", m.trello_user)),
+      t.leader && state.boardMembers ? trelloPick(m) : null,
+      ...remove);
+  }));
+  $("invitations").replaceChildren(...t.invitations.map((i) => h("div", { class: "member" },
+    h("div", { class: "who" }, h("strong", {}, i.email),
+      h("span", {}, i.expired ? "Invitație expirată" : `Invitație valabilă până la ${new Date(i.expires_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}`)),
+    h("button", { type: "button", class: "btn", onclick: (e) => guarded(e.currentTarget, async () => {
+      state.team = await api("team_cancel_invitation", i.email);
+      $("invite-code").hidden = true;
+      renderTeam();
+    }) }, "Anulează"))));
+  let legacy = $("legacy-key");
+  if (t.leader && state.legacyKey) {
+    if (!legacy) {
+      legacy = h("div", { class: "well inset", id: "legacy-key", role: "note" },
+        h("strong", {}, "Cheia veche a datelor e încă pe disc."),
+        h("p", { class: "small muted" }, "Datele se deschid acum cu parola ta. Fă un backup al cheii (norev.cmd export-key), apoi șterge fișierul."),
+        h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: (e) => guarded(e.currentTarget, async () => {
+          const s = await api("legacy_key_delete");
+          state.legacyKey = s.legacy_key;
+          renderTeam();
+          toast("Cheia veche a fost ștearsă.");
+        }) }, "Șterge cheia veche")));
+      $("view-team").insertBefore(legacy, $("view-team").children[1]);
+    }
+  } else if (legacy) legacy.remove();
+}
+
+function initTeam() {
+  const save = (button, work) => guarded(button, async () => {
+    try { await work(); } catch (err) { toast(teamError(err)); }
+  });
+  $("profile-save").addEventListener("click", (e) => save(e.currentTarget, async () => {
+    state.team = await api("profile_save", $("p-name").value, $("p-skills").value);
+    const me = state.team.members.find((m) => m.email === state.team.me);
+    state.me = { ...state.me, name: me.name };
+    $("me-name").textContent = me.name;
+    renderTeam();
+    toast("Profilul a fost salvat.");
+  }));
+  // the Member's own Jira and Trello users: one sign-in each, nothing of it kept (ADR 0006)
+  const linked = (service) => Boolean(state.team.members.find((m) => m.email === state.team.me)[`${service}_user`]);
+  // not through `guarded`: signing in can take minutes in the browser and must not hold the other actions
+  $("link-jira").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    button.disabled = true;
+    try {
+      if (linked("jira")) state.team = await api("profile_unlink", "jira");
+      else {
+        $("link-jira-status").textContent = "Termină conectarea în browser…";
+        const r = await api("profile_jira_connect");
+        state.team = r;
+        if (r.failed) toast(r.failed === "no_site" ? "Alege întâi, ca Team Leader, proiectul Jira (contul tău are acces la mai multe site-uri)."
+          : JIRA_FAILED[r.failed] || "Conectarea la Jira nu a reușit.");
+      }
+      renderTeam();
+    } catch (err) {
+      toast(teamError(err));
+    } finally {
+      button.disabled = false;
+    }
+  });
+  $("link-trello").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    button.disabled = true;
+    try {
+      if (linked("trello")) state.team = await api("profile_unlink", "trello");
+      else {
+        $("link-trello-status").textContent = "Termină conectarea în browser…";
+        const r = await api("profile_trello_connect");  // read-only, one hour, revoked at once
+        state.team = r;
+        if (r.failed && r.failed !== "cancelled") toast(TRELLO_FAILED[r.failed] || TRELLO_FAILED.trello_error);
+      }
+      renderTeam();
+    } catch (err) {
+      toast(teamError(err));
+    } finally {
+      button.disabled = false;
+    }
+  });
+  $("team-rename-save").addEventListener("click", (e) => save(e.currentTarget, async () => {
+    state.team = await api("team_rename", $("team-name").value);
+    renderTeam();
+  }));
+  $("invite-send").addEventListener("click", (e) => save(e.currentTarget, async () => {
+    const r = await api("team_invite", $("invite-email").value);
+    state.team = r;
+    $("invite-email").value = "";
+    const until = new Date(r.expires_at).toLocaleString("ro-RO", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    $("invite-code").replaceChildren(
+      h("span", { class: "small" }, `Codul pentru ${r.email}:`), h("strong", {}, r.code),
+      h("span", { class: "small muted" }, `Valabil până la ${until}. Trimite-i codul; nu va mai fi afișat. Cu el, ${r.email} își face cont din ecranul „Cont nou”.`));
+    $("invite-code").hidden = false;
+    renderTeam();
+  }));
+}
+
 // ---------- Lists
 
 async function refreshPending() {
@@ -822,12 +1106,26 @@ const TRELLO_FAILED = {
   no_browser: "Browserul nu a putut fi deschis.",
   unreachable: "Trello nu poate fi contactat. Verifică conexiunea la internet.",
   trello_error: "Trello a răspuns cu o eroare. Încearcă din nou.",
+  disconnect_first: "Deconectează întâi Trello, apoi schimbă cheia.",
+  invalid_key: "Cheia API Trello are doar cifre și litere a–f (de obicei 32). Copiaz-o din tab-ul API key, fără spații sau alt text.",
+  access_denied: "Ai refuzat accesul în Trello. Nimic nu s-a salvat.",
+  timeout: "Conectarea a expirat. Încearcă din nou și termină în browser.",
+  port_in_use: "Portul de conectare e ocupat de alt program. Închide-l și încearcă din nou.",
 };
 
 async function renderTrello(status) {
-  $("trello").hidden = !status.available;
-  if (!status.available) return;
-  $("trello-connect").hidden = status.connected;
+  state.available.trello = status.available;
+  // the Team Leader can enter the app's key here (ADR 0006); the whole card stays hidden without a store for it
+  $("trello").hidden = !status.available && !status.key_settable;
+  $("trello-key").hidden = status.available;
+  // a key entered in the app can be changed while Trello is not connected (the token belongs to the key)
+  $("trello-key-change").hidden = !(status.available && status.key_in_app && !status.connected);
+  if (!status.available) {
+    for (const id of ["trello-sign-in", "trello-pick", "trello-disconnect"]) $(id).hidden = true;
+    $("trello-status").textContent = "Lipsește cheia API a aplicației pentru Trello.";
+    return;
+  }
+  $("trello-sign-in").hidden = status.connected;
   $("trello-pick").hidden = !status.connected;
   $("trello-disconnect").hidden = !status.connected;
   $("trello-status").textContent = !status.connected ? "Neconectat. Sarcinile pot fi trimise în Trello după conectare."
@@ -846,11 +1144,12 @@ async function trelloAction(button, name, ...args) {
   button.setAttribute("aria-busy", "true");
   try {
     const status = await api(name, ...args);
+    if (status.failed === "cancelled") return;  // a newer sign-in took over; it reports for both
     if (status.failed) toast(TRELLO_FAILED[status.failed] || TRELLO_FAILED.trello_error);
-    else if (name === "trello_connect") toast("Trello e conectat. Alege lista pentru sarcini.");
+    else if (name === "trello_sign_in") toast("Trello e conectat. Alege lista pentru sarcini.");
+    else if (name === "trello_set_key") toast("Cheia Trello a fost salvată. Acum conectează Trello.");
     else if (name === "trello_choose_list") toast("Lista pentru sarcini a fost salvată.");
     else if (name === "trello_disconnect") toast(status.revoked ? "Trello a fost deconectat." : "Trello a fost deconectat aici; Trello nu a confirmat revocarea.");
-    if (name === "trello_connect") $("trello-token").value = "";  // the token stays only in the store
     await renderTrello(status);
     if (state.review) renderReview();  // which destinations are ready may have changed
   } catch (err) {
@@ -862,8 +1161,21 @@ async function trelloAction(button, name, ...args) {
 }
 
 function initTrello() {
-  $("trello-authorize").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_authorize"));
-  $("trello-save").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_connect", $("trello-token").value));
+  $("trello-key-change").addEventListener("click", () => {
+    $("trello-key").hidden = false;
+    $("trello-key-change").hidden = true;
+    $("trello-key-input").focus();
+  });
+  $("trello-key-save").addEventListener("click", async (e) => {
+    await trelloAction(e.currentTarget, "trello_set_key", $("trello-key-input").value);
+    if (state.available.trello) $("trello-key-input").value = "";  // kept to fix a typo when refused
+    if (state.team) renderTeam();  // the Team Leader's own profile can now link Trello too
+  });
+  // the browser comes back to the app with the token, as Jira's sign-in does: nothing to paste
+  $("trello-sign-in").addEventListener("click", (e) => {
+    $("trello-status").textContent = "Termină conectarea în browser…";
+    trelloAction(e.currentTarget, "trello_sign_in");
+  });
   $("trello-choose").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_choose_list", $("trello-list").value));
   $("trello-disconnect").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_disconnect"));
 }
@@ -892,6 +1204,7 @@ function jiraStatusText(status) {
 }
 
 function renderJira(status, sites) {
+  state.available.jira = status.available;
   $("jira").hidden = !status.available;
   $("jira-status").textContent = jiraStatusText(status);
   $("jira-button").textContent = status.connected ? "Deconectează" : "Conectează";
@@ -1007,6 +1320,7 @@ function initNav() {
     b.addEventListener("click", () => {
       setNav(b.dataset.view);
       if (b.dataset.view === "new") { show("new"); updateStart(); }
+      else if (b.dataset.view === "team") showTeam().catch(fail);
       else showList(b.dataset.view).catch(fail);
     });
   }
@@ -1017,7 +1331,29 @@ async function init() {
   initRecording();
   initNav();
   initList();
+  initAuth();
+  initTeam();
   $("main").setAttribute("tabindex", "-1");
+  try {
+    const auth = await api("auth_status");
+    if (auth.accounts && !auth.signed_in) showAuth(auth);
+    else await startApp(auth);
+  } catch (err) {
+    fail(err);
+  }
+}
+
+// After sign-in (or at once, without Users): the app as it was, for this User
+async function startApp(auth) {
+  $("auth").hidden = true;
+  document.querySelector(".app").hidden = false;
+  state.me = auth.user || null;
+  state.legacyKey = Boolean(auth.legacy_key);
+  $("me").hidden = $("nav-team").hidden = !state.me;
+  if (state.me) {
+    $("me-name").textContent = state.me.name;
+    state.team = await api("team");
+  }
   try {
     state.modes = await api("modes");
     const first = state.modes.find((m) => m.available);
