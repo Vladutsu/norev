@@ -10,6 +10,7 @@
             "properties": {
               "id": {"type": "string"},
               "action_type": {"const": "action_item"},
+              "owner": {"anyOf": [{"type": "string", "enum": ["organizer", "participant"]}, {"type": "null"}]},
               "fields": {
                 "type": "object",
                 "properties": {
@@ -19,7 +20,7 @@
                 "additionalProperties": false
               }
             },
-            "required": ["id", "action_type", "fields"],
+            "required": ["id", "action_type", "owner", "fields"],
             "additionalProperties": false
           }
         ]

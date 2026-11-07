@@ -50,6 +50,7 @@ DOMAIN_ANSWER = {
         {
             "id": BLOOD_TESTS,
             "action_type": "schedule_visit",
+            "owner": "patient",
             "fields": {
                 "reason": "Blood tests: cholesterol, blood sugar, creatinine and ionogram",
                 "visit_date": None,
@@ -61,6 +62,7 @@ DOMAIN_ANSWER = {
         {
             "id": MEDICATION,
             "action_type": "medication_reminder",
+            "owner": "patient",
             "fields": {
                 "medication": "amlodipine",
                 "dose": "5 milligrams, one tablet",
@@ -219,7 +221,7 @@ class MedicalConsult1IntegrationTest(unittest.TestCase):
         for item in DOMAIN_ANSWER["proposed_actions"]:
             with self.subTest(item["id"]):
                 fields_schema = branches[item["action_type"]]
-                self.assertEqual(set(item), {"id", "action_type", "fields"})
+                self.assertEqual(set(item), {"id", "action_type", "owner", "fields"})
                 self.assertEqual(set(item["fields"]), set(fields_schema["required"]))
                 for name, value in item["fields"].items():
                     if value is None:

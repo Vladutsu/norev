@@ -95,10 +95,10 @@ class CorporateDomainStageTest(unittest.TestCase):
     def test_explicit_commitment_gets_its_deliverable(self):
         a1 = self.by_id["a1"]
         self.assertEqual((a1.action_type, a1.fields), ("work_item", {"deliverable": "the Q3 report draft"}))
-        self.assertEqual((a1.owner, a1.due_date), ("Elena", date(2026, 11, 13)))
+        self.assertEqual((a1.owner, a1.due_date), (None, date(2026, 11, 13)))  # a name is never the owner (#60)
 
     def test_reassignment_is_a_suggestion_not_a_silent_owner_change(self):
-        self.assertEqual(self.by_id["a2"].owner, "Ionuț")
+        self.assertIsNone(self.by_id["a2"].owner)  # neither the generic "Ionuț" nor the model's "Elena" is a Role
         self.assertIn("Elena", self.suggestions[0].text)
 
     def test_missing_deadline_stays_empty(self):

@@ -29,8 +29,9 @@ AUDIO_TYPES = ("Audio și video (*.wav;*.mp3;*.m4a;*.flac;*.ogg;*.opus;*.aac;*.w
 
 def session_backend(store, approved_by: str, pick_file):
     """The real backend, built here so the GPU libraries load only outside --demo. main() ran prepare()."""
+    from norev.adapters import child_process
     from norev.adapters.recorder.recorder import capture, resolve_device
-    from norev.adapters.whisper.transcriber import WhisperTranscriber
+    from norev.adapters.child_process import ChildProcessAdapter
     from norev.launcher.__main__ import LLM_DEFAULTS
     from norev.launcher.llama import server_from_environment
     from norev.launcher.paths import AppPaths
@@ -44,18 +45,20 @@ def session_backend(store, approved_by: str, pick_file):
     llama = server_from_environment(paths.logs / "llama-server.log")
     os.environ.setdefault("LLAMACPP_URL", llama.url)
     os.environ.setdefault("LLM_MODEL", llama.alias)  # the alias llama-server answers to
+    # Whisper and diarization each in a child process that ends before llama-server starts, so their
+    # CUDA contexts do not stay on the GPU during the LLM stage (#65)
     try:
-        from norev.adapters.diarization.sortformer import SortformerDiarizer
+        from norev.adapters.diarization.sortformer import SortformerDiarizer  # noqa: F401  (same check as before)
 
-        diarizer = SortformerDiarizer(store)
+        diarizer = ChildProcessAdapter(store, child_process.sortformer)
     except ImportError:
         print("requirements-diarization.txt is not installed: Transcripts have no Speakers", file=sys.stderr)
         diarizer = _NoSpeakers()
     export_dir = Path(os.environ.get("NOREV_EXPORT_DIR") or Path.home() / "Documents" / "norev").resolve()
     google, calendar = build_google_calendar(store)  # no Connector without an OAuth client and the encrypted store
     trello, trello_connector = build_trello(store)  # none without NOREV_TRELLO_API_KEY and the encrypted store
-    processor = build_desktop_processor(store, export_dir, transcriber=WhisperTranscriber(store), diarizer=diarizer,
-                                        calendar=calendar, trello=trello_connector)
+    processor = build_desktop_processor(store, export_dir, transcriber=ChildProcessAdapter(store, child_process.whisper),
+                                        diarizer=diarizer, calendar=calendar, trello=trello_connector)
     return SessionBackend(
         store, approved_by=approved_by, processor=processor, export_dir=export_dir,
         builder=desktop_payload_builder(export_dir, calendar=calendar is not None, trello=trello), google=google,

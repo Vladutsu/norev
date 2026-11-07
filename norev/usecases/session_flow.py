@@ -1,5 +1,6 @@
 """Session flow (#19): finished audio -> Transcript with Speakers (usecases.transcribe, #24) ->
-English per Speaker turn -> generic extraction -> Domain stage -> Proposed Actions waiting for review.
+English per Speaker turn -> generic extraction -> Speaker Roles (#60) -> Domain stage -> Proposed
+Actions waiting for review.
 
 Extraction runs only here, after the final Transcript (no Live Transcript extraction). Every model
 call goes through the `translator`, `extractor` and `llm` the composition root built on the
@@ -13,6 +14,7 @@ from norev.core.ports import ActionExtractor, LlmClient, SessionStore, Translato
 from norev.usecases.domain_stage import ask_domain
 from norev.usecases.extract import to_proposed_actions
 from norev.usecases.others_prompt import others_domain
+from norev.usecases.speaker_roles import propose_speaker_roles
 
 DEFAULT_DOMAIN = "corporate"
 DOMAINS = ("corporate", "medical", "others")
@@ -66,6 +68,8 @@ def run_session(
     Without `regenerate`, another Domain or a decided action raises ValueError and changes nothing.
     Domain "others" runs with the Session's confirmed prompt (#21), never one made up here; a newly
     confirmed `others_prompt` replaces it only with `regenerate`, in the same write as the actions.
+    Speaker Roles are proposed before the Domain stage (a Role the User confirmed is kept); an invalid
+    answer leaves them unknown and the analysis goes on.
     A failing stage raises and leaves what was saved before it; nothing is ever executed here.
     """
     session = _session(session_id, store)
@@ -107,7 +111,9 @@ def run_session(
     prefix = f"{session_id}-r{snapshot.revision}" if regenerate else session_id
     raw = extractor.extract(transcript, session_date)
     generic = to_proposed_actions(raw, id_prefix=prefix)
-    actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date)
+    # Domain's model: it is loaded next for the Domain stage anyway
+    speakers = propose_speaker_roles(session_id, store, domain, llm, model=domain.model)
+    actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date, speakers)
     if regenerate:
         store.regenerate_actions(session_id, decided + actions, domain=domain.name,
                                  expected_revision=snapshot.revision, suggestions=suggestions,

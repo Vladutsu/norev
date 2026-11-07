@@ -10,6 +10,7 @@
             "properties": {
               "id": {"type": "string"},
               "action_type": {"const": "work_item"},
+              "owner": {"anyOf": [{"type": "string", "enum": ["organizer", "participant"]}, {"type": "null"}]},
               "fields": {
                 "type": "object",
                 "properties": {
@@ -19,7 +20,7 @@
                 "additionalProperties": false
               }
             },
-            "required": ["id", "action_type", "fields"],
+            "required": ["id", "action_type", "owner", "fields"],
             "additionalProperties": false
           },
           {
@@ -27,6 +28,7 @@
             "properties": {
               "id": {"type": "string"},
               "action_type": {"const": "calendar_event"},
+              "owner": {"anyOf": [{"type": "string", "enum": ["organizer", "participant"]}, {"type": "null"}]},
               "fields": {
                 "type": "object",
                 "properties": {
@@ -40,7 +42,7 @@
                 "additionalProperties": false
               }
             },
-            "required": ["id", "action_type", "fields"],
+            "required": ["id", "action_type", "owner", "fields"],
             "additionalProperties": false
           },
           {
@@ -48,6 +50,7 @@
             "properties": {
               "id": {"type": "string"},
               "action_type": {"const": "follow_up_email"},
+              "owner": {"anyOf": [{"type": "string", "enum": ["organizer", "participant"]}, {"type": "null"}]},
               "fields": {
                 "type": "object",
                 "properties": {
@@ -59,7 +62,7 @@
                 "additionalProperties": false
               }
             },
-            "required": ["id", "action_type", "fields"],
+            "required": ["id", "action_type", "owner", "fields"],
             "additionalProperties": false
           }
         ]

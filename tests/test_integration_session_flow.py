@@ -19,7 +19,7 @@ from norev.testing.fakes import FakeLlmClient, FixedClock
 from norev.usecases.approve import approve_action, preview_action
 from test_processor_send import RecordingAuditLog
 from test_processor_workflow import InMemoryExecutionStore
-from test_usecases_session_flow import ANSWERS, CORPORATE, MEDICAL, OTHERS, TRANSLATION, Flow
+from test_usecases_session_flow import ANSWERS, CORPORATE, MEDICAL, OTHERS, ROLES, TRANSLATION, Flow
 
 AT = datetime(2026, 11, 6, 12, tzinfo=timezone.utc)
 USER = "local:ana"
@@ -55,7 +55,7 @@ class SessionToLocalDocumentTest(unittest.TestCase):
                 self.audit.events.clear()
                 for f in os.listdir(self.export_dir):
                     os.unlink(self.export_dir / f)
-                flow = Flow(domain, [TRANSLATION, ANSWERS[domain.name]])
+                flow = Flow(domain, [TRANSLATION, ROLES, ANSWERS[domain.name]])
                 flow.run()
                 self._review(flow, domain)
 
@@ -78,7 +78,7 @@ class SessionToLocalDocumentTest(unittest.TestCase):
         complete = {"proposed_actions": [{"id": "s1-1", "action_type": "schedule_visit", "fields": {
             "reason": "Report", "visit_date": "2026-11-13", "visit_time": "09:00", "visit_end_time": "09:30",
             "location": "Clinic"}}]}
-        flow = Flow(MEDICAL, [TRANSLATION, complete])
+        flow = Flow(MEDICAL, [TRANSLATION, ROLES, complete])
         flow.run()
         revision = flow.store.load_actions_snapshot("s1").revision
         with self.assertRaises(UnsupportedWorkflow):
@@ -88,7 +88,7 @@ class SessionToLocalDocumentTest(unittest.TestCase):
         self.assertEqual((os.listdir(self.export_dir), self.audit.events), ([], []))
 
     def test_rerun_after_execution_is_refused_and_keeps_the_executed_action(self):
-        flow = Flow(CORPORATE, [TRANSLATION, ANSWERS["corporate"], ANSWERS["corporate"]])
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"], ROLES, ANSWERS["corporate"]])
         flow.run()
         self._review(flow, CORPORATE)
         self._execute(flow, CORPORATE)
