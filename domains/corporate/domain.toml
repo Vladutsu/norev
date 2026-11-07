@@ -57,6 +57,8 @@ label = "Salvează în Sesiune"
 name = "calendar_event"
 label = "Eveniment în calendar"
 description = "A meeting or call that was agreed on, with a day and a clock time, to put in the User's calendar."
+# The Domain stage may add one the generic stage missed: a meeting agreed on can read like a decision (#66)
+may_add = true
 
 [[action_types.fields]]
 name = "event_date"

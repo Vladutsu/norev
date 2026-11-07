@@ -8,3 +8,7 @@ We split it this way because the generic stage can be built and tested without a
 
 - **One Domain-specific extraction straight from the Transcript**: rejected, because every Domain would re-implement action finding, and each Domain model would also need to be good at it.
 - **Generic extraction only, no Domain model**: rejected, because Domain fields (medication, dose, visit type) and Domain Suggestions need Domain knowledge.
+
+## Amendment (#66, 2026-11-07)
+
+A Domain may also add a Proposed Action of an Action Type it marks `may_add` (e.g. a calendar event the generic stage missed), only with a Transcript excerpt that the app checks is present; it is a Proposed Action like any other, decided by the User.

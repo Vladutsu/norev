@@ -19,14 +19,18 @@ A calendar event is a meeting or call that was agreed on for a later moment: "le
 
 A follow-up email is an email someone agreed to send after the meeting: "I'll email you the figures", "please send the client a recap", "I'll write to Ana with the answer". Preparing the thing that is sent ("I'll prepare the report") is a work item, not an email.
 
-For each generic Proposed Action:
+First, calendar events. Go through the Transcript from the start and find every meeting or call that was set for a day, with or without a clock time ("it stays Tuesday at 10", "I'll call him tomorrow at 3", "we move it to Friday at 9", "let's put it on Thursday the 12th"), but not one that was cancelled. Write their exact Transcript words in `calendar_events_said`, one per meeting or call, in the order they were said.
+- If a generic Proposed Action is about that meeting or call (even "Call X" or "Schedule X"), output it in `proposed_actions` with its `id` unchanged as a calendar event.
+- If none is, put it in `added_actions`: `action_type` "calendar_event", a `title` ("Client demo"), a `description`, its `fields`, and in `transcript_excerpt` its words from `calendar_events_said`. Every meeting or call in `calendar_events_said` is either a generic Proposed Action or in `added_actions`.
+
+Then every generic Proposed Action, each once in `proposed_actions` unless a rule below leaves it out:
 - If it is a calendar event, output it with its `id` unchanged, `action_type` "calendar_event" and its `fields`.
 - If it is a follow-up email, output it with its `id` unchanged, `action_type` "follow_up_email" and its `fields`.
 - If it is a work item, output it with its `id` unchanged, `action_type` "work_item" and its `fields`.
 - Leave it out if it was cancelled or dropped later in the Transcript ("we won't do X anymore"), if it is an idea nobody committed to ("maybe we could ..."), or if it is only a decision.
 - If two generic Proposed Actions describe the same work, output it once, with the `id` of the first.
 
-You do not change the title, description or due date; you set `owner` and fill the Domain fields.
+You do not change the title, description or due date of a generic Proposed Action; you set `owner` and fill the Domain fields.
 - `owner`: the Role of who will do it, from the Speakers above: the Role of the Speaker who committed, or the Role the Transcript names ("the patient will ..."). Use only a Role name from the Speaker Roles list. If it is not clear, or that Speaker's Role is unknown, use null. Never a Speaker label (S1, S2) or a person's name.
 - `deliverable`: the concrete output, as it was said ("the Q3 report", "the login fix"). If no output was named, null.
 - `event_date`: YYYY-MM-DD. Resolve relative dates ("tomorrow", "next Tuesday") against the Session date; "next week" with no day is null.

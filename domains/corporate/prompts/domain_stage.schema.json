@@ -1,6 +1,43 @@
 {
   "type": "object",
   "properties": {
+    "calendar_events_said": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {"type": "string", "maxLength": 300}
+    },
+    "added_actions": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "action_type": {"const": "calendar_event"},
+              "title": {"type": "string", "minLength": 1, "maxLength": 200},
+              "description": {"type": "string", "maxLength": 400},
+              "transcript_excerpt": {"type": "string", "minLength": 1, "maxLength": 300},
+              "owner": {"anyOf": [{"type": "string", "enum": ["organizer", "participant"]}, {"type": "null"}]},
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "event_date": {"anyOf": [{"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}, {"type": "null"}]},
+                  "start_time": {"anyOf": [{"type": "string", "pattern": "^[0-9]{2}:[0-9]{2}$"}, {"type": "null"}]},
+                  "end_time": {"anyOf": [{"type": "string", "pattern": "^[0-9]{2}:[0-9]{2}$"}, {"type": "null"}]},
+                  "location": {"type": ["string", "null"]},
+                  "attendees": {"type": "null"}
+                },
+                "required": ["event_date", "start_time", "end_time", "location", "attendees"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["action_type", "title", "description", "transcript_excerpt", "owner", "fields"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
     "proposed_actions": {
       "type": "array",
       "items": {
@@ -81,6 +118,6 @@
       }
     }
   },
-  "required": ["proposed_actions", "suggestions"],
+  "required": ["calendar_events_said", "added_actions", "proposed_actions", "suggestions"],
   "additionalProperties": false
 }

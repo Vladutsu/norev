@@ -125,19 +125,33 @@ def check_domain(folder: Path) -> None:
     assert REQUIRED_PLACEHOLDERS <= used, f"prompt must use {sorted(REQUIRED_PLACEHOLDERS - used)}"
 
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    assert set(schema.get("required", [])) == {"proposed_actions", "suggestions"}, "schema top-level keys"
+    required = set(schema.get("required", []))
+    assert {"proposed_actions", "suggestions"} <= required <= {"proposed_actions", "suggestions", "added_actions",
+                                                                "calendar_events_said"}, "schema top-level keys"
     variants = schema["properties"]["proposed_actions"]["items"]["anyOf"]
     by_type = {v["properties"]["action_type"]["const"]: v for v in variants}
     assert set(by_type) == {a["name"] for a in action_types}, "schema Action Types differ from domain.toml"
+    # added_actions (#66): Proposed Actions the generic stage missed, only of Action Types with may_add
+    added_variants = schema["properties"].get("added_actions", {}).get("items", {}).get("anyOf", [])
+    added = {v["properties"]["action_type"]["const"]: v for v in added_variants}
+    may_add = {a["name"] for a in action_types if a.get("may_add") is True}
+    for a in action_types:
+        assert isinstance(a.get("may_add", False), bool), f"action type {a['name']}: may_add must be true or false"
+    assert set(added) == may_add, "added_actions variants must be exactly the Action Types with may_add"
+    for name, variant in added.items():
+        missing = {"title", "description", "transcript_excerpt"} - set(variant.get("required", []))
+        assert not missing, f"schema {name} (added): must require {sorted(missing)}"
+        assert "id" not in variant["properties"], f"schema {name} (added): the core gives the id"
     roles = {r["name"] for r in domain.get("roles", [])}
-    for action_type in action_types:
-        where = f"schema {action_type['name']}"
+    for action_type, variant in [(a, by_type[a["name"]]) for a in action_types] + [
+            (a, added[a["name"]]) for a in action_types if a["name"] in added]:
+        where = f"schema {action_type['name']}" + (" (added)" if variant is added.get(action_type["name"]) else "")
         # the owner is one of the Domain's Roles or null, never a Speaker id or a name (#60)
-        owner = by_type[action_type["name"]]["properties"].get("owner", {})
-        assert "owner" in by_type[action_type["name"]].get("required", []), f"{where}: owner must be required"
+        owner = variant["properties"].get("owner", {})
+        assert "owner" in variant.get("required", []), f"{where}: owner must be required"
         assert _allows_null(owner), f"{where}.owner: must allow null"
         assert {n for v in _variants(owner) for n in v.get("enum", [])} == roles, f"{where}.owner: enum must be the Roles"
-        props = by_type[action_type["name"]]["properties"]["fields"]
+        props = variant["properties"]["fields"]
         names = [f["name"] for f in action_type["fields"]]
         assert set(props["properties"]) == set(names), f"{where}: fields differ from domain.toml"
         assert set(props.get("required", [])) == set(names), f"{where}: every field must be present (null if not said)"

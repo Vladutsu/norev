@@ -1,0 +1,207 @@
+{
+ "verified_by": "David-Eti23, 2026-11-07",
+ "about": "The expectations of corporate_4, unchanged, on its ASR Transcript: the synthetic audio through Whisper (beam 5) and diarization as the app runs them (#66).",
+ "actions": [
+  {
+   "key": "demo",
+   "what": "Client demo on Tuesday 10 November, 10:00-11:00 (time and duration said)",
+   "match": [
+    [
+     "demo"
+    ]
+   ],
+   "owner": "any",
+   "due": "any",
+   "action_type": "calendar_event",
+   "fields": {
+    "event_date": [
+     "2026-11-10"
+    ],
+    "start_time": [
+     "10:00"
+    ],
+    "end_time": [
+     "11:00"
+    ]
+   }
+  },
+  {
+   "key": "supplier-call",
+   "what": "Victor calls the server supplier tomorrow at 15:00 for half an hour (relative date)",
+   "match": [
+    [
+     "supplier",
+     "vendor",
+     "provider"
+    ]
+   ],
+   "owner": [
+    "Victor",
+    null
+   ],
+   "due": "any",
+   "action_type": "calendar_event",
+   "fields": {
+    "event_date": [
+     "2026-11-07"
+    ],
+    "start_time": [
+     "15:00"
+    ],
+    "end_time": [
+     "15:30"
+    ]
+   }
+  },
+  {
+   "key": "retrospective",
+   "what": "Retrospective moved from Thursday to Friday 13 November at 09:00 (rescheduled; no end said)",
+   "match": [
+    [
+     "retro"
+    ]
+   ],
+   "owner": "any",
+   "due": "any",
+   "action_type": "calendar_event",
+   "fields": {
+    "event_date": [
+     "2026-11-13"
+    ],
+    "start_time": [
+     "09:00"
+    ],
+    "end_time": [
+     null
+    ]
+   }
+  },
+  {
+   "key": "training",
+   "what": "Internal training on Thursday 12 November, time not decided (missing time)",
+   "match": [
+    [
+     "training"
+    ]
+   ],
+   "owner": "any",
+   "due": "any",
+   "action_type": "calendar_event",
+   "fields": {
+    "event_date": [
+     "2026-11-12"
+    ],
+    "start_time": [
+     null
+    ],
+    "end_time": [
+     null
+    ]
+   }
+  },
+  {
+   "key": "demo-slides",
+   "what": "Ioana prepares the demo presentation by Monday",
+   "match": [
+    [
+     "presentation",
+     "slides",
+     "deck"
+    ]
+   ],
+   "owner": [
+    "Ioana",
+    null
+   ],
+   "due": [
+    "2026-11-09"
+   ],
+   "action_type": "work_item"
+  }
+ ],
+ "not_actions": [
+  {
+   "key": "marketing-meeting",
+   "what": "Monday meeting with marketing, cancelled",
+   "match": [
+    [
+     "marketing"
+    ]
+   ]
+  }
+ ],
+ "numbers": [
+  {
+   "key": "date-10",
+   "said": "zece noiembrie",
+   "english": [
+    "10",
+    "tenth"
+   ]
+  },
+  {
+   "key": "hour-10",
+   "said": "ora zece",
+   "english": [
+    "10",
+    "ten"
+   ]
+  },
+  {
+   "key": "hour-3",
+   "said": "ora trei după-amiaza",
+   "english": [
+    "3",
+    "three",
+    "15"
+   ]
+  },
+  {
+   "key": "date-13",
+   "said": "treisprezece noiembrie",
+   "english": [
+    "13",
+    "thirteenth"
+   ]
+  },
+  {
+   "key": "hour-9",
+   "said": "ora nouă",
+   "english": [
+    "9",
+    "nine"
+   ]
+  },
+  {
+   "key": "date-12",
+   "said": "doisprezece noiembrie",
+   "english": [
+    "12",
+    "twelfth"
+   ]
+  }
+ ],
+ "known_cases": [
+  {
+   "id": "calendar-missing-time-asr",
+   "what": "A calendar event with no time said keeps start_time and end_time empty",
+   "action": "training",
+   "follow_up": "#66"
+  },
+  {
+   "id": "calendar-relative-date-asr",
+   "what": "'Tomorrow at three' becomes 2026-11-07 15:00-15:30",
+   "action": "supplier-call",
+   "follow_up": "#66"
+  },
+  {
+   "id": "calendar-rescheduled-asr",
+   "what": "The rescheduled retrospective is an event at the new moment",
+   "action": "retrospective",
+   "follow_up": "#66"
+  }
+ ],
+ "notes": [
+  "Domain expectations (action_type, fields) are checked on the Corporate Domain stage of the neutral variant (#46)."
+ ]
+}
