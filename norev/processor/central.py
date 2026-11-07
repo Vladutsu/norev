@@ -106,8 +106,10 @@ class CentralProcessor:
         connectors: Iterable[Connector] = (),
         transcriber: Transcriber | None = None,
         diarizer: Diarizer | None = None,
+        models=None,
     ) -> None:
         self._llm = llm
+        self._models = models  # launcher.llama.LlamaModels: starts llama-server per model (#62); None: one server run outside
         self._audit = audit
         self.identity = identity
         self._clock = clock
@@ -123,10 +125,15 @@ class CentralProcessor:
     # ── model calls ─────────────────────────────────────────────────────────
 
     def generate_json(self, prompt: str, *, model: str | None = None, json_schema: dict | None = None) -> str:
-        """LlmClient for every stage. llama-server runs out of process, so there is no release hook:
-        the gate only keeps Whisper and diarization off the GPU while LLM calls run."""
-        with self._gpu.use(f"llm:{model or ''}"):
-            return self._llm.generate_json(prompt, model=model, json_schema=json_schema)
+        """LlmClient for every stage. With `models`, the call's model is started in llama-server and the
+        one before it stopped first (#62); a missing model raises before anything starts. Without it the
+        gate only keeps Whisper and diarization off the GPU while LLM calls run."""
+        if self._models is None:
+            with self._gpu.use(f"llm:{model or ''}"):
+                return self._llm.generate_json(prompt, model=model, json_schema=json_schema)
+        with self._gpu.use(f"llm:{self._models.resolve(model)}", self._models.stop):
+            alias = self._models.load(model)
+            return self._llm.generate_json(prompt, model=alias, json_schema=json_schema)
 
     def transcribe(self, audio_ref: str, language: str | None = None) -> Transcript:
         if self._transcriber is None:

@@ -89,6 +89,8 @@ def apply_defaults(paths: AppPaths, env: MutableMapping[str, str], *, offline: b
             break
     env.setdefault("LLAMA_SERVER", str(paths.llama_server))
     env.setdefault("NOREV_EXTRACT_MODEL", env.get("LLAMACPP_MODEL") or str(paths.gguf))
+    env.setdefault("NOREV_TRANSLATE_MODEL", env["NOREV_EXTRACT_MODEL"])
+    env.setdefault("NOREV_MODELS_DIR", str(paths.models))  # where a Domain's `[model] gguf` is looked up (#62)
 
 
 def cuda_dll_dirs(site_packages: list[Path]) -> list[Path]:

@@ -8,10 +8,12 @@
 
 transcribe runs Whisper and diarization and needs no LLM; analyse translates per Speaker turn,
 extracts and runs the Domain stage. They are separate so Whisper and the LLM never hold the GPU at
-the same time (./norev.sh starts llama-server between them). The Domain is Corporate unless chosen;
+the same time. With LLAMA_SERVER set, analyse starts llama-server itself, with the model of each
+stage (NOREV_TRANSLATE_MODEL, NOREV_EXTRACT_MODEL, the Domain's `[model]`), one at a time (#62). The Domain is Corporate unless chosen;
 Others needs a prompt the User confirmed (#21), which the CLI cannot show, so it refuses Others. Needs NOREV_STORE_KEY_FILE: nothing is written in plaintext.
 """
 import argparse
+import logging
 import os
 import sys
 import uuid
@@ -22,6 +24,7 @@ from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.store.encrypted import StoreKeyError, StoreSettings, open_store
 from norev.core.models import Session
+from norev.launcher.llama import LlamaError  # its messages name files and ports, never Session content
 from norev.processor.compose import build_central_processor
 from norev.usecases.session_flow import run_session, select_domain
 from norev.usecases.transcribe import transcribe_session
@@ -70,14 +73,32 @@ def analyse(store, session_id: str, translate: bool, regenerate: bool = False, d
         raise LookupError(f"no Session {session_id!r}")
     if not session.transcript_ref:
         raise LookupError(f"Session {session_id!r} is not transcribed yet; run `transcribe` first")
-    processor = _processor(store)
-    model = os.getenv("LLM_MODEL") or None
-    return run_session(
-        session_id, store=store, domain=load_domain(DOMAINS / select_domain(domain or session.domain)),
-        translator=TurnTranslator(processor, model=model, workers=WORKERS),
-        extractor=LegacyActionExtractor(processor, workers=WORKERS), llm=processor, translate=translate,
-        regenerate=regenerate,
-    )
+    models = _models()
+    processor = _processor(store, models=models)
+    model = os.getenv("NOREV_TRANSLATE_MODEL") or os.getenv("LLM_MODEL") or None
+    try:
+        return run_session(
+            session_id, store=store, domain=load_domain(DOMAINS / select_domain(domain or session.domain)),
+            translator=TurnTranslator(processor, model=model, workers=WORKERS),
+            extractor=LegacyActionExtractor(processor, workers=WORKERS), llm=processor, translate=translate,
+            regenerate=regenerate,
+        )
+    finally:
+        if models is not None:
+            models.stop()
+
+
+def _models():
+    """With LLAMA_SERVER set (norev.sh, norev.cmd), llama-server starts here with each stage's model
+    (#62); without it every call goes to the one llama-server already running at LLAMACPP_URL."""
+    if not os.getenv("LLAMA_SERVER"):
+        return None
+    from norev.launcher.llama import models_from_environment
+    from norev.launcher.paths import AppPaths
+
+    paths = AppPaths.from_environment()
+    os.environ.setdefault("NOREV_MODELS_DIR", str(paths.models))
+    return models_from_environment(paths.logs / "llama-server.log")
 
 
 def show(store, session_id: str) -> None:
@@ -150,7 +171,7 @@ def main(argv: list[str]) -> int:
         else:
             show(store, args.session_id)
     except Exception as e:  # one line, no traceback: tracebacks and model errors can quote Session content
-        detail = str(e) if isinstance(e, (LookupError, ValueError, OSError)) else "details withheld"
+        detail = str(e) if isinstance(e, (LookupError, ValueError, OSError, LlamaError)) else "details withheld"
         print(f"norev.session {args.command} failed: {type(e).__name__}: {detail}", file=sys.stderr)
         return 1
     finally:
@@ -159,4 +180,6 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
+    # INFO shows each llama-server start and how long it took (#62); norev loggers write ids, never Session content
+    logging.basicConfig(level=logging.INFO, format="norev.session: %(message)s")
     sys.exit(main(sys.argv[1:]))

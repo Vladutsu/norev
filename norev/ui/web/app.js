@@ -309,6 +309,7 @@ async function waitAnalysis(sessionId, start = true) {
       const p = await api("progress", sessionId);
       if (p.failed) {
         const what = p.failed === "no_audio" ? "Nu s-a înregistrat nimic. Pornește o sesiune nouă."
+          : p.failed === "ModelMissing" ? "Lipsește modelul local cerut de o etapă a analizei. Rulează norev.cmd doctor și vezi logul aplicației. Ce s-a salvat până acolo e păstrat."
           : `Analiza s-a oprit la etapa „${STAGES[p.stage] || p.stage}”. Ce s-a salvat până acolo e păstrat.`;
         line.replaceChildren(what, " ", p.failed === "no_audio" ? "" : h("button", {
           type: "button", class: "btn", onclick: (e) => guarded(e.currentTarget, () => waitAnalysis(sessionId)) }, "Încearcă din nou"));

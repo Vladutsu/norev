@@ -43,6 +43,7 @@ def build_central_processor(
     settings: DeepSeekSettings | None = None,
     identity: LocalUser | None = None,
     clock: Clock | None = None,
+    models=None,
 ) -> CentralProcessor:
     """The real processor. The LLM settings come from the environment (README.md); building it does
     not connect to anything. There is no default audit log: without one nothing can be sent."""
@@ -54,6 +55,7 @@ def build_central_processor(
         connectors=connectors,
         transcriber=transcriber,
         diarizer=diarizer,
+        models=models,
     )
 
 
@@ -66,13 +68,13 @@ LOCAL_STEPS = {"build_document": lambda action: None, "build_event": lambda acti
 
 def build_desktop_processor(
     store: ExecutionAuditLog, export_dir: Path, *, transcriber: Transcriber | None = None, diarizer: Diarizer | None = None,
-    calendar: GoogleCalendarConnector | None = None,
+    calendar: GoogleCalendarConnector | None = None, models=None,
 ) -> CentralProcessor:
     """The desktop app's processor (#43): the local Connectors (document, email draft #61) write into
     `export_dir`; `calendar` is the Google Calendar Connector when it is set up (build_google_calendar, #45)."""
     connectors = [LocalDocumentConnector(export_dir), EmailDraftConnector(export_dir)]
     connectors += [calendar] if calendar is not None else []
-    return build_central_processor(store, connectors=connectors, transcriber=transcriber, diarizer=diarizer)
+    return build_central_processor(store, connectors=connectors, transcriber=transcriber, diarizer=diarizer, models=models)
 
 
 def desktop_payload_builder(export_dir: Path, *, calendar: bool) -> PayloadBuilder:
