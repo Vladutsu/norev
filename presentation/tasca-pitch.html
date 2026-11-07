@@ -1,0 +1,1358 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tasca — prezentare AstraHack 2026</title>
+<link rel="icon" href="data:,">
+<style>
+/* Fonts: the app's own bundled files (relative to this folder); system fonts if the file is moved. */
+@font-face{font-family:Inter;font-weight:400;src:url(../norev/ui/web/fonts/inter-latin-ext-400-normal.woff2) format("woff2");unicode-range:U+0100-024F,U+1E00-1EFF}
+@font-face{font-family:Inter;font-weight:400;src:url(../norev/ui/web/fonts/inter-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2192}
+@font-face{font-family:Inter;font-weight:500;src:url(../norev/ui/web/fonts/inter-latin-ext-500-normal.woff2) format("woff2");unicode-range:U+0100-024F,U+1E00-1EFF}
+@font-face{font-family:Inter;font-weight:500;src:url(../norev/ui/web/fonts/inter-latin-500-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2192}
+@font-face{font-family:Inter;font-weight:600;src:url(../norev/ui/web/fonts/inter-latin-ext-600-normal.woff2) format("woff2");unicode-range:U+0100-024F,U+1E00-1EFF}
+@font-face{font-family:Inter;font-weight:600;src:url(../norev/ui/web/fonts/inter-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2192}
+@font-face{font-family:Inter;font-weight:700;src:url(../norev/ui/web/fonts/inter-latin-ext-700-normal.woff2) format("woff2");unicode-range:U+0100-024F,U+1E00-1EFF}
+@font-face{font-family:Inter;font-weight:700;src:url(../norev/ui/web/fonts/inter-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2192}
+@font-face{font-family:Manrope;font-weight:700;src:url(../norev/ui/web/fonts/manrope-latin-ext-700-normal.woff2) format("woff2");unicode-range:U+0100-024F,U+1E00-1EFF}
+@font-face{font-family:Manrope;font-weight:700;src:url(../norev/ui/web/fonts/manrope-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2192}
+@font-face{font-family:Manrope;font-weight:800;src:url(../norev/ui/web/fonts/manrope-latin-ext-800-normal.woff2) format("woff2");unicode-range:U+0100-024F,U+1E00-1EFF}
+@font-face{font-family:Manrope;font-weight:800;src:url(../norev/ui/web/fonts/manrope-latin-800-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2192}
+@font-face{font-family:"JetBrains Mono";font-weight:400;src:url(../norev/ui/web/fonts/jetbrains-mono-latin-ext-400-normal.woff2) format("woff2");unicode-range:U+0100-024F,U+1E00-1EFF}
+@font-face{font-family:"JetBrains Mono";font-weight:400;src:url(../norev/ui/web/fonts/jetbrains-mono-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2192}
+
+:root{
+  --bg:#E7ECF3;--shadow-dark:#C5CEDB;--shadow-light:#FFFFFF;--inset-dark:#C9D2DF;
+  --text:#1E2633;--text-2:#3A4456;--text-3:#4A5466;--text-disabled:#5B6576;
+  --accent:#2477F2;--accent-text:#1F63D6;--success:#13A26B;--success-text:#0E7A50;
+  --recording:#D93A3A;--attention:#E0702B;--attention-text:#B4540F;
+  --raised:9px 9px 20px var(--shadow-dark),-9px -9px 20px var(--shadow-light);
+  --raised-sm:5px 5px 12px var(--shadow-dark),-5px -5px 12px var(--shadow-light);
+  --inset:inset 5px 5px 11px var(--inset-dark),inset -5px -5px 11px var(--shadow-light);
+  --accent-lift:0 10px 24px rgba(36,119,242,.35),inset 2px 2px 6px rgba(255,255,255,.35);
+  --body:Inter,"Segoe UI",system-ui,sans-serif;--display:Manrope,Inter,"Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,ui-monospace,monospace;
+  --ease:cubic-bezier(.65,0,.35,1);--spring:cubic-bezier(.34,1.56,.64,1);--out:cubic-bezier(.2,.8,.2,1);
+  --k:1;
+}
+*{box-sizing:border-box}
+html{font-size:14px}
+body{margin:0;overflow:hidden;height:100vh;background:#08090C;color:#fff;font-family:var(--body);cursor:default;user-select:none}
+[hidden]{display:none!important}
+
+/* ================= STAGE ================= */
+#bgc{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 75%)}
+
+.stage{position:fixed;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale(var(--k));z-index:1}
+
+/* caption column */
+.cap{position:absolute;left:110px;top:0;bottom:0;width:500px;display:flex;flex-direction:column;justify-content:center;gap:24px;transition:opacity .6s,transform .8s var(--out)}
+body[data-mode=hero] .cap{opacity:0;transform:translateX(-60px)}
+.bignum{position:absolute;left:-30px;top:90px;font:800 330px/1 var(--display);color:transparent;-webkit-text-stroke:1.5px rgba(255,255,255,.08);letter-spacing:-12px;pointer-events:none}
+.kicker{display:flex;align-items:center;gap:14px;font:600 15px var(--body);letter-spacing:4px;text-transform:uppercase;color:#8DB8FF}
+.kicker::before{content:"";width:38px;height:2px;background:linear-gradient(90deg,#2477F2,#7C5CFF);border-radius:2px}
+.ctitle{font:800 66px/1.02 var(--display);letter-spacing:-2.4px;margin:0}
+.ctitle .w{display:inline-block;margin-right:.22em}
+.ctitle .w:last-child{color:#8DB8FF}
+.ctext{font:400 21px/1.5 var(--body);color:rgba(226,233,250,.72);margin:0}
+.points{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:15px}
+.points li{display:flex;gap:16px;align-items:flex-start;font:500 18.5px/1.4 var(--body);color:rgba(226,233,250,.42);transition:color .45s,transform .45s var(--out)}
+.points li::before{content:"";flex:none;width:12px;height:12px;margin-top:6px;border-radius:50%;border:2px solid rgba(255,255,255,.25);transition:all .45s}
+.points li.on{color:#fff;transform:translateX(8px)}
+.points li.on::before{background:#2477F2;border-color:#5C9BFF;box-shadow:0 0 0 6px rgba(36,119,242,.22),0 0 24px #2477F2}
+.points li.done{color:rgba(226,233,250,.72)}
+.points li.done::before{background:#13A26B;border-color:#13A26B}
+.rv{opacity:0;animation:rise .85s var(--out) forwards;animation-delay:var(--d,0ms)}
+@keyframes rise{from{opacity:0;transform:translateY(26px);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+
+/* app window */
+.win{position:absolute;left:670px;top:84px;width:1160px;height:912px;border-radius:22px;overflow:hidden;background:var(--bg);pointer-events:none;
+  box-shadow:0 50px 130px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.09),0 0 160px rgba(36,119,242,.28);
+  transition:transform 1.2s var(--out),opacity .9s,filter .7s}
+body[data-mode=hero] .win{opacity:0;transform:perspective(1800px) translate(-80px,160px) rotateX(16deg) rotateY(12deg) scale(.82)}
+.win.dim{filter:brightness(.5) saturate(.7) blur(1.5px)}
+.wbar{height:52px;display:flex;align-items:center;gap:9px;padding:0 20px;background:#DCE2EB;border-bottom:1px solid #CDD5E1;position:relative;z-index:2}
+.wbar i{width:13px;height:13px;border-radius:50%;background:#FF5F57}.wbar i:nth-child(2){background:#FEBC2E}.wbar i:nth-child(3){background:#28C840}
+.wbar span{position:absolute;left:0;right:0;text-align:center;font:600 13px var(--body);color:#5B6576}
+.view{height:860px;overflow:hidden;position:relative}
+
+/* hero slides */
+.hero{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;opacity:0;transform:scale(1.06);transition:opacity .9s,transform 1.2s var(--out);pointer-events:none}
+.hero.on{opacity:1;transform:none}
+.hkick{font:600 17px var(--body);letter-spacing:7px;text-transform:uppercase;color:#8DB8FF}
+.hname{font:800 250px/.9 var(--display);letter-spacing:-12px;margin:0;display:flex}
+.hname span{display:inline-block;color:#fff;opacity:0}
+.hero.on .hname span{animation:letter 1.1s var(--out) forwards;animation-delay:calc(var(--i) * 90ms + 300ms)}
+@keyframes letter{from{opacity:0;transform:translateY(80px) rotateX(70deg);filter:blur(16px)}to{opacity:1;transform:none;filter:none}}
+.htag{font:500 28px/1.45 var(--body);color:rgba(226,233,250,.78);margin:0;text-align:center;max-width:1100px}
+.hero .rv{animation-play-state:paused}
+.hero.on .rv{animation-play-state:running}
+.wave{display:flex;align-items:center;gap:7px;height:150px}
+.wave span{width:9px;border-radius:9px;height:9px;background:linear-gradient(180deg,#5C9BFF,#7C5CFF 55%,#19C3A6);box-shadow:0 0 18px rgba(92,155,255,.45)}
+@keyframes wv{from{transform:scaleY(.18)}to{transform:scaleY(1)}}
+.chips{display:flex;gap:16px}
+.hchip{padding:13px 24px;border-radius:999px;font:600 17px var(--body);color:#DDE7FF;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px);display:flex;align-items:center;gap:10px}
+.hchip::before{content:"";width:8px;height:8px;border-radius:50%;background:#19C3A6;box-shadow:0 0 12px #19C3A6}
+.hhint{position:absolute;bottom:70px;font:500 16px var(--body);color:rgba(226,233,250,.5);display:flex;gap:10px;align-items:center}
+.hhint kbd{font:600 14px var(--body);padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);color:#fff;animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:none}50%{transform:translateX(6px)}}
+.stats{display:flex;gap:26px;margin-top:10px}
+.stat{width:300px;padding:28px 26px;border-radius:26px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);display:flex;flex-direction:column;gap:6px}
+.stat b{font:800 64px/1 var(--display);color:#8DB8FF}
+.stat span{font:500 17px/1.4 var(--body);color:rgba(226,233,250,.72)}
+#hero-end .stat{width:270px}
+.dlabel{display:block;font:600 14px var(--body);letter-spacing:4px;text-transform:uppercase;color:#8DB8FF;margin-bottom:20px}
+.dlabel small{display:block;margin-top:6px;font:500 13px var(--body);letter-spacing:0;text-transform:none;color:rgba(226,233,250,.5)}
+.chart{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:visible;pointer-events:none}
+.chart .box{fill:#0E1118;stroke:rgba(141,184,255,.55);stroke-width:1.5}
+.chart .box.key{fill:#0F1A2E;stroke:#5C9BFF}
+.chart .st{font:700 17px var(--display);fill:#fff}
+.chart .ss{font:500 13px var(--body);fill:rgba(226,233,250,.6)}
+.chart .yn{font:700 14px var(--body);fill:#8DB8FF}
+.chart .dg{opacity:0}
+#hero-end.on .chart .dg{animation:rise .7s var(--out) forwards;animation-delay:var(--d)}
+.chart .dl{fill:none;stroke:#8DB8FF;stroke-width:2;stroke-dasharray:1000;stroke-dashoffset:1000;opacity:0}
+#hero-end.on .chart .dl{animation:draw var(--t,.5s) ease-out forwards;animation-delay:var(--d)}
+@keyframes draw{0%{opacity:1;stroke-dashoffset:1000}100%{opacity:1;stroke-dashoffset:0}}
+.pulse{position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;background:#8DB8FF;box-shadow:0 0 16px 5px rgba(92,155,255,.75);offset-path:path("M250 226 V1000 H1400 V576");offset-rotate:0deg;opacity:0}
+#hero-end.on .pulse{animation:move 6s linear 4.6s infinite}
+@keyframes move{0%{offset-distance:0%;opacity:0}3%,77%{opacity:1}80%{offset-distance:100%;opacity:0}100%{offset-distance:100%;opacity:0}}
+.logo{position:absolute;margin:-22px 0 0 -22px;display:flex;align-items:center;gap:12px}
+.lg{position:relative;flex:none;width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 8px 22px rgba(0,0,0,.5)}
+.logo em{font:600 15px var(--body);font-style:normal;color:rgba(226,233,250,.8);white-space:nowrap}
+.lg .on{position:absolute;right:-2px;top:-2px;width:15px;height:15px;border-radius:50%;background:#13A26B;border:3px solid #08090C}
+.bpulse{position:absolute;left:0;top:0;width:9px;height:9px;border-radius:50%;background:#8DB8FF;box-shadow:0 0 12px 4px rgba(92,155,255,.7);offset-rotate:0deg;opacity:0}
+#hero-end.on .bpulse{animation:bmove 6s linear 4.6s infinite}
+@keyframes bmove{0%,79%{offset-distance:0%;opacity:0}81%{opacity:1}97%{opacity:1}100%{offset-distance:100%;opacity:0}}
+.legend{position:absolute;left:1600px;top:950px;display:flex;gap:22px;font:500 13px var(--body);color:rgba(226,233,250,.55)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;background:#13A26B;margin-right:8px}
+.legend i.soon{background:rgba(255,255,255,.25)}
+.thanks{font:800 46px var(--display);letter-spacing:-1px;margin-top:14px}
+.thanks span{color:rgba(226,233,250,.5);font-weight:700}
+
+/* stage overlays */
+.ff{position:absolute;left:1535px;top:26px;padding:12px 22px;border-radius:999px;background:rgba(10,16,32,.75);border:1px solid rgba(141,184,255,.35);backdrop-filter:blur(10px);font:700 17px var(--display);display:flex;align-items:center;gap:12px;opacity:0;transform:translateY(-20px);transition:all .5s var(--spring);color:#DDE7FF}
+.ff.show{opacity:1;transform:none}
+.ff .tri{display:flex}
+.ff .tri i{width:0;height:0;border-left:11px solid #5C9BFF;border-top:7px solid transparent;border-bottom:7px solid transparent;animation:tri .7s infinite;opacity:.3}
+.ff .tri i:nth-child(2){animation-delay:.12s}.ff .tri i:nth-child(3){animation-delay:.24s}
+@keyframes tri{50%{opacity:1}}
+
+.board{position:absolute;left:1150px;top:430px;width:700px;padding:22px;border-radius:22px;background:linear-gradient(135deg,#0B5FD0,#4B3FD8);box-shadow:0 40px 100px rgba(0,0,0,.6);opacity:0;transform:translateX(120px) rotate(3deg) scale(.92);transition:all .8s var(--spring);font-family:var(--body)}
+.board.show{opacity:1;transform:none}
+.board h3{margin:0 0 16px;font:800 20px var(--display);display:flex;align-items:center;gap:12px}
+.board h3 small{font:600 13px var(--body);padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
+.cols{display:flex;gap:14px;align-items:flex-start}
+.col{flex:1;background:rgba(10,20,50,.35);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:250px}
+.col b{font:700 14px var(--body);color:rgba(255,255,255,.9);padding:2px 4px}
+.tcard{background:#fff;color:#1E2633;border-radius:10px;padding:11px 12px;font:600 14px/1.35 var(--body);box-shadow:0 2px 0 rgba(0,0,0,.15)}
+.tcard em{display:block;font:500 12px var(--body);color:#5B6576;font-style:normal;margin-top:6px}
+.tcard .lbl{display:block;width:38px;height:7px;border-radius:4px;background:#13A26B;margin-bottom:7px}
+.tcard.new{display:none}
+.tcard.new.in{display:block;animation:drop .7s var(--spring)}
+@keyframes drop{from{transform:scale(.6) translateY(-30px);opacity:0}to{transform:none;opacity:1}}
+.flycard{position:absolute;z-index:20;border-radius:12px;background:#fff;color:#1E2633;font:700 15px var(--body);padding:12px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);pointer-events:none;white-space:nowrap}
+
+.social{position:absolute;left:1000px;top:110px;width:720px;border-radius:24px;background:#fff;color:#1E2633;box-shadow:0 50px 120px rgba(0,0,0,.65);opacity:0;transform:translateY(80px) scale(.9);transition:all .9s var(--spring);overflow:hidden;font-family:var(--body)}
+.social.show{opacity:1;transform:none}
+.so-top{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid #E6E9EF;font:700 15px var(--body);color:#3A4456}
+.so-top small{font:600 12px var(--body);padding:5px 10px;border-radius:999px;background:#EEF3FB;color:#1F63D6}
+.so-who{display:flex;gap:14px;align-items:center;padding:18px 22px 6px}
+.so-av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font:800 18px var(--display);color:#fff;background:linear-gradient(135deg,#2477F2,#7C5CFF)}
+.so-who b{display:block;font:700 16px var(--body)}
+.so-who span{font:500 13px var(--body);color:#5B6576}
+.so-body{padding:10px 22px 14px;font:400 15px/1.55 var(--body);white-space:pre-wrap;min-height:40px}
+.so-body .h{font-weight:700;font-size:17px}
+.so-body .tag{color:#1F63D6;font-weight:600}
+.so-img{margin:0 22px;height:200px;border-radius:16px;background:radial-gradient(circle at 25% 30%,#F3B07C,transparent 50%),linear-gradient(135deg,#C2643A,#7A3420);display:flex;align-items:flex-end;padding:20px;color:#fff;font:800 30px/1.1 var(--display);letter-spacing:-.5px;position:relative;overflow:hidden;opacity:0;transform:scale(.96);transition:all .7s var(--out)}
+.so-img.in{opacity:1;transform:none}
+.so-img svg{position:absolute;right:30px;top:24px;opacity:.85}
+.so-foot{display:flex;align-items:center;gap:24px;padding:16px 22px;font:600 14px var(--body);color:#3A4456}
+.so-foot span{display:flex;align-items:center;gap:7px}
+.so-pub{margin-left:auto;padding:12px 26px;border-radius:999px;background:#2477F2;color:#fff;font:700 15px var(--body);box-shadow:0 10px 24px rgba(36,119,242,.4);transition:transform .15s,background .3s;display:flex;gap:8px;align-items:center}
+.so-pub.pressed{transform:scale(.92)}
+.so-pub.done{background:#13A26B;box-shadow:0 10px 24px rgba(19,162,107,.4)}
+.heart{position:absolute;z-index:30;pointer-events:none;animation:float 2.2s ease-out forwards}
+@keyframes float{0%{opacity:0;transform:translateY(0) scale(.4)}15%{opacity:1}100%{opacity:0;transform:translateY(-260px) translateX(var(--dx)) scale(1.2)}}
+
+.ctl{position:fixed;bottom:0;left:0;right:0;z-index:5;height:4px;background:rgba(255,255,255,.06)}
+.ctl i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2477F2,#7C5CFF,#19C3A6);transition:width .8s var(--out);box-shadow:0 0 14px #2477F2}
+.count{position:fixed;right:28px;bottom:20px;z-index:5;font:700 14px var(--display);color:rgba(226,233,250,.55);letter-spacing:1px}
+
+/* ================= APP MOCK (from norev/ui/web/app.css) ================= */
+.app{width:1160px;height:860px;padding:14px;display:flex;flex-direction:column;gap:14px;position:relative;background:var(--bg);color:var(--text);font-family:var(--body);font-size:.95rem;line-height:1.5;transform-origin:0 0;transition:transform 1.25s var(--ease)}
+.app.instant,.app.instant *{transition:none!important}
+.app button,.app input,.app textarea{font:inherit;color:inherit}
+.raised{background:var(--bg);box-shadow:var(--raised)}
+.raised-sm{background:var(--bg);box-shadow:var(--raised-sm)}
+.inset{background:var(--bg);box-shadow:var(--inset)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem 1.6rem;border-radius:1.5rem}
+.brand{display:flex;align-items:center;gap:1rem}
+.brand-name{font:800 1.75rem var(--display);letter-spacing:-.03rem}
+.brand-sep{width:1px;height:1.5rem;background:var(--inset-dark)}
+.overline{font-size:.8125rem;font-weight:600;letter-spacing:.125rem;text-transform:uppercase;color:var(--text-3)}
+.local{display:flex;align-items:center;gap:.5rem;padding:.6rem 1.1rem;border-radius:999px;font-size:.875rem;color:var(--text-2)}
+.dot{width:.5rem;height:.5rem;border-radius:50%;background:var(--success);flex:none}
+.columns{display:flex;gap:0;align-items:stretch;flex:1;min-height:0}
+.sidebar{flex:0 0 13.5rem;padding:1.25rem .75rem;border-radius:1.75rem;display:flex;flex-direction:column;gap:1rem;overflow:hidden}
+.nav{display:flex;flex-direction:column;gap:.6rem}
+.nav .overline{padding:0 1rem .5rem}
+.navbtn{display:flex;align-items:center;gap:.75rem;width:100%;min-height:3rem;padding:0 1rem;border:0;border-radius:1rem;background:transparent;font-weight:500;color:var(--text-2);text-align:left;transition:box-shadow .3s,color .3s}
+.navbtn[aria-current="page"]{color:var(--accent-text);box-shadow:var(--inset)}
+.navbtn .grow{flex:1;white-space:nowrap}
+.badge{min-width:1.6rem;height:1.6rem;padding:0 .4rem;border-radius:999px;display:grid;place-items:center;font-size:.8125rem;font-weight:600;color:var(--accent-text);box-shadow:var(--raised-sm)}
+.privacy{padding:1rem;border-radius:1.25rem;display:flex;flex-direction:column;gap:.3rem}
+.privacy strong{font-size:.875rem;display:flex;align-items:center;gap:.5rem}
+.privacy span{font-size:.8125rem;color:var(--text-3)}
+.sidebar .privacy:last-child{margin-top:auto}
+main{flex:1 1 0;min-width:0;padding:1.25rem 1.5rem 2rem;overflow:hidden;position:relative}
+main > section{display:flex;flex-direction:column;gap:1.5rem}
+.inspector{flex:0 0 16rem;padding:1.25rem 1rem;border-radius:1.75rem;display:flex;flex-direction:column;gap:1.1rem;overflow:hidden}
+.inspector-title{display:flex;align-items:center;gap:.6rem;font:700 1rem var(--display);color:var(--accent-text);margin:0}
+.inspector > div{display:flex;flex-direction:column;gap:1rem}
+.well{border-radius:1.4rem;padding:1.2rem 1.1rem;display:flex;flex-direction:column;gap:.6rem}
+.well p{margin:0}
+.muted{color:var(--text-3)}
+.small{font-size:.875rem}
+.eyebrow{font-size:.875rem;color:var(--text-3)}
+.app h1{margin:0;font:800 2.875rem/1.1 var(--display);letter-spacing:-.06rem}
+.app h1.title{font-size:2.5rem}
+.app h2{margin:.25rem 0 0;font:700 1.25rem var(--display)}
+#new-title{font-size:2rem;letter-spacing:-.03rem}
+.lede{margin:0;font-size:1rem;color:var(--text-3)}
+.stack{display:flex;flex-direction:column;gap:.6rem}
+.row{display:flex;flex-wrap:wrap;gap:1.25rem;align-items:flex-end}
+.label{font-size:.8125rem;font-weight:500;color:var(--text-3)}
+.segmented{display:flex;gap:.4rem;padding:.4rem;border-radius:1.75rem;box-shadow:var(--inset);width:max-content;max-width:100%;position:relative}
+.segmented button{min-height:2.75rem;padding:0 1.25rem;border:0;border-radius:999px;background:transparent;font-size:.875rem;font-weight:500;color:var(--text-3);display:flex;align-items:center;gap:.5rem;position:relative;z-index:1;transition:color .3s,box-shadow .3s}
+.segmented button[aria-pressed="true"]{color:var(--text);font-weight:600;box-shadow:4px 4px 10px var(--shadow-dark),-4px -4px 10px var(--shadow-light)}
+.segmented.thumbed button[aria-pressed="true"]{box-shadow:none}
+.segmented small{font-size:.8125rem;font-weight:500;color:var(--text-3)}
+.thumb{position:absolute;z-index:0;border-radius:999px;background:var(--bg);box-shadow:4px 4px 10px var(--shadow-dark),-4px -4px 10px var(--shadow-light);transition:left .6s var(--spring),width .6s var(--spring)}
+.field{width:100%;min-height:3rem;border:0;border-radius:.9rem;padding:.7rem 1rem;background:var(--bg);box-shadow:var(--inset);display:block;transition:outline-color .2s}
+.field.big{min-height:3.5rem;border-radius:1.1rem;padding:0 1.25rem;font-weight:500;display:flex;align-items:center}
+textarea.field{min-height:4.2rem;resize:none;line-height:1.5}
+textarea.field.mono{font-family:var(--mono);font-size:.8rem;min-height:9.5rem}
+.field.focus{outline:2px solid var(--accent);outline-offset:2px}
+.field-label{display:flex;justify-content:space-between;gap:.5rem;font-size:.8125rem;font-weight:500;color:var(--text-2)}
+.btn{min-height:2.9rem;padding:0 1.4rem;border:0;border-radius:1rem;font-weight:600;font-size:.875rem;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;color:var(--text-2);background:var(--bg);box-shadow:var(--raised-sm);transition:box-shadow .15s ease-out,background .3s,transform .15s}
+.btn.primary{background:var(--accent);color:#fff;box-shadow:0 8px 18px rgba(36,119,242,.32),inset 1px 1px 4px rgba(255,255,255,.35)}
+.btn.ok{background:var(--success)}
+.btn.link{background:transparent;box-shadow:none;color:var(--text-2);font-weight:500}
+.btn.pressed,.navbtn.pressed,.segmented button.pressed{box-shadow:var(--inset)!important;transform:scale(.97)}
+.btn.primary.pressed{transform:scale(.94)}
+.card{border-radius:1.75rem;padding:1.4rem 1.6rem;display:flex;flex-direction:column;gap:1.1rem}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem}
+.chip{padding:.5rem 1rem;border-radius:999px;font-size:.8125rem;font-weight:600;letter-spacing:.06rem;color:var(--text-2);box-shadow:var(--inset);display:inline-flex;align-items:center;gap:.5rem;white-space:nowrap;transition:color .3s}
+.chip.ok{color:var(--success-text)}
+.chip.rec{color:var(--text)}
+.transcript{border-radius:1.4rem;padding:1.4rem;display:flex;flex-direction:column;gap:1rem;overflow:hidden;position:relative}
+.line{display:flex;gap:.9rem;align-items:flex-start;animation:lin .45s var(--out)}
+@keyframes lin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.line .time{flex:none;font-size:.8125rem;color:var(--text-3);padding-top:.35rem;font-variant-numeric:tabular-nums}
+.line p{margin:0;line-height:1.6}
+.line p.live::after{content:"";display:inline-block;width:2px;height:1.05em;margin-left:3px;vertical-align:-2px;background:var(--accent);animation:blink .8s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.speaker{flex:none;text-align:center;border-radius:999px;font-size:.8125rem;font-weight:600;box-shadow:var(--raised-sm);white-space:nowrap;overflow:hidden;max-width:0;min-width:0;padding:.35rem 0;opacity:0;transition:max-width .55s var(--spring),min-width .55s var(--spring),padding .55s,opacity .4s}
+.line.spk .speaker{max-width:8rem;min-width:6.4rem;padding:.35rem .6rem;opacity:1}
+.speaker.s0{color:var(--accent-text)}
+.speaker.s1{color:var(--attention-text)}
+.fix{border-radius:.3rem;transition:background .4s}
+.fix.flag{background:rgba(224,112,43,.14);text-decoration:underline wavy var(--attention);text-underline-offset:4px}
+.fix .old,.fix .new{display:inline-block;white-space:nowrap;overflow:hidden;vertical-align:bottom}
+.fix.fixed{background:rgba(19,162,107,.13);text-decoration:none}
+.fix.fixed .old{animation:old .9s var(--ease) forwards;text-decoration:line-through;color:var(--attention-text)}
+.fix.fixed .new{max-width:0;animation:nw .9s var(--spring) .55s forwards;color:var(--success-text);font-weight:700}
+@keyframes old{0%{max-width:12em}40%{max-width:12em;opacity:1}100%{max-width:0;opacity:0}}
+@keyframes nw{to{max-width:12em}}
+.scan{position:absolute;left:0;right:0;height:90px;top:-90px;background:linear-gradient(180deg,transparent,rgba(36,119,242,.16) 70%,rgba(36,119,242,.55) 98%,transparent);pointer-events:none}
+.scan.go{animation:scan 1.6s var(--ease) forwards}
+@keyframes scan{to{top:100%}}
+.start{display:flex;flex-direction:column;align-items:center;gap:.5rem}
+.recbtn{display:flex;flex-direction:column;align-items:center;gap:.9rem;border:0;background:transparent;color:var(--text)}
+.recbtn .ring{width:7.5rem;height:7.5rem;border-radius:50%;display:grid;place-items:center;box-shadow:var(--raised);position:relative}
+.recbtn .core{width:5.25rem;height:5.25rem;border-radius:50%;background:var(--accent);display:grid;place-items:center;box-shadow:var(--accent-lift);transition:transform .2s ease-out,background .3s}
+.recbtn.pressed .core{transform:scale(.88)}
+.recbtn .caption{font:700 1.1rem var(--display)}
+.recbtn:disabled .core{background:var(--bg);box-shadow:var(--inset)}
+.recbtn:disabled .core svg{stroke:var(--text-disabled)}
+.recbtn .ring::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--accent);opacity:0}
+.recbtn.pressed .ring::after{animation:ripple .7s ease-out}
+@keyframes ripple{from{opacity:.7;transform:scale(.8)}to{opacity:0;transform:scale(1.5)}}
+.reason{font-size:.875rem;color:var(--attention-text);font-weight:500;text-align:center;min-height:1.2em}
+.controls{display:flex;align-items:center;gap:2.25rem}
+.pausebtn{width:4.5rem;height:4.5rem;border:0;border-radius:50%;display:grid;place-items:center;box-shadow:var(--raised);background:var(--bg)}
+.meter{display:flex;align-items:center;gap:.375rem;height:4rem;padding:0 1.75rem;border-radius:999px;box-shadow:var(--inset)}
+.meter span{width:.375rem;border-radius:999px;background:var(--accent);height:.4rem}
+.recording .meter span{animation:level 1.1s ease-in-out infinite}
+.meter span:nth-child(3n){animation-delay:.2s}.meter span:nth-child(3n+1){animation-delay:.45s}.meter span:nth-child(4n){animation-delay:.7s}.meter span:nth-child(5n){animation-duration:.8s}
+@keyframes level{0%,100%{height:.5rem}50%{height:2.6rem}}
+.ffrec .meter span{animation-duration:.35s!important}
+.pulse{animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.recdot{width:.625rem;height:.625rem;border-radius:50%;background:var(--recording)}
+.recdot.busy{background:var(--accent)}
+.analysis{gap:.5rem;animation:lin .5s var(--out)}
+.analysis .analysing{display:flex;align-items:center;gap:.6rem;font:700 1.05rem var(--display)}
+.skeleton{display:flex;flex-direction:column;gap:.6rem;padding-top:.5rem}
+.skeleton span{height:.6rem;border-radius:999px;box-shadow:var(--raised-sm);background:linear-gradient(90deg,var(--bg) 0%,#F4F7FB 50%,var(--bg) 100%);background-size:200% 100%;animation:shim 1.3s linear infinite}
+@keyframes shim{to{background-position:-200% 0}}
+.progress{display:flex;align-items:center;gap:.9rem;padding:.75rem 1.25rem;border-radius:999px;box-shadow:var(--inset);font-size:.875rem;font-weight:600}
+.bar{width:7.5rem;height:.6rem;border-radius:999px;box-shadow:var(--inset);overflow:hidden}
+.bar span{display:block;height:100%;border-radius:999px;background:var(--accent);transition:width .6s var(--out)}
+.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem 1rem}
+.fields > div{display:flex;flex-direction:column;gap:.35rem}
+.fields .field{min-height:2.75rem;padding:.55rem .9rem}
+.typeicon{width:2.5rem;height:2.5rem;border-radius:.85rem;display:grid;place-items:center;box-shadow:var(--raised-sm);color:var(--accent-text);flex:none}
+.typename{font-size:.8125rem;font-weight:600;letter-spacing:.06rem;color:var(--accent-text);text-transform:uppercase}
+.atitle{font:700 1.1rem var(--display)}
+blockquote{margin:0;display:flex;gap:.75rem;font-size:.875rem;line-height:1.55;color:var(--text-2);border-radius:.6rem}
+.payload{border-radius:1.1rem;padding:.75rem 1.1rem;display:flex;flex-direction:column;gap:.4rem}
+.payload-head{display:flex;align-items:center;gap:.5rem;font-size:.8125rem;font-weight:600;color:var(--text-2);white-space:nowrap}
+.payload-head .tog{margin-left:auto;color:var(--accent-text);font-weight:600}
+.payload pre{margin:0;font:400 .8rem/1.6 var(--mono);white-space:pre-wrap;overflow:hidden;max-height:0;transition:max-height .7s var(--ease)}
+.payload.open pre{max-height:12rem}
+.payload pre.flash{animation:flash .6s}
+@keyframes flash{from{background:rgba(36,119,242,.18)}to{background:transparent}}
+.actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.9rem;align-items:center}
+.actions .hint{margin-right:auto;font-size:.8125rem;color:var(--text-3)}
+.dest{display:flex;align-items:center;gap:.6rem}
+.dest .segmented button{min-height:2.5rem;padding:0 1rem}
+.listitem{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.05rem 1.4rem;border-radius:1.25rem;background:var(--bg);box-shadow:var(--raised-sm)}
+.listitem strong{display:block;font:700 1.05rem var(--display)}
+.list{display:flex;flex-direction:column;gap:1rem}
+.filters{display:flex;gap:.75rem}
+.filters > div{flex:1 1 8rem;display:flex;flex-direction:column;gap:.35rem}
+.filters > div:first-child{flex:2 1 12rem}
+.steps{display:flex;flex-direction:column;gap:.85rem;padding:.25rem .4rem}
+.steps div{display:flex;gap:.75rem;align-items:flex-start;font-size:.875rem;color:var(--text-2)}
+.num{flex:none;width:1.75rem;height:1.75rem;border-radius:50%;display:grid;place-items:center;font-size:.8125rem;font-weight:600;color:var(--accent-text);box-shadow:var(--raised-sm)}
+.speakers{display:flex;flex-direction:column;gap:.7rem}
+.speakers div{display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;font-size:.8rem;color:var(--text-3)}
+.speakers .chip{padding:.35rem .7rem}
+.toast{position:absolute;left:50%;bottom:1.5rem;transform:translate(-50%,30px);padding:.9rem 1.4rem;border-radius:1rem;font-size:.95rem;font-weight:600;box-shadow:var(--raised);background:var(--bg);display:flex;gap:.6rem;align-items:center;opacity:0;transition:all .5s var(--spring);z-index:10;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast svg{color:var(--success)}
+pre.result{white-space:pre-wrap;margin:0;line-height:1.6;font:inherit;font-size:.95rem;min-height:1.6em}
+pre.result .h{font:800 1.15rem var(--display)}
+.summary{margin:0;line-height:1.6;min-height:1.6em}
+details.ft summary{display:flex;justify-content:space-between;align-items:baseline;list-style:none}
+.audit{animation:lin .6s var(--out)}
+.audit code{font:400 .75rem/1.5 var(--mono);color:var(--text-2)}
+
+/* mock-only effects */
+.vin{animation:vin .6s var(--out)}
+@keyframes vin{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.pop{animation:popin .7s var(--spring) backwards;animation-delay:var(--d,0ms)}
+@keyframes popin{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
+.unfold{animation:unfold .9s var(--out)}
+@keyframes unfold{from{opacity:0;clip-path:inset(0 0 100% 0 round 1.75rem);transform:translateY(-10px)}to{opacity:1;clip-path:inset(0 0 0 0 round 1.75rem);transform:none}}
+.spot{outline:3px solid rgba(36,119,242,.9);animation:spot 1.5s ease-out infinite}
+@keyframes spot{0%{outline-color:rgba(36,119,242,.95);outline-offset:3px}100%{outline-color:rgba(36,119,242,0);outline-offset:16px}}
+.cursor{position:absolute;left:0;top:0;z-index:50;pointer-events:none;opacity:0;transition:opacity .3s;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))}
+.cursor svg{display:block;margin:-3px 0 0 -4px}
+.cursor::after{content:"";position:absolute;left:-18px;top:-18px;width:36px;height:36px;border-radius:50%;background:rgba(36,119,242,.35);opacity:0;transform:scale(.3)}
+.cursor.click::after{animation:clk .45s ease-out}
+@keyframes clk{0%{opacity:1;transform:scale(.3)}100%{opacity:0;transform:scale(1.6)}}
+.callout{position:absolute;z-index:40;padding:.5rem .85rem;border-radius:.7rem;font:600 .82rem var(--body);color:#fff;background:var(--attention);box-shadow:0 10px 24px rgba(224,112,43,.4);white-space:nowrap;opacity:0;transform:translate(-50%,0) translateY(-4px) scale(.9);transition:opacity .35s,transform .45s var(--spring),background .4s,box-shadow .4s}
+.callout::after{content:"";position:absolute;left:50%;top:-6px;margin-left:-6px;border:6px solid transparent;border-top:0;border-bottom-color:var(--cc,var(--attention))}
+.callout.show{opacity:1;transform:translate(-50%,0) translateY(8px)}
+.callout.ok{background:var(--success);--cc:var(--success);box-shadow:0 10px 24px rgba(19,162,107,.4)}
+.xfade{animation:xf .6s}
+@keyframes xf{from{opacity:0;filter:blur(4px)}to{opacity:1;filter:none}}
+</style>
+</head>
+<body data-mode="hero">
+<canvas id="bgc"></canvas>
+<div class="grid"></div>
+
+<div class="stage" id="stage">
+
+  <!-- hero: intro -->
+  <section class="hero" id="hero-intro">
+    <span class="hkick rv" style="--d:100ms">AstraHack 2026</span>
+    <div class="wave" id="wave1"></div>
+    <h1 class="hname" id="name1"></h1>
+    <p class="htag rv" style="--d:1000ms">Asistentul local care ascultă conversația<br>și o transformă în acțiuni pe care <b style="color:#fff">tu</b> le aprobi.</p>
+    <div class="chips rv" style="--d:1300ms"><span class="hchip">100% local</span><span class="hchip">Transcriere cu vorbitori</span><span class="hchip">Modele open, pe GPU-ul tău</span></div>
+    <div class="hhint rv" style="--d:2000ms">Apasă <kbd>→</kbd> sau click pentru a începe</div>
+  </section>
+
+  <!-- hero: final -->
+  <section class="hero" id="hero-end">
+    <div class="wave" id="wave2" style="height:110px"></div>
+    <h1 class="hname" id="name2" style="font-size:200px"></h1>
+    <p class="htag rv" style="--d:900ms">Conversațiile rămân aici. <b style="color:#fff">Tu decizi ce pleacă.</b></p>
+    <div class="stats rv" style="--d:1200ms">
+      <div class="stat"><b data-n="100" data-s="%">0</b><span>procesare locală: audio, transcriere, model</span></div>
+      <div class="stat"><b data-n="0">0</b><span>date trimise fără aprobarea ta</span></div>
+      <div class="stat"><b data-n="3" data-s="+">0</b><span>domenii — și oricâte moduri custom</span></div>
+    </div>
+    <div class="thanks rv" style="--d:1700ms">Mulțumim! <span>· tasca</span></div>
+
+    <div class="pulse"></div>
+    <svg class="chart" viewBox="0 0 1920 1080">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8DB8FF"/></marker></defs>
+      <g class="dg" style="--d:1900ms"><rect class="box key" x="100" y="170" width="300" height="56" rx="28"/><text class="st" x="250" y="204" text-anchor="middle">Start · conversația</text></g>
+      <path class="dl" pathLength="1000" marker-end="url(#ah)" style="--d:2100ms" d="M250 226 V274"/>
+      <g class="dg" style="--d:2250ms"><rect class="box" x="100" y="276" width="300" height="56" rx="10"/><text class="st" x="250" y="310" text-anchor="middle">Înregistrare locală</text></g>
+      <path class="dl" pathLength="1000" marker-end="url(#ah)" style="--d:2450ms" d="M250 332 V380"/>
+      <g class="dg" style="--d:2600ms"><rect class="box" x="100" y="382" width="300" height="68" rx="10"/><text class="st" x="250" y="412" text-anchor="middle">Transcriere</text><text class="ss" x="250" y="432" text-anchor="middle">live + finală, cu vorbitori</text></g>
+      <path class="dl" pathLength="1000" marker-end="url(#ah)" style="--d:2800ms" d="M250 450 V498"/>
+      <g class="dg" style="--d:2950ms"><rect class="box" x="100" y="500" width="300" height="68" rx="10"/><text class="st" x="250" y="530" text-anchor="middle">Procesare</text><text class="ss" x="250" y="550" text-anchor="middle">model local · Domain-ul ales</text></g>
+      <path class="dl" pathLength="1000" marker-end="url(#ah)" style="--d:3150ms" d="M250 568 V616"/>
+      <g class="dg" style="--d:3300ms"><polygon class="box" points="128,618 400,618 372,674 100,674"/><text class="st" x="250" y="652" text-anchor="middle">Acțiuni propuse</text></g>
+      <path class="dl" pathLength="1000" marker-end="url(#ah)" style="--d:3500ms" d="M250 674 V728"/>
+      <g class="dg" style="--d:3650ms"><polygon class="box key" points="250,730 350,790 250,850 150,790"/><text class="st" x="250" y="796" text-anchor="middle">Aprobi?</text></g>
+      <path class="dl" pathLength="1000" marker-end="url(#ah)" style="--d:3850ms" d="M350 790 H378"/>
+      <g class="dg" style="--d:3950ms"><rect class="box" x="380" y="762" width="130" height="56" rx="10"/><text class="st" x="445" y="786" text-anchor="middle">Respins</text><text class="ss" x="445" y="806" text-anchor="middle">nimic nu pleacă</text><text class="yn" x="354" y="812">Nu</text></g>
+      <path class="dl" pathLength="1000" marker-end="url(#ah)" style="--d:3950ms;--t:1.4s" d="M250 850 V1000 H1400 V576"/>
+      <g class="dg" style="--d:4100ms"><text class="yn" x="262" y="886">Da</text><text class="ss" x="825" y="988" text-anchor="middle">Execută · pleacă exact ce ai aprobat</text></g>
+      <g class="dg" style="--d:4100ms"><circle class="box key" cx="1400" cy="540" r="36"/><text class="st" x="1400" y="545" text-anchor="middle" style="font-size:13px">Execută</text></g>
+      <g id="fan"></g>
+    </svg>
+    <div id="fan-logos"></div>
+
+    <div class="legend rv" style="--d:5200ms"><span><i></i>conectat azi</span><span><i class="soon"></i>următorii</span></div>
+  </section>
+
+  <!-- caption -->
+  <div class="cap" id="cap"></div>
+
+  <!-- app window -->
+  <div class="win" id="win">
+    <div class="wbar"><i></i><i></i><i></i><span>tasca — Studio</span></div>
+    <div class="view">
+    <div class="app" id="app">
+
+      <header class="topbar raised">
+        <div class="brand">
+          <svg width="26" height="20" viewBox="0 0 26 20" fill="none" stroke="#2477F2" stroke-width="2" stroke-linecap="round"><path d="M2 8v4M7 4v12M12 1v18M17 5v10M22 8v4"/></svg>
+          <span class="brand-name">tasca</span><span class="brand-sep"></span><span class="overline">Studio</span>
+        </div>
+        <span class="local inset" id="local"><span class="dot"></span>Procesare locală</span>
+      </header>
+
+      <div class="columns">
+        <nav class="sidebar raised">
+          <div class="nav">
+            <span class="overline">Spațiul tău</span>
+            <button class="navbtn" id="nav-new"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="grow">Sesiune nouă</span></button>
+            <button class="navbtn" id="nav-recent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/></svg><span class="grow">Sesiuni recente</span></button>
+            <button class="navbtn" id="nav-pending"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l2 2 3-3M4 13l2 2 3-3M12 7h8M12 14h8M12 19h8"/></svg><span class="grow">De verificat</span><span class="badge">2</span></button>
+          </div>
+          <div id="connectors" class="stack" style="gap:.8rem">
+            <div class="privacy inset"><strong><span class="dot"></span>Trello</strong><span>Conectat · lista „De făcut”</span></div>
+            <div class="privacy inset"><strong><span class="dot"></span>Jira</strong><span>Conectat · proiectul NRV</span></div>
+          </div>
+          <div class="privacy inset">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#13A26B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+            <strong>Conversațiile rămân aici.</strong><span>Tu decizi ce poate fi trimis.</span>
+          </div>
+        </nav>
+
+        <main id="main">
+          <!-- Sesiuni recente -->
+          <section id="v-recent">
+            <h1 class="title">Sesiuni recente</h1>
+            <div class="filters">
+              <div><span class="field-label">Caută după Contact</span><span class="field"></span></div>
+              <div><span class="field-label">Mod</span><span class="field">Toate</span></div>
+              <div><span class="field-label">De la</span><span class="field">01.11.2026</span></div>
+            </div>
+            <div class="list" id="recent-list">
+              <div class="listitem"><div><strong>Planificare sprint</strong><span class="small muted">Corporate · Echipa produs · ieri, 16:20</span></div><span class="chip ok">3 trimise</span></div>
+              <div class="listitem"><div><strong>Ion Marin</strong><span class="small muted">Medicină de familie · consult · 5 nov, 10:15</span></div><span class="chip">2 de verificat</span></div>
+              <div class="listitem"><div><strong>Interviu podcast</strong><span class="small muted">Others · 3 nov, 18:40</span></div><span class="chip ok">Rezultat salvat</span></div>
+              <div class="listitem"><div><strong>Ședință buget Q4</strong><span class="small muted">Corporate · Finanțe · 2 nov, 09:30</span></div><span class="chip ok">4 trimise</span></div>
+            </div>
+          </section>
+
+          <!-- Sesiune nouă -->
+          <section id="v-new" hidden>
+            <div class="stack">
+              <span class="eyebrow">Sâmbătă, 7 noiembrie 2026</span>
+              <h1 id="new-title">Mai multă atenție.<br>Mai puține notițe.</h1>
+              <p class="lede">Un spațiu liniștit pentru următoarea conversație.</p>
+            </div>
+            <div class="stack">
+              <span class="label">Mod</span>
+              <div class="segmented thumbed" id="modes">
+                <span class="thumb" id="thumb"></span>
+                <button data-mode="corporate">Corporate <small>ședințe</small></button>
+                <button data-mode="medical">Medicină de familie <small>consultații</small></button>
+                <button data-mode="others">Others <small>promptul tău</small></button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="stack">
+                <span class="label">Limba sesiunii</span>
+                <div class="segmented" id="langs">
+                  <button aria-pressed="false">Auto</button><button aria-pressed="true" id="lang-ro">Română</button><button aria-pressed="false">English</button>
+                </div>
+              </div>
+              <div class="stack" style="flex:1 1 14rem">
+                <span class="label">Cu cine ai sesiunea?</span>
+                <span class="field big" id="contact"></span>
+              </div>
+            </div>
+
+            <section class="card raised" id="others" hidden>
+              <div class="card-head">
+                <h2 style="margin:0">Promptul pentru Others</h2>
+                <span class="chip" id="prompt-status">Neconfirmat</span>
+              </div>
+              <label class="stack"><span class="label">Tipul conversației (obligatoriu)</span><textarea class="field" id="o-context" rows="2"></textarea></label>
+              <label class="stack"><span class="label">Ce contează ca acțiune (opțional)</span><textarea class="field" id="o-focus" rows="2"></textarea></label>
+              <label class="stack"><span class="label">Ce vrei să obții din conversație (opțional): un rezultat, de exemplu o listă sau un prompt</span><textarea class="field" id="o-completion" rows="2"></textarea></label>
+              <div class="actions"><button class="btn" id="o-generate">Generează promptul</button></div>
+              <label class="stack"><span class="label">Promptul (îl poți edita)</span><textarea class="field mono" id="o-prompt" rows="6"></textarea></label>
+              <div class="actions">
+                <span class="hint">Analiza pornește doar cu promptul confirmat.</span>
+                <button class="btn primary" id="o-confirm">Confirm promptul</button>
+              </div>
+            </section>
+
+            <div class="start" id="start-wrap">
+              <button class="recbtn" id="start">
+                <span class="ring"><span class="core"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span></span>
+                <span class="caption">Începe sesiunea</span>
+              </button>
+              <span class="reason" id="start-reason"></span>
+              <span class="btn link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>sau importă un fișier audio</span>
+            </div>
+          </section>
+
+          <!-- Înregistrare -->
+          <section id="v-rec" hidden style="height:100%">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <div class="stack" style="gap:.3rem">
+                <span class="eyebrow">Sesiune cu</span>
+                <h1 class="title" id="rec-title"></h1>
+                <span class="small muted" id="rec-meta"></span>
+              </div>
+              <span class="chip rec raised-sm" id="rec-status"><span class="recdot pulse" id="rec-dot"></span><span id="rec-text"></span></span>
+            </div>
+            <section class="card raised" style="flex:1;min-height:0">
+              <div class="card-head">
+                <span class="small" style="color:var(--text-2)" id="live-label">Transcriere live</span>
+                <span class="small muted" id="live-note">Provizorie · cea finală se face după oprire</span>
+              </div>
+              <div class="transcript inset" id="live" style="flex:1"><div class="scan" id="scan"></div></div>
+            </section>
+            <div class="start" id="rec-controls">
+              <div class="meter" id="meter"></div>
+              <div class="controls">
+                <button class="pausebtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="#3A4456"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg></button>
+                <button class="recbtn" id="stop">
+                  <span class="ring"><span class="core"><svg width="26" height="26" viewBox="0 0 24 24" fill="#FFFFFF"><rect x="5" y="5" width="14" height="14" rx="3"/></svg></span></span>
+                  <span class="caption">Oprește și analizează</span>
+                </button>
+                <span style="width:4.5rem"></span>
+              </div>
+            </div>
+            <div class="well inset analysis" id="analysis" hidden>
+              <strong class="analysing"><span class="recdot busy pulse"></span><span id="an-text"></span></strong>
+              <div class="skeleton"><span></span><span style="width:82%"></span><span style="width:60%"></span></div>
+            </div>
+          </section>
+
+          <!-- De verificat -->
+          <section id="v-review" hidden>
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <div class="stack" style="gap:.3rem">
+                <span class="eyebrow" id="rv-meta"></span>
+                <h1 class="title" id="rv-title"></h1>
+              </div>
+              <div class="progress" id="rv-progress"><span id="decided">0 din 1 decise</span><span class="bar"><span id="decided-bar" style="width:0"></span></span></div>
+            </div>
+            <section class="card raised" style="gap:.6rem">
+              <span class="overline">Rezumat</span>
+              <p class="summary" id="summary"></p>
+            </section>
+            <section class="card raised" id="result" hidden>
+              <span class="overline">Rezultat</span>
+              <pre class="result" id="result-text"></pre>
+              <div class="actions">
+                <span class="hint">Nu se trimite nicăieri. Îl copiezi sau îl salvezi local.</span>
+                <button class="btn" id="copy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>Copiază</button>
+                <button class="btn">Salvează local</button>
+              </div>
+            </section>
+            <section class="card raised ft" style="gap:.5rem">
+              <div class="card-head"><span class="overline">Transcriere finală</span><span class="small muted" id="ft-meta"></span></div>
+            </section>
+            <h2 id="acts-title">Acțiuni propuse</h2>
+            <article class="card raised" id="act">
+              <div class="card-head" style="align-items:flex-start">
+                <div class="brand" style="align-items:flex-start;gap:.9rem">
+                  <span class="typeicon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg></span>
+                  <div class="stack" style="gap:.15rem"><span class="typename">Sarcină de lucru</span><span class="atitle" id="a-title"></span></div>
+                </div>
+                <span class="chip" id="a-chip">În așteptare</span>
+              </div>
+              <div class="fields">
+                <div><span class="field-label">Responsabil</span><span class="field" id="a-owner"></span></div>
+                <div><span class="field-label">Termen</span><span class="field" id="a-due"></span></div>
+                <div><span class="field-label">Livrabil</span><span class="field" id="a-del"></span></div>
+              </div>
+              <blockquote id="a-quote"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M7 7h4v4c0 3-2 5-4 6M14 7h4v4c0 3-2 5-4 6"/></svg><span>„Te rog să pregătești raportul de KPI pe Q3 și să-l pui pe board până vineri.” — Organizator, 00:12</span></blockquote>
+              <div class="payload inset" id="payload">
+                <div class="payload-head"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Ce se trimite · <span id="pl-dest">Trello</span><span class="tog" id="pl-tog">Arată</span></div>
+                <pre id="pl-pre"></pre>
+              </div>
+              <div class="actions" id="a-actions">
+                <div class="dest" id="a-dest"><span class="field-label">Unde trimiți</span>
+                  <div class="segmented"><button id="d-trello" aria-pressed="true">Trello</button><button id="d-jira" aria-pressed="false">Jira</button></div>
+                </div>
+                <span class="hint" id="a-hint"></span>
+                <button class="btn" id="a-reject">Respinge</button>
+                <button class="btn primary" id="a-go"></button>
+              </div>
+            </article>
+          </section>
+        </main>
+
+        <aside class="inspector raised">
+          <h2 class="inspector-title"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Din conversație</h2>
+          <div id="i-new">
+            <div class="well inset">
+              <strong>Lucrurile importante, la locul lor.</strong>
+              <p class="small muted">Rezumatul și acțiunile propuse apar după încheierea sesiunii.</p>
+              <div class="skeleton"><span></span><span style="width:82%"></span><span style="width:60%"></span></div>
+            </div>
+            <div class="steps">
+              <span class="overline">Cum funcționează</span>
+              <div><span class="num">1</span><span>Înregistrezi conversația, pe acest calculator.</span></div>
+              <div><span class="num">2</span><span>tasca propune acțiuni din transcriere.</span></div>
+              <div><span class="num">3</span><span>Tu aprobi sau respingi fiecare, înainte să plece ceva.</span></div>
+            </div>
+          </div>
+          <div id="i-rec" hidden>
+            <div class="well inset">
+              <strong>Acțiunile vin după oprire.</strong>
+              <p class="small muted">tasca le extrage doar din transcrierea finală, ca să nu te distragă în timpul conversației.</p>
+            </div>
+          </div>
+          <div id="i-review" hidden>
+            <div class="well inset">
+              <span class="overline">Vorbitori</span>
+              <div class="speakers" id="speakers"></div>
+            </div>
+            <span class="small muted">Sugestii doar de citit. Nu se trimit nicăieri.</span>
+            <div class="well inset audit" id="audit" hidden>
+              <span class="overline">Jurnal de audit</span>
+              <code id="audit-line"></code>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="toast" id="toast"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span id="toast-text"></span></div>
+      <div class="callout" id="callout"></div>
+      <div class="cursor" id="cursor"><svg width="26" height="30" viewBox="0 0 26 30"><path d="M3 2l19 13-8.5 1.6L18 26l-4 2-4.4-9.4L3 24z" fill="#1E2633" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>
+    </div>
+    </div>
+  </div>
+
+  <!-- overlays -->
+  <div class="ff" id="ff"><span class="tri"><i></i><i></i><i></i></span>Repede înainte · ×8</div>
+
+  <div class="board" id="board">
+    <h3>Trello · Echipa produs <small>board</small></h3>
+    <div class="cols">
+      <div class="col" id="col-todo"><b>De făcut</b><div class="tcard new" id="tnew"><span class="lbl"></span>Raport KPI pentru Q3<em>13 nov · Andrei Popescu · din tasca</em></div><div class="tcard">Actualizare roadmap<em>20 nov</em></div></div>
+      <div class="col"><b>În lucru</b><div class="tcard">Landing page v2<em>12 nov</em></div><div class="tcard">Migrare analytics<em>15 nov</em></div></div>
+      <div class="col"><b>Gata</b><div class="tcard">Demo AstraHack<em>7 nov</em></div></div>
+    </div>
+  </div>
+
+  <div class="social" id="social">
+    <div class="so-top">Postare nouă <small>rețea socială</small></div>
+    <div class="so-who"><span class="so-av">AI</span><div><b>Ana Ionescu</b><span>Jurnalist · acum</span></div></div>
+    <div class="so-body" id="so-body"></div>
+    <div class="so-img" id="so-img">Din lut, în șase țări
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8M9 3c0 3-4 4-4 9a7 7 0 0 0 14 0c0-5-4-6-4-9M6 14h12"/></svg>
+    </div>
+    <div class="so-foot">
+      <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><b id="c1">0</b></span>
+      <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg><b id="c2">0</b></span>
+      <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7h16v-7M12 3v12M7 8l5-5 5 5"/></svg><b id="c3">0</b></span>
+      <span class="so-pub" id="so-pub">Publică</span>
+    </div>
+  </div>
+</div>
+
+<div class="ctl"><i id="prog"></i></div>
+<div class="count" id="count"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const app = $("app"), stage = $("stage"), main = $("main");
+
+// ---------- timeline plumbing: every slide change makes older timelines stale
+const STALE = Symbol("stale");
+let run = 0, timers = [], current = 0, zoom = 1;
+const sleep = (ms) => { const id = run; return new Promise((res, rej) => setTimeout(() => (id === run ? res() : rej(STALE)), ms)); };
+const every = (ms, fn) => timers.push(setInterval(fn, ms));
+const replay = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+
+// ---------- stage scale
+function fit() { document.documentElement.style.setProperty("--k", Math.min(innerWidth / 1920, innerHeight / 1080)); }
+addEventListener("resize", fit); fit();
+
+// ---------- geometry inside the (possibly zoomed) app
+function pos(el) {
+  const a = app.getBoundingClientRect(), f = a.width / app.offsetWidth, r = el.getBoundingClientRect();
+  return { x: (r.left - a.left + r.width / 2) / f, y: (r.top - a.top + r.height / 2) / f, bottom: (r.bottom - a.top) / f };
+}
+function stagePos(el) {
+  const s = stage.getBoundingClientRect(), k = s.width / 1920, r = el.getBoundingClientRect();
+  return { x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k };
+}
+function scrollMain(el, offset = 90, smooth = true) {
+  const a = app.getBoundingClientRect(), f = a.width / app.offsetWidth;
+  const top = main.scrollTop + (el.getBoundingClientRect().top - main.getBoundingClientRect().top) / f - offset;
+  main.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "auto" });
+  return smooth ? sleep(700) : Promise.resolve();
+}
+
+// ---------- fake cursor
+const cur = $("cursor");
+let cx = 580, cy = 430;
+function placeCursor(dur) {
+  cur.style.transition = `transform ${dur}ms var(--ease), opacity .3s`;
+  cur.style.transform = `translate(${cx}px, ${cy}px) scale(${1 / zoom})`;
+}
+async function moveTo(el, dur = 750) {
+  const p = pos(el); cx = p.x; cy = p.y;
+  cur.style.opacity = 1; placeCursor(dur);
+  await sleep(dur + 80);
+}
+async function click(el, fn, dur) {
+  await moveTo(el, dur);
+  replay(cur, "click"); el.classList.add("pressed");
+  await sleep(170);
+  el.classList.remove("pressed");
+  if (fn) fn();
+  await sleep(220);
+}
+async function zoomTo(el, s) {
+  const p = pos(el), W = app.offsetWidth, H = app.offsetHeight;
+  zoom = s; app.style.transform = `translate(${W / 2 - p.x * s}px, ${H / 2 - p.y * s}px) scale(${s})`;
+  placeCursor(1250); await sleep(1300);
+}
+async function zoomReset() { zoom = 1; app.style.transform = ""; placeCursor(1250); await sleep(1300); }
+
+// ---------- text helpers
+async function type(el, text, ms = 40) {
+  const prop = el.tagName === "TEXTAREA" ? "value" : "textContent";
+  el.classList.add("focus");
+  for (let i = 1; i <= text.length; i++) { el[prop] = text.slice(0, i); if (el.scrollHeight > el.clientHeight) el.scrollTop = el.scrollHeight; await sleep(ms); }
+  el.classList.remove("focus");
+}
+async function streamWords(el, text, ms = 30) {
+  const prop = el.tagName === "TEXTAREA" ? "value" : "textContent";
+  const parts = text.split(/(\s+)/); el[prop] = "";
+  for (const w of parts) { el[prop] += w; if (w.trim()) await sleep(ms); }
+}
+// article/post text with a bold first line and coloured hashtags
+function richText(el, text) {
+  const [head, ...rest] = text.split("\n");
+  el.innerHTML = "";
+  const h = document.createElement("span"); h.className = "h"; h.textContent = head; el.append(h, "\n");
+  rest.join("\n").split(/(#[\wăâîșțĂÂÎȘȚ]+)/).forEach((t) => {
+    if (t.startsWith("#")) { const s = document.createElement("span"); s.className = "tag"; s.textContent = t; el.append(s); } else el.append(t);
+  });
+}
+async function streamRich(el, text, ms) {
+  const words = text.split(/(\s+)/); let acc = "";
+  for (const w of words) { acc += w; if (w.trim()) { richText(el, acc); await sleep(ms); } }
+}
+function toast(text) { $("toast-text").textContent = text; $("toast").classList.add("show"); setTimeout(() => $("toast").classList.remove("show"), 2600); }
+function spot(el, on = true) { el.classList.toggle("spot", on); }
+function callout(el, text, ok) {
+  const c = $("callout"), p = pos(el);
+  c.textContent = text; c.classList.toggle("ok", !!ok);
+  c.style.left = p.x + "px"; c.style.top = p.bottom + "px"; c.classList.add("show");
+}
+function countUp(el, to, ms, suffix = "") {
+  const t0 = performance.now();
+  const step = (t) => { const k = Math.min(1, (t - t0) / ms); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))) + suffix; if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+// ---------- conversations
+const CORP = [
+  { t: "00:02", s: 0, text: "Bună, Andrei. Am văzut cifrele pe trimestrul trei." },
+  { t: "00:06", s: 1, text: "Da, vânzările au crescut, dar churn-ul e încă mare." },
+  { t: "00:12", s: 0, text: "Te rog să pregătești raportul de {copii pe cu trei|KPI pe Q3} și să-l pui pe board până vineri." },
+  { t: "00:19", s: 1, text: "Sigur, îl am gata vineri dimineață." },
+  { t: "00:23", s: 0, text: "Perfect, mulțumesc!" },
+];
+const CORP_ROLES = ["Organizator", "Participant"];
+const INTERVIEW = [
+  { t: "00:04", s: 0, text: "Când ați deschis {a tele lut|Atelier Lut}?" },
+  { t: "00:08", s: 1, text: "În 2019, cu doi oameni și un cuptor împrumutat." },
+  { t: "03:15", s: 0, text: "Și astăzi câți oameni sunteți?" },
+  { t: "03:19", s: 1, text: "Paisprezece. Exportăm în șase țări." },
+  { t: "09:42", s: 0, text: "Care a fost cel mai greu moment?" },
+  { t: "09:47", s: 1, text: "Pandemia. Am vândut online ca să nu închidem." },
+  { t: "17:58", s: 1, text: "Meșteșugul local poate concura global, dacă îndrăznești." },
+];
+const INT_ROLES = ["Jurnalist", "Invitat"];
+
+const PAYLOAD = {
+  trello: `Trello · board Echipa produs · lista „De făcut”
+name:  Raport KPI pentru Q3
+due:   2026-11-13
+desc:  Responsabil: Andrei Popescu.
+       Pregătește raportul de KPI pe Q3 și pune-l pe board.`,
+  jira: `Jira · proiectul NRV · tip Task
+summary:   Raport KPI pentru Q3
+assignee:  Andrei Popescu
+duedate:   2026-11-13
+description:
+  Pregătește raportul de KPI pe Q3 și pune-l pe board.`,
+};
+const OTHERS = {
+  context: "Un interviu jurnalistic cu fondatoarea unui atelier de ceramică.",
+  focus: "Citatele puternice, cifrele, numele și datele verificabile.",
+  completion: "Un articol scurt pentru social media: titlu, 3 paragrafe, 3 hashtag-uri.",
+  prompt: `Ești asistentul unui jurnalist. Conversația este un interviu.
+Extrage doar ce apare în Transcriere: citatele puternice, cifrele, numele și funcțiile persoanelor, datele verificabile.
+Nu inventa nimic.
+Rezultat: un articol scurt pentru social media — un titlu, 3 paragrafe, 3 hashtag-uri.`,
+};
+const ARTICLE = `Din lut, în șase țări: povestea Atelier Lut
+În 2019, Elena Dobre pornea Atelier Lut cu doi oameni și un cuptor împrumutat. Astăzi, atelierul are 14 angajați și exportă în 6 țări.
+
+„Pandemia a fost cel mai greu moment. Am vândut online ca să nu închidem”, spune fondatoarea.
+
+Lecția ei e simplă: meșteșugul local poate concura global, dacă îndrăznești.
+
+#antreprenoriat #meșteșug #madeinromania`;
+
+// ---------- app state setters
+function nav(which) {
+  ["new", "recent"].forEach((n) => { if (n === which) $("nav-" + n).setAttribute("aria-current", "page"); else $("nav-" + n).removeAttribute("aria-current"); });
+}
+function view(name, animate) {
+  ["recent", "new", "rec", "review"].forEach((v) => { $("v-" + v).hidden = v !== name; });
+  const insp = { recent: "new", new: "new", rec: "rec", review: "review" }[name];
+  ["new", "rec", "review"].forEach((v) => { $("i-" + v).hidden = v !== insp; });
+  main.scrollTop = 0;
+  if (animate) { replay($("v-" + name), "vin"); replay($("i-" + insp), "vin"); }
+}
+function setMode(id) {
+  document.querySelectorAll("#modes button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === id)));
+  const b = document.querySelector(`#modes button[data-mode="${id}"]`), t = $("thumb");
+  t.style.left = b.offsetLeft + "px"; t.style.top = b.offsetTop + "px"; t.style.width = b.offsetWidth + "px"; t.style.height = b.offsetHeight + "px";
+  updateStart(id);
+}
+function updateStart(mode) {
+  const blocked = mode === "others" && $("prompt-status").textContent !== "Confirmat";
+  $("start").disabled = blocked;
+  $("start-reason").textContent = blocked ? "Confirmă promptul pentru Others ca să poți începe." : "";
+}
+function setupNew({ mode = "corporate", contact = "", others = "hidden" } = {}) {
+  $("contact").textContent = contact;
+  $("others").hidden = others === "hidden";
+  const filled = others === "filled" || others === "confirmed";
+  $("o-context").value = filled ? OTHERS.context : "";
+  $("o-focus").value = filled ? OTHERS.focus : "";
+  $("o-completion").value = filled ? OTHERS.completion : "";
+  $("o-prompt").value = filled ? OTHERS.prompt : "";
+  $("prompt-status").textContent = others === "confirmed" ? "Confirmat" : "Neconfirmat";
+  $("prompt-status").classList.toggle("ok", others === "confirmed");
+  $("o-confirm").innerHTML = others === "confirmed" ? "Confirmat ✓" : "Confirm promptul";
+  $("o-confirm").classList.toggle("ok", others === "confirmed");
+  view("new"); nav("new");
+  setMode(mode);
+}
+let secs = 0;
+const clock = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+function setRecText(text) { $("rec-text").textContent = text; }
+function setupRec({ title, meta }) {
+  $("rec-title").textContent = title; $("rec-meta").textContent = meta;
+  const live = $("live"); live.querySelectorAll(".line").forEach((l) => l.remove());
+  $("live-label").textContent = "Transcriere live"; $("live-note").textContent = "Provizorie · cea finală se face după oprire";
+  $("v-rec").classList.add("recording"); $("v-rec").classList.remove("ffrec");
+  $("rec-dot").classList.remove("busy"); secs = 0; setRecText("Se înregistrează · 00:00");
+  $("rec-controls").hidden = false; $("analysis").hidden = true;
+  $("scan").classList.remove("go");
+  view("rec"); nav("new");
+}
+function lineEl(L, roles) {
+  const el = document.createElement("div"); el.className = "line";
+  el.innerHTML = `<span class="time">${L.t}</span><span class="speaker s${L.s}">${roles[L.s]}</span><p></p>`;
+  return el;
+}
+const PARTS = /\{([^|}]+)\|([^}]+)\}/;
+async function streamLine(L, roles, ms) {
+  const el = lineEl(L, roles), p = el.querySelector("p"), live = $("live");
+  live.append(el); p.classList.add("live");
+  const [before, wrong, right, after] = L.text.split(PARTS);
+  const chunks = [];
+  before.split(/(?<= )/).forEach((w) => chunks.push(w));
+  if (wrong) { chunks.push({ wrong, right }); after.split(/(?<= )/).forEach((w) => chunks.push(w)); }
+  for (const c of chunks) {
+    if (typeof c === "string") p.append(c);
+    else { const s = document.createElement("span"); s.className = "fix"; s.dataset.right = c.right; s.textContent = c.wrong; p.append(s); }
+    live.scrollTop = live.scrollHeight;
+    if (ms) await sleep(ms);
+  }
+  p.classList.remove("live");
+  return el;
+}
+async function fillLines(lines, roles) { for (const L of lines) await streamLine(L, roles, 0); }
+function stopRec() {
+  timers.forEach(clearInterval); timers = [];
+  $("v-rec").classList.remove("recording");
+  $("rec-dot").classList.add("busy"); setRecText("Se analizează");
+  $("rec-controls").hidden = true; $("analysis").hidden = false; $("an-text").textContent = "Se face transcrierea finală…";
+}
+async function wave2(fast) {
+  const k = fast ? 0.45 : 1;
+  $("live-label").textContent = "Transcriere finală"; $("live-note").textContent = "Din tot audio-ul · cu vorbitori";
+  replay($("live-label"), "xfade"); replay($("live-note"), "xfade");
+  replay($("scan"), "go");
+  await sleep(1700 * k);
+  if (!fast) hl(1);
+  for (const l of $("live").querySelectorAll(".line")) { l.classList.add("spk"); await sleep(170 * k); }
+  await sleep(900 * k);
+  if (!fast) hl(2);
+  $("live").querySelectorAll(".fix").forEach((f) => {
+    const wrong = f.textContent; f.textContent = "";
+    const o = document.createElement("span"); o.className = "old"; o.textContent = wrong;
+    const n = document.createElement("span"); n.className = "new"; n.textContent = f.dataset.right;
+    f.append(o, n); f.classList.remove("flag"); f.classList.add("fixed");
+  });
+  await sleep(600 * k);
+  const fix = $("live").querySelector(".fix");
+  if (fix) callout(fix, "Corectat în valul 2", true);
+  await sleep(1900 * k);
+  $("callout").classList.remove("show");
+}
+function setupReview(kind) {
+  const corp = kind === "corp";
+  $("rv-meta").textContent = corp ? "Corporate · Română · 00:27" : "Others · Română · 18:42";
+  $("rv-title").textContent = corp ? "Andrei Popescu" : "Elena Dobre";
+  $("rv-progress").hidden = !corp;
+  $("decided").textContent = "0 din 1 decise"; $("decided-bar").style.width = "0";
+  $("summary").textContent = "";
+  $("result").hidden = true; $("result-text").textContent = "";
+  $("ft-meta").textContent = corp ? "5 replici · 2 vorbitori" : "7 replici · 2 vorbitori · 18:42";
+  $("acts-title").hidden = true; $("act").hidden = true;
+  ["a-title", "a-owner", "a-due", "a-del"].forEach((id) => { $(id).textContent = ""; });
+  $("a-chip").textContent = "În așteptare"; $("a-chip").className = "chip";
+  $("payload").classList.remove("open"); $("pl-tog").textContent = "Arată";
+  setDest("trello", true);
+  $("a-dest").hidden = false; $("a-reject").hidden = false; $("a-go").hidden = false; $("a-hint").textContent = "";
+  $("a-go").className = "btn primary"; $("a-go").innerHTML = ICON.check + "Aprobă";
+  const roles = corp ? CORP_ROLES : INT_ROLES, who = corp ? ["Maria Ionescu", "Andrei Popescu"] : ["Ana Ionescu", "Elena Dobre"];
+  $("speakers").innerHTML = roles.map((r, i) => `<div><span>Vorbitor ${i + 1}</span><span class="chip" style="color:${i ? "var(--attention-text)" : "var(--accent-text)"}">${r} · ${who[i].split(" ")[0]}</span></div>`).join("");
+  $("audit").hidden = true;
+  view("review"); nav("new");
+}
+const ICON = {
+  check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  arrow: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+};
+const CARD = { title: "Raport KPI pentru Q3", owner: "Andrei Popescu", due: "vineri, 13 nov 2026", del: "Raport KPI · Q3" };
+const SUMMARY_CORP = "Maria i-a cerut lui Andrei raportul de KPI pe Q3, pus pe board până vineri. Andrei a confirmat că îl are gata vineri dimineață.";
+const SUMMARY_ART = "Interviu cu Elena Dobre, fondatoarea Atelier Lut: de la 2 oameni în 2019 la 14 angajați și export în 6 țări.";
+function setDest(d, quiet) {
+  $("d-trello").setAttribute("aria-pressed", String(d === "trello"));
+  $("d-jira").setAttribute("aria-pressed", String(d === "jira"));
+  $("pl-dest").textContent = d === "trello" ? "Trello" : "Jira";
+  $("pl-pre").textContent = PAYLOAD[d];
+  if (!quiet) { $("payload").classList.add("open"); $("pl-tog").textContent = "Ascunde"; replay($("pl-pre"), "flash"); }
+}
+function fillCardInstant() {
+  $("summary").textContent = SUMMARY_CORP;
+  $("acts-title").hidden = false; $("act").hidden = false;
+  $("a-title").textContent = CARD.title; $("a-owner").textContent = CARD.owner; $("a-due").textContent = CARD.due; $("a-del").textContent = CARD.del;
+  setDest("trello");
+}
+
+// ---------- caption
+const cap = $("cap");
+function renderCaption(c) {
+  if (!c) return;
+  const words = c.title.split(" ").map((w) => `<span class="w">${w}</span>`).join("");
+  cap.innerHTML = `<div class="bignum rv" style="--d:0ms">${c.n}</div>
+    <div class="kicker rv" style="--d:80ms">${c.k}</div>
+    <h2 class="ctitle rv" style="--d:180ms">${words}</h2>
+    <p class="ctext rv" style="--d:300ms">${c.text}</p>
+    <ol class="points">${c.points.map((p, i) => `<li class="rv" style="--d:${420 + i * 90}ms">${p}</li>`).join("")}</ol>`;
+}
+function hl(i) { cap.querySelectorAll(".points li").forEach((li, k) => { li.classList.toggle("on", k === i); li.classList.toggle("done", k < i); }); }
+
+// ---------- slides
+const SLIDES = [
+  { hero: "intro", play: async () => {} },
+
+  { cap: { n: "01", k: "Pagina principală", title: "Totul începe aici.", text: "Sesiunile tale, conectorii și un semn mereu vizibil: procesarea e locală.",
+      points: ["Sesiunile recente, într-un singur loc", "Trello și Jira, deja conectate", "„Procesare locală” — mereu la vedere"] },
+    play: async () => {
+      setupNew(); view("recent"); nav("recent");
+      document.querySelectorAll("#recent-list .listitem").forEach((x, i) => { x.style.setProperty("--d", 300 + i * 130 + "ms"); replay(x, "pop"); });
+      await sleep(900); hl(0); await sleep(1500);
+      hl(1); spot($("connectors")); await sleep(2000); spot($("connectors"), false);
+      hl(2); spot($("local")); await sleep(2000); spot($("local"), false);
+      await click($("nav-new"), () => { nav("new"); view("new", true); });
+      hl(3);
+    } },
+
+  { cap: { n: "02", k: "Sesiune nouă", title: "Un mod, o limbă, un buton.", text: "Alegi pentru ce e conversația și cu cine o ai. Apoi pornești.",
+      points: ["Mod: Corporate", "Limba sesiunii: Română", "Contact: Andrei Popescu", "Începe sesiunea"] },
+    play: async () => {
+      setupNew();
+      await sleep(700); hl(0);
+      await click(document.querySelector('#modes [data-mode="corporate"]'), () => setMode("corporate"));
+      await sleep(500); hl(1); await click($("lang-ro")); await sleep(400);
+      hl(2); await click($("contact")); await type($("contact"), "Andrei Popescu", 65);
+      await sleep(500); hl(3);
+      await click($("start"), () => {}, 800);
+      await sleep(300);
+      setupRec({ title: "Andrei Popescu", meta: "Corporate · Română" }); view("rec", true);
+      cur.style.opacity = 0;
+    } },
+
+  { cap: { n: "03", k: "Înregistrare", title: "Valul 1: transcriere live.", text: "Textul apare cât vorbiți — doar ca feedback. Totul rulează pe GPU-ul tău.",
+      points: ["Whisper, local, în timp real", "Nicio acțiune în timpul conversației", "Live-ul poate greși: „KPI pe Q3” devine „copii pe cu trei”"] },
+    play: async () => {
+      setupRec({ title: "Andrei Popescu", meta: "Corporate · Română" });
+      every(1000, () => setRecText(`Se înregistrează · ${clock(++secs)}`));
+      await sleep(900); hl(0);
+      await streamLine(CORP[0], CORP_ROLES, 150); await sleep(700);
+      await streamLine(CORP[1], CORP_ROLES, 150); hl(1); await sleep(800);
+      const l3 = await streamLine(CORP[2], CORP_ROLES, 150);
+      const fix = l3.querySelector(".fix"); fix.classList.add("flag"); hl(2);
+      await sleep(250); callout(fix, "Acronim interpretat greșit în live");
+      await sleep(1800);
+      await streamLine(CORP[3], CORP_ROLES, 150); await sleep(600);
+      await streamLine(CORP[4], CORP_ROLES, 150);
+    } },
+
+  { cap: { n: "04", k: "După oprire", title: "Valul 2: transcrierea finală.", text: "Refăcută din tot audio-ul, cu vorbitori. Greșelile din live dispar.",
+      points: ["Transcriere din toată înregistrarea", "Vorbitori: Organizator și Participant", "„copii pe cu trei” → „KPI pe Q3”", "Modelul local citește conversația"] },
+    play: async () => {
+      setupRec({ title: "Andrei Popescu", meta: "Corporate · Română" });
+      await fillLines(CORP, CORP_ROLES); secs = 27; setRecText("Se înregistrează · 00:27");
+      const fix = $("live").querySelector(".fix"); fix.classList.add("flag");
+      await sleep(600); callout(fix, "Acronim interpretat greșit în live");
+      await sleep(900);
+      await click($("stop"), () => { $("callout").classList.remove("show"); stopRec(); });
+      hl(0);
+      await wave2(false);
+      hl(3); $("an-text").textContent = "Se pornește modelul local…"; replay($("an-text"), "xfade"); await sleep(1100);
+      $("an-text").textContent = "Se analizează conversația…"; replay($("an-text"), "xfade"); await sleep(1500);
+      setupReview("corp"); view("review", true); cur.style.opacity = 0;
+    } },
+
+  { cap: { n: "05", k: "Acțiune propusă", title: "Cine, ce, până când.", text: "tasca extrage sarcina din transcrierea finală și îți arată exact ce ar trimite.",
+      points: ["Sarcină: Raport KPI pentru Q3", "Citatul exact din conversație", "Tu alegi unde: Jira sau Trello", "Conținutul exact, înainte să plece"] },
+    play: async () => {
+      setupReview("corp");
+      await sleep(500);
+      await streamWords($("summary"), SUMMARY_CORP, 45);
+      $("acts-title").hidden = false; $("act").hidden = false; replay($("act"), "pop"); replay($("acts-title"), "pop");
+      await scrollMain($("acts-title"), 30);
+      hl(0);
+      await type($("a-title"), CARD.title, 30); await type($("a-owner"), CARD.owner, 30);
+      await type($("a-due"), CARD.due, 25); await type($("a-del"), CARD.del, 30);
+      await sleep(400); hl(1); spot($("a-quote")); await sleep(2000); spot($("a-quote"), false);
+      await scrollMain($("a-actions"), 380);
+      hl(2); await click($("d-jira"), () => setDest("jira"));
+      await sleep(2000);
+      await click($("d-trello"), () => setDest("trello"));
+      hl(3); spot($("payload")); await sleep(2400); spot($("payload"), false);
+    } },
+
+  { cap: { n: "06", k: "Aprobare", title: "Tu aprobi. Abia apoi pleacă.", text: "Un click aprobă exact conținutul văzut. Fiecare trimitere e notată în jurnal.",
+      points: ["Aprobat de tine", "Trimis în Trello", "Notat în jurnalul de audit"] },
+    play: async () => {
+      setupReview("corp"); fillCardInstant();
+      await scrollMain($("a-actions"), 380, false);
+      await sleep(800); hl(0);
+      await click($("a-go"), () => {
+        $("a-chip").textContent = "Aprobat"; $("a-chip").className = "chip ok";
+        $("decided").textContent = "1 din 1 decise"; $("decided-bar").style.width = "100%";
+        $("a-dest").hidden = true; $("a-reject").hidden = true;
+        $("a-hint").textContent = "Aprobat. Pleacă doar când apeși Execută.";
+        $("a-go").innerHTML = ICON.arrow + "Execută";
+      });
+      await sleep(1300); hl(1);
+      await click($("a-go"), () => { $("a-go").innerHTML = "Se trimite…"; });
+      $("board").classList.add("show"); await sleep(900);
+      const from = stagePos($("a-go")), slot = $("tnew");
+      const fly = document.createElement("div"); fly.className = "flycard"; fly.textContent = CARD.title;
+      stage.append(fly);
+      slot.classList.add("in"); const to = stagePos(slot); slot.classList.remove("in");
+      const a = fly.animate([
+        { left: from.x + "px", top: from.y + "px", transform: "scale(.8) rotate(0deg)", opacity: .2 },
+        { left: (from.x + to.x) / 2 + "px", top: Math.min(from.y, to.y) - 160 + "px", transform: "scale(1.1) rotate(-6deg)", opacity: 1, offset: .5 },
+        { left: to.x + "px", top: to.y + "px", transform: "scale(1) rotate(0deg)", opacity: 1 },
+      ], { duration: 1100, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" });
+      await a.finished.catch(() => {}); await sleep(0);
+      fly.remove(); slot.classList.add("in");
+      $("a-chip").textContent = "Executat"; $("a-go").hidden = true;
+      $("a-hint").textContent = "Trimis în Trello · lista „De făcut”";
+      toast("Trimis în Trello · lista „De făcut”");
+      await sleep(2200); $("board").classList.remove("show"); await sleep(500); hl(2);
+      $("audit-line").textContent = "12:41 · Trello · „Raport KPI pentru Q3” · aprobat de tine · trimis";
+      $("audit").hidden = false; spot($("audit")); await sleep(2400); spot($("audit"), false);
+    } },
+
+  { cap: { n: "07", k: "Moduri", title: "Un nucleu. Orice domeniu.", text: "Rolurile, tipurile de acțiuni și promptul vin dintr-un Domain. Îl schimbi dintr-un click.",
+      points: ["Corporate — ședințe, sarcini, livrabile", "Medicină de familie — consultații, rețete, programări", "Others — tu scrii regulile"] },
+    play: async () => {
+      setupNew();
+      await sleep(600);
+      await zoomTo($("modes"), 1.95); hl(0); await sleep(1300);
+      await click(document.querySelector('#modes [data-mode="medical"]'), () => setMode("medical"), 600); hl(1); await sleep(1700);
+      await click(document.querySelector('#modes [data-mode="others"]'), () => setMode("others"), 600); hl(2); await sleep(1300);
+      cur.style.opacity = 0;
+      await zoomReset();
+      $("others").hidden = false; replay($("others"), "unfold");
+      await sleep(300); await scrollMain($("others"), 40);
+      await sleep(1200);
+    } },
+
+  { cap: { n: "08", k: "Mod custom", title: "Jurnalism, în trei fraze.", text: "Descrii conversația și ce vrei să obții. tasca scrie promptul, tu îl confirmi.",
+      points: ["Conversația: un interviu", "Ce contează: citate, cifre, nume", "Rezultatul: un articol pentru social media", "Promptul, vizibil și confirmat de tine"] },
+    play: async () => {
+      setupNew({ mode: "others", others: "empty" });
+      await scrollMain($("others"), 40, false);
+      await sleep(600); hl(0);
+      await click($("o-context")); await type($("o-context"), OTHERS.context, 28);
+      hl(1); await click($("o-focus")); await type($("o-focus"), OTHERS.focus, 28);
+      hl(2); await click($("o-completion")); await type($("o-completion"), OTHERS.completion, 26);
+      await click($("o-generate"));
+      await scrollMain($("o-prompt"), 160);
+      $("o-prompt").classList.add("focus"); await streamWords($("o-prompt"), OTHERS.prompt, 40); $("o-prompt").classList.remove("focus");
+      hl(3); spot($("o-prompt")); await sleep(1600); spot($("o-prompt"), false);
+      await click($("o-confirm"), () => {
+        $("prompt-status").textContent = "Confirmat"; $("prompt-status").classList.add("ok");
+        $("o-confirm").innerHTML = "Confirmat ✓"; $("o-confirm").classList.add("ok"); updateStart("others");
+      });
+      await scrollMain($("start-wrap"), 260); await sleep(1200);
+    } },
+
+  { cap: { n: "09", k: "Repede înainte", title: "Același flux. Alt scop.", text: "Înregistrare, transcriere în două valuri, model local. Doar promptul e altul.",
+      points: ["Un interviu de 18 minute", "Transcriere finală, cu vorbitori", "Analiză cu promptul tău"] },
+    play: async () => {
+      setupNew({ mode: "others", others: "confirmed" });
+      $("ff").classList.add("show");
+      await sleep(400);
+      await click($("contact"), null, 500); await type($("contact"), "Elena Dobre", 35);
+      await scrollMain($("start-wrap"), 260);
+      await click($("start"), null, 500);
+      setupRec({ title: "Elena Dobre", meta: "Others · Română" }); view("rec", true); cur.style.opacity = 0;
+      $("v-rec").classList.add("ffrec"); hl(0);
+      every(30, () => { secs = Math.min(secs + 5, 1122); setRecText(`Se înregistrează · ${clock(secs)}`); });
+      for (const L of INTERVIEW) {
+        const el = await streamLine(L, INT_ROLES, 35);
+        const f = el.querySelector(".fix"); if (f) f.classList.add("flag");
+        await sleep(160);
+      }
+      await sleep(300);
+      await click($("stop"), () => { stopRec(); setRecText("Se analizează · 18:42"); }, 500);
+      hl(1);
+      await wave2(true);
+      hl(2); $("an-text").textContent = "Se analizează cu promptul tău…"; replay($("an-text"), "xfade"); await sleep(1100);
+      setupReview("art"); view("review", true); cur.style.opacity = 0;
+      $("ff").classList.remove("show");
+    } },
+
+  { cap: { n: "10", k: "Rezultat", title: "Interviul devine articol.", text: "Compus doar din ce s-a spus. Rămâne pe calculator până îl copiezi tu.",
+      points: ["Titlu, citat și cifre verificabile", "Editabil, local", "Copiat cu un click"] },
+    play: async () => {
+      setupReview("art");
+      await sleep(400); await streamWords($("summary"), SUMMARY_ART, 40);
+      $("result").hidden = false; replay($("result"), "pop"); hl(0);
+      await sleep(300);
+      await streamRich($("result-text"), ARTICLE, 42);
+      hl(1); spot($("result-text")); await sleep(1800); spot($("result-text"), false);
+      await scrollMain($("copy"), 520);
+      hl(2); await click($("copy"), () => toast("Copiat. Îl pui unde vrei."));
+      await sleep(1600);
+    } },
+
+  { cap: { n: "11", k: "Distribuire", title: "Din interviu, pe feed.", text: "Tu îl publici, unde și când vrei. tasca nu postează nimic singur.",
+      points: ["Lipit în postare", "Publicat de tine", "Minute, nu ore"] },
+    play: async () => {
+      setupReview("art"); $("summary").textContent = SUMMARY_ART; $("result").hidden = false; richText($("result-text"), ARTICLE);
+      $("so-body").textContent = ""; $("so-img").classList.remove("in");
+      const pub = $("so-pub"); pub.className = "so-pub"; pub.textContent = "Publică";
+      ["c1", "c2", "c3"].forEach((c) => { $(c).textContent = "0"; });
+      await sleep(300);
+      $("win").classList.add("dim"); $("social").classList.add("show");
+      await sleep(1000); hl(0);
+      richText($("so-body"), ARTICLE); replay($("so-body"), "xfade");
+      await sleep(500); $("so-img").classList.add("in");
+      await sleep(1600); hl(1);
+      pub.classList.add("pressed"); await sleep(180); pub.classList.remove("pressed");
+      pub.classList.add("done"); pub.innerHTML = ICON.check + "Publicat";
+      countUp($("c1"), 248, 2600); countUp($("c2"), 37, 2600); countUp($("c3"), 19, 2600);
+      const sp = stagePos(pub);
+      for (let i = 0; i < 14; i++) {
+        const h = document.createElement("div"); h.className = "heart";
+        h.innerHTML = `<svg width="${18 + Math.random() * 16}" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="${["#FF5C7A", "#2477F2", "#7C5CFF", "#19C3A6"][i % 4]}"/></svg>`;
+        h.style.left = sp.x + Math.random() * sp.w + "px"; h.style.top = sp.y - 10 + "px"; h.style.setProperty("--dx", (Math.random() - .5) * 160 + "px");
+        h.style.animationDelay = i * 110 + "ms"; stage.append(h); setTimeout(() => h.remove(), 4000);
+      }
+      await sleep(1800); hl(2);
+    } },
+
+  { hero: "end", play: async () => {
+      document.querySelectorAll("#hero-end .stat b").forEach((b) => { b.textContent = "0" + (b.dataset.s || ""); });
+      await sleep(1500);
+      document.querySelectorAll("#hero-end .stat b").forEach((b) => countUp(b, +b.dataset.n, 1600, b.dataset.s || ""));
+    } },
+];
+
+// ---------- navigation
+function resetStage() {
+  app.classList.add("instant");
+  zoom = 1; app.style.transform = "";
+  ["board", "social", "ff"].forEach((id) => $(id).classList.remove("show"));
+  $("win").classList.remove("dim"); $("tnew").classList.remove("in");
+  $("toast").classList.remove("show"); $("callout").classList.remove("show");
+  document.querySelectorAll(".spot").forEach((e) => e.classList.remove("spot"));
+  document.querySelectorAll(".flycard,.heart").forEach((e) => e.remove());
+  cur.style.opacity = 0;
+  void app.offsetWidth; app.classList.remove("instant");
+}
+async function go(i) {
+  i = Math.max(0, Math.min(SLIDES.length - 1, i));
+  current = i; run++; timers.forEach(clearInterval); timers = [];
+  resetStage();
+  const S = SLIDES[i];
+  document.body.dataset.mode = S.hero ? "hero" : "app";
+  document.querySelectorAll(".hero").forEach((h) => h.classList.toggle("on", h.id === "hero-" + S.hero));
+  renderCaption(S.cap);
+  $("prog").style.width = (i / (SLIDES.length - 1)) * 100 + "%";
+  $("count").textContent = `${String(i + 1).padStart(2, "0")} / ${SLIDES.length}`;
+  history.replaceState(null, "", "#" + (i + 1));
+  try { await S.play(); } catch (e) { if (e !== STALE) console.error(e); }
+}
+addEventListener("keydown", (e) => {
+  if (["ArrowRight", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); go(current + 1); }
+  else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); go(current - 1); }
+  else if (e.key === "Home") go(0);
+  else if (e.key === "End") go(SLIDES.length - 1);
+  else if (e.key.toLowerCase() === "r") go(current);
+  else if (e.key.toLowerCase() === "m") startMic();
+  else if (e.key.toLowerCase() === "f") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+});
+addEventListener("click", (e) => go(current + (e.clientX < innerWidth * 0.2 ? -1 : 1)));
+
+// ---------- hero bits
+function buildWave(el, n, maxH) {
+  el.innerHTML = Array.from({ length: n }, (_, i) => {
+    const env = Math.sin((i / (n - 1)) * Math.PI);
+    return `<span data-h="${Math.round(env * maxH * (0.75 + Math.random() * 0.25))}"></span>`;
+  }).join("");
+}
+function buildName(el) { el.innerHTML = [..."tasca"].map((c, i) => `<span style="--i:${i}">${c}</span>`).join(""); }
+buildWave($("wave1"), 56, 130); buildWave($("wave2"), 44, 95);
+buildName($("name1")); buildName($("name2"));
+$("meter").innerHTML = "<span></span>".repeat(24);
+
+// connectors on the final slide: a fan of branches from "Execută". Logos: Simple Icons (simpleicons.org, CC0), path data only.
+const CONNECTORS = [
+  ["Trello", "#0052CC", true, "M21.147 0H2.853A2.86 2.86 0 000 2.853v18.294A2.86 2.86 0 002.853 24h18.294A2.86 2.86 0 0024 21.147V2.853A2.86 2.86 0 0021.147 0zM10.34 17.287a.953.953 0 01-.953.953h-4a.954.954 0 01-.954-.953V5.38a.953.953 0 01.954-.953h4a.954.954 0 01.953.953zm9.233-5.467a.944.944 0 01-.953.947h-4a.947.947 0 01-.953-.947V5.38a.953.953 0 01.953-.953h4a.954.954 0 01.953.953z"],
+  ["Jira", "#0052CC", true, "M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0Z"],
+  ["Google Calendar", "#4285F4", true, "M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H1.895A1.894 1.894 0 0 0 0 1.895v16.421h5.684V5.684h12.632zm-7.207 6.25v-.065c.272-.144.5-.349.687-.617s.279-.595.279-.982c0-.379-.099-.72-.3-1.025a2.05 2.05 0 0 0-.832-.714 2.703 2.703 0 0 0-1.197-.257c-.6 0-1.094.156-1.481.467-.386.311-.65.671-.793 1.078l1.085.452c.086-.249.224-.461.413-.633.189-.172.445-.257.767-.257.33 0 .602.088.816.264a.86.86 0 0 1 .322.703c0 .33-.12.589-.36.778-.24.19-.535.284-.886.284h-.567v1.085h.633c.407 0 .748.109 1.02.327.272.218.407.499.407.843 0 .336-.129.614-.387.832s-.565.327-.924.327c-.351 0-.651-.103-.897-.311-.248-.208-.422-.502-.521-.881l-1.096.452c.178.616.505 1.082.977 1.401.472.319.984.478 1.538.477a2.84 2.84 0 0 0 1.293-.291c.382-.193.684-.458.902-.794.218-.336.327-.72.327-1.149 0-.429-.115-.797-.344-1.105a2.067 2.067 0 0 0-.881-.689zm2.093-1.931l.602.913L15 10.045v5.744h1.187V8.446h-.827l-2.158 1.557zM22.105 0h-3.289v5.184H24V1.895A1.894 1.894 0 0 0 22.105 0zm-3.289 23.5l4.684-4.684h-4.684V23.5zM0 22.105C0 23.152.848 24 1.895 24h3.289v-5.184H0v3.289z"],
+  ["Gmail", "#EA4335", false, "M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"],
+  ["Google Tasks", "#2684FC", false, "M11.383.617C5.097.617 0 5.714 0 12c0 6.286 5.097 11.383 11.383 11.383 6.286 0 11.38-5.097 11.38-11.383a11.34 11.34 0 0 0-.878-4.389l-3.203 3.203c.062.387.1.782.1 1.186a7.398 7.398 0 1 1-7.4-7.398c1.499 0 2.889.448 4.054 1.214l2.857-2.857a11.325 11.325 0 0 0-6.91-2.342zm9.674.756c-.292 0-.583.112-.805.334-2.97 2.965-5.934 5.934-8.9 8.902L9.596 8.854a1.139 1.139 0 0 0-1.61 0l-1.775 1.773a1.139 1.139 0 0 0 0 1.61l4.166 4.163a1.421 1.421 0 0 0 2.012 0L23.666 5.121a1.136 1.136 0 0 0 0-1.61l-1.805-1.804a1.136 1.136 0 0 0-.804-.334z"],
+  ["Google Drive", "#4285F4", false, "M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z"],
+  ["Notion", "#000000", false, "M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"],
+  ["Slack", "#4A154B", false, "M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"],
+  ["Asana", "#F06A6A", false, "M18.78 12.653c-2.882 0-5.22 2.336-5.22 5.22s2.338 5.22 5.22 5.22 5.22-2.34 5.22-5.22-2.336-5.22-5.22-5.22zm-13.56 0c-2.88 0-5.22 2.337-5.22 5.22s2.338 5.22 5.22 5.22 5.22-2.338 5.22-5.22-2.336-5.22-5.22-5.22zm12-6.525c0 2.883-2.337 5.22-5.22 5.22-2.882 0-5.22-2.337-5.22-5.22 0-2.88 2.338-5.22 5.22-5.22 2.883 0 5.22 2.34 5.22 5.22z"],
+  ["LinkedIn", "#0A66C2", false, "M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"],
+  ["Instagram", "#FF0069", false, "M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"],
+  ["X", "#000000", false, "M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"],
+  ["Facebook", "#0866FF", false, "M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"],
+  ["WhatsApp", "#25D366", false, "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"],
+];
+(() => {
+  const hx = 1400, hy = 540, n = CONNECTORS.length, gap = 54;  // even vertical spacing on an ellipse, so labels never collide
+  let fan = "", logos = "", pulses = "";
+  CONNECTORS.forEach(([name, color, live, d], i) => {
+    const y = hy + (i - (n - 1) / 2) * gap, x = hx + 330 * Math.sqrt(1 - ((y - hy) / 400) ** 2), a = Math.atan2(y - hy, x - hx);
+    const ex = x - 24 * Math.cos(a), ey = y - 24 * Math.sin(a);
+    const path = `M${hx + 36} ${hy} C${hx + 120} ${hy} ${ex - 70 * Math.cos(a)} ${ey - 70 * Math.sin(a)} ${ex} ${ey}`;
+    fan += `<path class="dl" pathLength="1000" style="--d:${4300 + i * 70}ms;--t:.6s;marker-end:none;stroke-opacity:.6" d="${path}"/>`;
+    pulses += `<div class="bpulse" style="offset-path:path('${path}')"></div>`;
+    logos += `<div class="logo rv" style="left:${x}px;top:${y}px;--d:${4450 + i * 70}ms"><span class="lg"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="${color}" d="${d}"/></svg>${live ? '<i class="on"></i>' : ""}</span><em>${name}</em></div>`;
+  });
+  $("fan").innerHTML = fan;
+  $("fan-logos").innerHTML = pulses + logos;
+})();
+
+// ---------- microphone-driven waveform (first and last slide only). Audio stays in this tab: analysed, never stored or sent.
+let analyser = null, bins = null, audioCtx = null, noiseFloor = 1;
+async function startMic() {
+  if (audioCtx) { audioCtx.resume(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
+    audioCtx = new AudioContext();
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.7;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    bins = new Uint8Array(analyser.frequencyBinCount);
+    audioCtx.resume();
+  } catch (e) { console.warn("Microfon indisponibil, audiograma rămâne liniștită:", e.name); }
+}
+const waves = [$("wave1"), $("wave2")].map((w) => [...w.children].map((b) => ({ el: b, max: +b.dataset.h, v: 0 })));
+function drawWaves() {
+  const S = SLIDES[current];
+  if (S && S.hero) {
+    let avg = 0;
+    if (analyser) { analyser.getByteFrequencyData(bins); for (let i = 1; i <= 32; i++) avg += bins[i] / 255; avg /= 32; }
+    noiseFloor = Math.min(avg, noiseFloor + 0.0015);  // follows the room's background noise, so only speech moves the bars
+    const bars = waves[S.hero === "intro" ? 0 : 1], n = bars.length;
+    bars.forEach((b, i) => {
+      const d = Math.abs(i - (n - 1) / 2) / ((n - 1) / 2);  // centre = low voice frequencies
+      const level = analyser ? bins[1 + Math.floor(d * 30)] / 255 : 0;
+      const target = Math.max(0, Math.min(1, (level - noiseFloor - 0.05) * 2.4));
+      b.v += (target - b.v) * (target > b.v ? 0.45 : 0.12);
+      b.el.style.height = 9 + b.v * b.max + "px";
+    });
+  }
+  requestAnimationFrame(drawWaves);
+}
+drawWaves();
+startMic();
+addEventListener("keydown", () => { if (audioCtx) audioCtx.resume(); });
+addEventListener("pointerdown", () => { if (audioCtx) audioCtx.resume(); });
+
+// ---------- background particles
+const cv = $("bgc"), cx2 = cv.getContext("2d");
+const P = [];
+function size() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener("resize", size); size();
+for (let i = 0; i < 70; i++) P.push({ x: Math.random(), y: Math.random(), vx: (Math.random() - .5) * .00025, vy: (Math.random() - .5) * .00025, r: Math.random() * 1.6 + .4 });
+function tick() {
+  const w = cv.width, h = cv.height; cx2.clearRect(0, 0, w, h);
+  for (const p of P) { p.x = (p.x + p.vx + 1) % 1; p.y = (p.y + p.vy + 1) % 1; }
+  cx2.lineWidth = devicePixelRatio * .6;
+  for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+    const dx = (P[i].x - P[j].x) * w, dy = (P[i].y - P[j].y) * h, d = Math.hypot(dx, dy), m = 150 * devicePixelRatio;
+    if (d < m) { cx2.strokeStyle = `rgba(141,184,255,${(1 - d / m) * .16})`; cx2.beginPath(); cx2.moveTo(P[i].x * w, P[i].y * h); cx2.lineTo(P[j].x * w, P[j].y * h); cx2.stroke(); }
+  }
+  cx2.fillStyle = "rgba(190,210,255,.55)";
+  for (const p of P) { cx2.beginPath(); cx2.arc(p.x * w, p.y * h, p.r * devicePixelRatio, 0, 7); cx2.fill(); }
+  requestAnimationFrame(tick);
+}
+tick();
+
+document.fonts.ready.then(() => go(Math.max(0, (parseInt(location.hash.slice(1), 10) || 1) - 1)));
+</script>
+</body>
+</html>
