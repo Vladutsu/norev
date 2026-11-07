@@ -163,10 +163,10 @@ def _challenge(verifier: str) -> str:
 class _Callback(HTTPServer):
     """One loopback redirect: keeps the first answer that carries our state, ignores any other request."""
 
-    def __init__(self, state: str) -> None:
+    def __init__(self, state: str, port: int = 0) -> None:  # port 0: any free port (Google); Jira needs a fixed one
         self.state = state
         self.answer: dict[str, str] | None = None
-        super().__init__(("127.0.0.1", 0), _CallbackHandler)
+        super().__init__(("127.0.0.1", port), _CallbackHandler)
 
     def server_bind(self) -> None:
         socketserver.TCPServer.server_bind(self)  # HTTPServer's would look up the host name: slow, not needed

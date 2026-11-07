@@ -68,7 +68,7 @@ class CoreTest(unittest.TestCase):
 
     def test_the_domain_lists_trello_as_an_alternative(self) -> None:
         [step] = [s for s in CORPORATE.action_type("work_item").workflow.steps if s.connector]
-        self.assertEqual(step.connectors(), ("local_document", "trello"))
+        self.assertEqual(step.connectors(), ("local_document", "trello", "jira"))
         self.assertIn("build_document", LOCAL_STEPS)
 
     def test_default_and_chosen_destination(self) -> None:
@@ -82,7 +82,7 @@ class CoreTest(unittest.TestCase):
         self.assertEqual(step["payload"]["list"], CHOSEN)
 
     def test_only_the_steps_connectors_can_be_chosen(self) -> None:
-        for destination in ("google_calendar", "email_draft", "jira", "", ["trello"]):
+        for destination in ("google_calendar", "email_draft", "slack", "", ["trello"]):
             with self.subTest(destination=destination), self.assertRaises(ValidationError) as caught:
                 self.preview({"destination": destination})
             self.assertEqual(caught.exception.code, "unknown_destination")
@@ -204,7 +204,8 @@ class DesktopTrelloTest(unittest.TestCase):
         self.assertEqual(self.ok(self.bridge.trello_status()), {"available": True, "connected": False, "list": None})
         self.assertEqual(self.destinations(), [
             {"connector": "local_document", "label": "Document local", "ready": True},
-            {"connector": "trello", "label": "Trello", "ready": False}])
+            {"connector": "trello", "label": "Trello", "ready": False},
+            {"connector": "jira", "label": "Jira", "ready": False}])
         revision = self.ok(self.bridge.review("s1"))["revision"]
         self.assertEqual(self.code(self.bridge.preview("s1", "s1-1", revision, "trello")), "unknown_destination")
         self.connect()

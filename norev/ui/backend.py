@@ -32,7 +32,7 @@ MODES = (
     ("others", "Others", "Prompt propriu"),
 )
 CONNECTOR_LABELS = {"google_calendar": "Google Calendar", "local_document": "Document local",
-                    "email_draft": "Draft de email", "trello": "Trello"}
+                    "email_draft": "Draft de email", "trello": "Trello", "jira": "Jira"}
 LOCAL_CONNECTORS = ("local_document", "email_draft")  # need no account
 GENERIC_FIELDS = ("title", "description", "owner", "due_date", "transcript_excerpt")
 
@@ -86,6 +86,7 @@ class DemoBackend:
     can_execute = False  # the demo reviews only; SessionBackend executes through the Central Processor (#43)
     google = None  # SessionBackend: the GoogleAccount from the composition root (#45); none in the demo
     trello = None  # SessionBackend: the TrelloLink from the composition root (#72); none in the demo
+    jira = None  # SessionBackend: the JiraAccount from the composition root (#73); none in the demo
 
     def __init__(self, store: SessionStore, *, approved_by: str, clock: Clock | None = None,
                  domains_dir: Path = ROOT / "domains", monotonic=time.monotonic) -> None:
@@ -172,11 +173,36 @@ class DemoBackend:
     def trello_disconnect(self) -> dict[str, Any]:
         return self._trello().disconnect()
 
+    # --- Jira (#73): connect, disconnect and the project for the work items sent to Jira
+
+    def _jira(self):
+        if self.jira is None:
+            raise ModeUnavailable("jira")
+        return self.jira
+
+    def jira_status(self) -> dict[str, Any]:
+        return self.jira.status() if self.jira is not None else {"available": False, "connected": False, "destination": None}
+
+    def jira_connect(self) -> dict[str, Any]:
+        return self._jira().connect()
+
+    def jira_disconnect(self) -> dict[str, Any]:
+        return self._jira().disconnect()
+
+    def jira_projects(self) -> dict[str, Any]:
+        return self._jira().projects()
+
+    def jira_choose(self, cloud_id: str | None, project_key: str | None) -> dict[str, Any]:
+        return self._jira().choose(cloud_id, project_key)
+
     def _destination_ready(self, connector: str) -> bool:
-        """A destination the User can pick now (#72): local ones always, Trello once connected with a list."""
+        """A destination the User can pick now (#72): local ones always, Trello once connected with a
+        list, Jira once connected with a project (#73)."""
         if connector in LOCAL_CONNECTORS:
             return True
-        return connector == "trello" and self.trello is not None and self.trello.ready()
+        if connector == "trello":
+            return self.trello is not None and self.trello.ready()
+        return connector == "jira" and self.jira is not None and self.jira.ready()
 
     # --- recording
 

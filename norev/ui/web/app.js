@@ -29,6 +29,8 @@ const ERRORS = {
   too_many: "Prea mulți destinatari.",
   unknown_destination: "Destinația aleasă nu e disponibilă. Conecteaz-o întâi.",
   no_trello_list: "Alege întâi lista din Trello pentru sarcini.",
+  no_jira_project: "Alege întâi proiectul Jira pentru sarcini.",
+  invalid_summary: "Titlul trebuie să fie pe un rând, de cel mult 255 de caractere, pentru Jira.",
 };
 // Why connecting Google Calendar did not work (GoogleAccount.connect, #45)
 const GOOGLE_FAILED = {
@@ -643,6 +645,101 @@ function initTrello() {
   $("trello-disconnect").addEventListener("click", (e) => trelloAction(e.currentTarget, "trello_disconnect"));
 }
 
+// ---------- Jira (#73): shown only when it is set up on this machine. The project chosen here is
+// used when the User picks Jira for a work item (#72); each action is still sent where it was approved.
+
+const JIRA_FAILED = {
+  access_denied: "Ai refuzat accesul în Atlassian. Nimic nu s-a salvat.",
+  timeout: "Conectarea a expirat. Încearcă din nou și termină în browser.",
+  no_browser: "Browserul nu a putut fi deschis.",
+  port_in_use: "Portul de conectare e ocupat de alt program. Închide-l și încearcă din nou.",
+  scope_not_granted: "Atlassian nu a dat acces la issue-urile Jira.",
+  already_connecting: "Conectarea e deja în curs, în browser.",
+  not_configured: "Jira nu e configurat pe acest calculator.",
+  not_connected: "Contul Atlassian nu mai e conectat. Conectează-l din nou.",
+  not_accessible: "Proiectul nu mai e accesibil contului conectat.",
+  unreachable: "Atlassian nu poate fi contactat. Verifică conexiunea la internet.",
+};
+
+function jiraStatusText(status) {
+  if (!status.connected) return "Neconectat. Sarcinile pot fi trimise în Jira după conectare.";
+  const d = status.destination;
+  return d ? `Sarcinile pot merge în: ${d.name} / ${d.project_key} (${d.project_name})`
+    : "Conectat. Alege proiectul pentru sarcini.";
+}
+
+function renderJira(status, sites) {
+  $("jira").hidden = !status.available;
+  $("jira-status").textContent = jiraStatusText(status);
+  $("jira-button").textContent = status.connected ? "Deconectează" : "Conectează";
+  $("jira-button").dataset.connected = String(status.connected);
+  const select = $("jira-project");
+  select.hidden = $("jira-project-label").hidden = !status.connected;
+  if (!status.connected) return;
+  const d = status.destination;
+  const chosen = d ? `${d.cloud_id}|${d.project_key}` : "";
+  const options = [h("option", { value: "", disabled: true }, "Alege proiectul")];
+  for (const site of sites || []) {
+    for (const p of site.projects) {
+      options.push(h("option", { value: `${site.cloud_id}|${p.key}` }, `${site.name} / ${p.key} (${p.name})`));
+    }
+  }
+  if (d && !options.some((o) => o.value === chosen)) {  // the list was not loaded: keep showing the choice
+    options.push(h("option", { value: chosen }, `${d.name} / ${d.project_key} (${d.project_name})`));
+  }
+  select.replaceChildren(...options);
+  select.value = chosen;
+}
+
+async function jiraLoad() {
+  const status = await api("jira_status");
+  if (!status.connected) renderJira(status, []);
+  else {
+    const listed = await api("jira_projects");
+    renderJira(listed, listed.sites);
+    if (listed.failed) toast(JIRA_FAILED[listed.failed] || "Proiectele Jira nu au putut fi încărcate.");
+  }
+  if (state.review) renderReview();  // whether Jira can be picked for a work item may have changed
+}
+
+async function jiraChoose(select) {
+  const [cloudId, key] = select.value.split("|");
+  select.disabled = true;
+  try {
+    const status = await api("jira_choose", cloudId, key);
+    $("jira-status").textContent = jiraStatusText(status);
+    if (status.failed) toast(JIRA_FAILED[status.failed] || "Proiectul nu a putut fi ales.");
+    await jiraLoad();
+  } catch (err) {
+    fail(err);
+  } finally {
+    select.disabled = false;
+  }
+}
+
+async function jiraButton(button) {
+  // not through `guarded`: signing in can take minutes in the browser and must not hold the other actions
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  try {
+    if (button.dataset.connected === "true") {
+      await api("jira_disconnect");
+      toast("Contul Atlassian a fost deconectat aici. Revocă accesul aplicației și în contul Atlassian (Connected apps).");
+    } else {
+      $("jira-status").textContent = "Termină conectarea în browser…";
+      const status = await api("jira_connect");
+      toast(status.failed ? (JIRA_FAILED[status.failed] || "Conectarea la Jira nu a reușit.")
+        : "Jira e conectat. Alege proiectul pentru sarcini.");
+    }
+    await jiraLoad();
+  } catch (err) {
+    fail(err);
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
 // ---------- Google Calendar (#45): shown only when it is set up on this machine
 
 function renderGoogle(status) {
@@ -706,6 +803,9 @@ async function init() {
     renderGoogle(await api("google_status"));
     initTrello();
     await renderTrello(await api("trello_status"));
+    $("jira-button").addEventListener("click", (e) => jiraButton(e.currentTarget));
+    $("jira-project").addEventListener("change", (e) => jiraChoose(e.currentTarget));
+    await jiraLoad();
   } catch (err) {
     fail(err);
   }

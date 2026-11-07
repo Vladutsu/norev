@@ -51,6 +51,11 @@ class Bridge:
     def trello_boards(self): return self._call(self._backend.trello_boards)
     def trello_choose_list(self, list_id): return self._call(self._backend.trello_choose_list, list_id)
     def trello_disconnect(self): return self._call(self._backend.trello_disconnect)
+    def jira_status(self): return self._call(self._backend.jira_status)
+    def jira_connect(self): return self._call(self._backend.jira_connect)
+    def jira_disconnect(self): return self._call(self._backend.jira_disconnect)
+    def jira_projects(self): return self._call(self._backend.jira_projects)
+    def jira_choose(self, cloud_id, project_key): return self._call(self._backend.jira_choose, cloud_id, project_key)
     def google_connect(self): return self._call(self._backend.google_connect)
     def google_disconnect(self): return self._call(self._backend.google_disconnect)
 

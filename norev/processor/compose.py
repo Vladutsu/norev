@@ -16,16 +16,19 @@ from norev.adapters.connectors.google_calendar import (
     GoogleCalendarSettings,
     SecretStore,
 )
+from norev.adapters.connectors.jira import JiraAuth, JiraConnector, JiraSettings
 from norev.adapters.connectors.local_document import LocalDocumentConnector
 from norev.adapters.connectors.trello import TrelloAccount, TrelloConnector, TrelloSettings
 from norev.core.ports import Clock, Connector, Diarizer, PayloadBuilder, Transcriber
 from norev.processor.central import CentralProcessor, ExecutionAuditLog
 from norev.processor.google_account import GoogleAccount
 from norev.processor.identity import LocalUser
+from norev.processor.jira_account import JiraAccount
 from norev.processor.payloads import (
     ConnectorPayloadBuilder,
     EmailDraftPayloadBuilder,
     GoogleCalendarPayloadBuilder,
+    JiraPayloadBuilder,
     LocalDocumentPayloadBuilder,
     TrelloPayloadBuilder,
 )
@@ -70,25 +73,30 @@ LOCAL_STEPS = {"build_document": lambda action: None, "build_event": lambda acti
 def build_desktop_processor(
     store: ExecutionAuditLog, export_dir: Path, *, transcriber: Transcriber | None = None, diarizer: Diarizer | None = None,
     calendar: GoogleCalendarConnector | None = None, trello: TrelloConnector | None = None,
+    jira: JiraConnector | None = None,
 ) -> CentralProcessor:
     """The desktop app's processor (#43): the local Connectors (document, email draft #61) write into
-    `export_dir`; `calendar` and `trello` are the Google Calendar (#45) and Trello (#72) Connectors
-    when they are set up (build_google_calendar, build_trello)."""
+    `export_dir`; `calendar`, `trello` and `jira` are the Google Calendar (#45), Trello (#72) and Jira
+    (#73) Connectors when they are set up (build_google_calendar, build_trello, build_jira)."""
     connectors = [LocalDocumentConnector(export_dir), EmailDraftConnector(export_dir)]
-    connectors += [c for c in (calendar, trello) if c is not None]
+    connectors += [c for c in (calendar, trello, jira) if c is not None]
     return build_central_processor(store, connectors=connectors, transcriber=transcriber, diarizer=diarizer)
 
 
-def desktop_payload_builder(export_dir: Path, *, calendar: bool, trello: TrelloLink | None = None) -> PayloadBuilder:
+def desktop_payload_builder(export_dir: Path, *, calendar: bool, trello: TrelloLink | None = None,
+                            jira: JiraAccount | None = None) -> PayloadBuilder:
     """The previews of the desktop app (#18): the builder of each Workflow's Connector, or of the
     destination the User chose (#72). Without Google Calendar or Trello set up, nothing can be
-    previewed for them (UnsupportedWorkflow), so nothing is approved that could not be sent."""
+    previewed for them (UnsupportedWorkflow), so nothing is approved that could not be sent. The same
+    holds for Jira (#73)."""
     builders: dict[str, PayloadBuilder] = {"local_document": LocalDocumentPayloadBuilder(export_dir),
                                            "email_draft": EmailDraftPayloadBuilder(export_dir)}
     if calendar:
         builders["google_calendar"] = GoogleCalendarPayloadBuilder.from_environment()
     if trello is not None and trello.status()["available"]:
         builders["trello"] = TrelloPayloadBuilder.from_environment(trello.chosen_list)
+    if jira is not None and jira.status()["available"]:
+        builders["jira"] = JiraPayloadBuilder(jira.destination)
     return ConnectorPayloadBuilder(builders)
 
 
@@ -115,3 +123,15 @@ def build_trello(store: object, settings: TrelloSettings | None = None) -> tuple
         return TrelloLink(None), None
     account = TrelloAccount(settings, store)
     return TrelloLink(account), TrelloConnector(account)
+
+
+def build_jira(store: object, settings: JiraSettings | None = None) -> tuple[JiraAccount, JiraConnector | None]:
+    """The User's Atlassian account and chosen project (for the UI) and the Jira Connector (#73), which
+    the app gives to build_desktop_processor. Without an OAuth app in the environment, or without a
+    store that keeps secrets encrypted, there is no Connector and the account is unavailable.
+    Building them connects to nothing."""
+    settings = settings or JiraSettings.from_environment()
+    if not (settings.client_id and settings.client_secret) or not isinstance(store, SecretStore):
+        return JiraAccount(None), None
+    auth = JiraAuth(settings, store)
+    return JiraAccount(auth), JiraConnector(auth)

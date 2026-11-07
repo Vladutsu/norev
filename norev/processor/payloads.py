@@ -1,5 +1,5 @@
-"""PayloadBuilders (core/ports, #18) for the `local_document` (#23), `google_calendar` (#44) and
-`email_draft` (#61) Connectors.
+"""PayloadBuilders (core/ports, #18) for the `local_document` (#23), `google_calendar` (#44),
+`email_draft` (#61), `trello` (#72) and `jira` (#73) Connectors.
 
 It makes, at preview time, the final payload of each `local_document` step: the exact document text
 and the path it will be written to, so the User approves both (ADR 0002). The folder is the app's,
@@ -300,5 +300,69 @@ class TrelloPayloadBuilder:
                 card["due"] = datetime.combine(action.due_date, time(12, 0), tzinfo=self.zone).isoformat()
             steps.append({"step": step.name, "connector": trello.NAME,
                           "payload": {"list": {"id": target["id"], "name": target["name"]}, "card": card}})
+        return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
+                "action_type": action.action_type, "steps": steps}
+
+
+JIRA = "jira"
+JIRA_LABELS = {"owner": "Responsabil", "due_date": "Termen", "transcript_excerpt": "Citat din Transcript"}
+MAX_SUMMARY = 255  # Jira's limit for an issue summary
+
+
+class JiraPayloadBuilder:
+    """For a work item the User sends to Jira (#73): the step's payload is `{"site", "project",
+    "issue"}`, with `issue` the exact create-issue body (API v2, plain-text description).
+
+    `destination()` is the site and project the User chose in the app; None before they chose one
+    (the preview is refused). From the step's `sends`: `title` is the summary, `due_date` the duedate,
+    and the description holds the description, then the owner as text (no assignee: a Speaker is not
+    a Jira user), the other text fields and the Transcript quote. The `norev-<id>` label is made here,
+    so a retry of the approved payload finds the issue instead of creating a second one. options must
+    be `{}`. ConnectorPayloadBuilder routes a step here when the User picked Jira for the action (#72).
+    """
+
+    def __init__(self, destination: Callable[[], dict[str, str] | None], *,
+                 new_id: Callable[[], str] = lambda: uuid.uuid4().hex) -> None:
+        self.destination = destination
+        self.new_id = new_id
+
+    def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
+        action_type = domain.action_type(action.action_type)
+        if action_type is None:
+            raise ValidationError("unknown_action_type", "action_type")
+        if options:
+            raise ValidationError("unknown_options", "options")
+        connector_steps = [s for s in action_type.workflow.steps if s.connector]
+        for step in connector_steps:
+            if step.connector != JIRA:
+                raise UnsupportedWorkflow(f"no payload builder for Connector {step.connector!r}")
+        destination = self.destination()
+        if destination is None:
+            raise ValidationError("no_jira_project", "destination")
+        summary = action.title.strip()
+        if not summary or len(summary) > MAX_SUMMARY or any(c in summary for c in "\r\n"):
+            raise ValidationError("invalid_summary", "title")  # Jira refuses it only at Execute otherwise
+        labels = {f.name: f.label or f.name for f in action_type.fields}
+        types = {f.name: f.type for f in action_type.fields}
+        steps = []
+        for step in connector_steps:
+            if set(step.sends) - set(GENERIC_FIELDS) - {n for n, t in types.items() if t == "string"} or "title" not in step.sends:
+                raise UnsupportedWorkflow(f"step {step.name!r} sends fields a Jira issue cannot hold")
+            notes = [_value(action, "description")] if "description" in step.sends else []
+            notes += [f"{JIRA_LABELS.get(n) or labels[n]}: {_value(action, n)}" for n in step.sends
+                      if n not in ("title", "description", "due_date") and _value(action, n)]
+            fields: dict[str, Any] = {
+                "project": {"key": destination["project_key"]},
+                "issuetype": {"name": "Task"},
+                "summary": summary,
+                "description": "\n\n".join(n for n in notes if n),
+                "labels": [f"norev-{self.new_id()}"],
+            }
+            if "due_date" in step.sends and _value(action, "due_date"):
+                fields["duedate"] = _value(action, "due_date")
+            payload = {"site": {k: destination[k] for k in ("cloud_id", "url", "name")},
+                       "project": {"key": destination["project_key"], "name": destination["project_name"]},
+                       "issue": {"fields": fields}}
+            steps.append({"step": step.name, "connector": JIRA, "payload": payload})
         return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
                 "action_type": action.action_type, "steps": steps}
