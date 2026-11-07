@@ -39,6 +39,22 @@
       <span class="badge" id="pending-count" aria-label="acțiuni de verificat">0</span>
     </button>
   </div>
+  <div class="privacy inset" id="trello" aria-labelledby="trello-title" hidden>
+    <strong id="trello-title">Trello</strong>
+    <span id="trello-status" role="status"></span>
+    <div id="trello-connect" class="stack" style="gap:.4rem" hidden>
+      <button type="button" class="btn link" id="trello-authorize">Obține tokenul din Trello</button>
+      <label for="trello-token"><span class="small">Lipește tokenul aici</span>
+        <input id="trello-token" class="field" type="password" autocomplete="off" spellcheck="false"></label>
+      <button type="button" class="btn" id="trello-save">Conectează</button>
+    </div>
+    <div id="trello-pick" class="stack" style="gap:.4rem" hidden>
+      <label for="trello-list"><span class="small">Lista pentru sarcini</span>
+        <select id="trello-list" class="field"></select></label>
+      <button type="button" class="btn" id="trello-choose">Alege lista</button>
+    </div>
+    <button type="button" class="btn" id="trello-disconnect" hidden>Deconectează</button>
+  </div>
   <div class="privacy inset" id="google" aria-labelledby="google-title" hidden>
     <strong id="google-title">Google Calendar</strong>
     <span id="google-status" role="status"></span>

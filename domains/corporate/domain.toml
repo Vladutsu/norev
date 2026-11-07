@@ -41,10 +41,12 @@ name = "build_document"
 label = "Pregătește documentul"
 
 # shortcut: the local_document payload is the proposal for #18/#23; change it here once agreed.
+# The User may send the work item to Trello instead, chosen per action at preview (#72).
 [[action_types.workflow]]
 name = "save_document"
-label = "Salvează documentul local"
+label = "Trimite sarcina"
 connector = "local_document"
+alternatives = ["trello"]
 sends = ["title", "description", "owner", "due_date", "deliverable", "transcript_excerpt"]
 
 [[action_types.workflow]]
