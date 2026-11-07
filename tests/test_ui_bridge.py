@@ -110,6 +110,8 @@ class ReviewTest(BridgeCase):
         self.assertTrue(visit["transcript_excerpt"])
         self.assertEqual([s["role"] for s in review["speakers"]], ["doctor", "patient"])
         self.assertTrue(review["suggestions"])
+        # every demo quote was said, so each one links to its place in the Transcript
+        self.assertTrue(all(item["source"] for item in review["actions"] + review["suggestions"]))
         self.assertFalse(any(name for name in dir(self.bridge) if "suggestion" in name and not name.startswith("_")))
 
     def test_review_shows_the_demo_transcript_with_speakers(self):
