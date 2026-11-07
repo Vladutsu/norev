@@ -14,13 +14,14 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from norev.adapters.domains.loader import load_domain
+from norev.adapters.domains.loader import load_completion, load_domain
 from norev.core.models import (
     ActionStatus, Domain, ProposedAction, Segment, Session, Suggestion, Transcript, ValidationError,
 )
 from norev.core.ports import Clock, SessionStore
 from norev.processor.payloads import email_preview
 from norev.usecases.approve import approve_action, domain_digest, edit_action, preview_action, reject_action
+from norev.usecases.others_prompt import render_completion
 from norev.usecases.transcript_correction import correct_transcript
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -55,8 +56,14 @@ class SystemClock:
         return datetime.now().astimezone()
 
 
-def prompt_digest(context: str, prompt: str) -> str:
-    return hashlib.sha256(f"{context}\0{prompt}".encode()).hexdigest()
+def prompt_digest(context: str, prompt: str, focus: str = "", completion: str = "") -> str:
+    """What the User confirmed: the three Others boxes (#83) and the instructions."""
+    return hashlib.sha256(f"{context}\0{prompt}\0{focus}\0{completion}".encode()).hexdigest()
+
+
+def _others_digest(others: dict[str, Any] | None) -> str:
+    others = others or {}
+    return prompt_digest(*(str(others.get(k, "")).strip() for k in ("context", "prompt", "focus", "completion")))
 
 
 class SendsPayloadBuilder:
@@ -116,7 +123,13 @@ class DemoBackend:
             raise ModeUnavailable(name)
         return load_domain(self.domains_dir / name)
 
-    def others_generate(self, context: str) -> dict[str, str]:
+    def others_completion_prompt(self, completion: str) -> dict[str, str]:
+        """The exact completion prompt for the third box (#83), shown before the User confirms; no model."""
+        text = completion.strip() if isinstance(completion, str) else ""
+        template = load_completion(self.domains_dir / "others")[0]
+        return {"prompt": render_completion(template, text) if text else ""}
+
+    def others_generate(self, context: str, focus: str = "") -> dict[str, str]:
         """A first prompt from the User's context, generated locally; the User edits and confirms it.
 
         # shortcut: a template until #21 generates it with the local model.
@@ -129,8 +142,10 @@ class DemoBackend:
         )
         return {"prompt": prompt}
 
-    def others_confirm(self, context: str, prompt: str) -> dict[str, str]:
-        digest = prompt_digest(_required_text(context, "context"), _required_text(prompt, "prompt"))
+    def others_confirm(self, context: str, prompt: str, focus: str = "", completion: str = "") -> dict[str, str]:
+        _required_text(context, "context")
+        _required_text(prompt, "prompt")
+        digest = _others_digest({"context": context, "prompt": prompt, "focus": focus, "completion": completion})
         self._confirmed.add(digest)
         return {"digest": digest}
 
@@ -211,9 +226,7 @@ class DemoBackend:
         if mode not in {m for m, _, _ in MODES}:
             raise ModeUnavailable(str(mode))
         if mode == "others":
-            others = others or {}
-            digest = prompt_digest(str(others.get("context", "")), str(others.get("prompt", "")))
-            if digest not in self._confirmed:
+            if _others_digest(others) not in self._confirmed:
                 raise PromptNotConfirmed("others")
         session = Session(id=f"s-{uuid.uuid4().hex[:10]}", started_at=self.clock.now(), domain=mode,
                           contact_id=str(contact or "") or None)
@@ -307,6 +320,7 @@ class DemoBackend:
             "started_at": session.started_at.isoformat(),
             "domain": {"name": domain.name, "label": domain.label},
             "summary": self._summary(session_id),
+            "completion": self._completion(session_id),
             "speakers": self._speakers(session_id, transcript),
             "untranslated": self._partial(session_id, transcript),
             "transcript": self._transcript_view(spoken, transcript if spoken_ref != session.transcript_ref else None),
@@ -332,6 +346,9 @@ class DemoBackend:
         return {"spoken": lines(spoken), "spoken_language": spoken.language,
                 "translated": lines(translated) if translated else [],
                 "translated_language": translated.language if translated else None}
+
+    def _completion(self, session_id: str) -> str:
+        return ""  # the demo has no model to make the Others result (#83)
 
     def _speakers(self, session_id: str, transcript: Transcript) -> list[dict[str, Any]]:
         roles = self._state(session_id)["roles"]

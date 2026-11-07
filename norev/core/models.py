@@ -283,15 +283,22 @@ class Suggestion:
 class OthersPrompt:
     """The Others Domain prompt the User confirmed (#21): their context, the instructions that fill
     {{user_instructions}}, and `prompt`, the exact full prompt they saw. Kept with the Session as it
-    was confirmed, never regenerated silently."""
+    was confirmed, never regenerated silently.
+
+    #83: `context` is the first box (the kind of conversation), `focus` what counts as an action and
+    `completion` the result the User asks for, with `completion_prompt` the exact prompt they saw for
+    it ("" when they asked for none). A Session saved before #83 reads with the three of them empty."""
 
     context: str
     instructions: str
     prompt: str
+    focus: str = ""
+    completion: str = ""
+    completion_prompt: str = ""
 
     def __repr__(self) -> str:
         return (f"OthersPrompt(context_len={len(self.context)}, instructions_len={len(self.instructions)}, "
-                f"prompt_len={len(self.prompt)})")
+                f"prompt_len={len(self.prompt)}, focus_len={len(self.focus)}, completion_len={len(self.completion)})")
 
 
 @dataclass

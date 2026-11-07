@@ -109,11 +109,19 @@
         <h2 id="others-title" style="margin:0">Promptul pentru Others</h2>
         <span class="chip" id="prompt-status">Neconfirmat</span>
       </div>
-      <label class="stack"><span class="label">Contextul tău: ce fel de conversație e și ce vrei să afli din ea</span>
-        <textarea id="others-context" class="field" rows="3"></textarea></label>
+      <label class="stack"><span class="label">Tipul conversației (obligatoriu)</span>
+        <textarea id="others-context" class="field" rows="2"></textarea></label>
+      <label class="stack"><span class="label">Ce contează ca acțiune (opțional)</span>
+        <textarea id="others-focus" class="field" rows="2"></textarea></label>
+      <label class="stack"><span class="label">Ce vrei să obții din conversație (opțional): un rezultat, de exemplu o listă sau un prompt</span>
+        <textarea id="others-completion" class="field" rows="2"></textarea></label>
       <div class="actions"><button type="button" class="btn" id="others-generate">Generează promptul</button></div>
       <label class="stack"><span class="label">Promptul (îl poți edita)</span>
         <textarea id="others-prompt" class="field mono" rows="6"></textarea></label>
+      <div class="stack" id="others-completion-box" hidden>
+        <span class="label">Promptul pentru rezultat (exact cum îl primește modelul local)</span>
+        <pre id="others-completion-prompt" class="field mono" style="white-space:pre-wrap;max-height:16rem;overflow:auto;margin:0"></pre>
+      </div>
       <div class="actions">
         <span class="hint">Analiza pornește doar cu promptul confirmat. Orice schimbare cere o nouă confirmare.</span>
         <button type="button" class="btn primary" id="others-confirm">Confirm promptul</button>
@@ -191,6 +199,16 @@
     <section class="card raised" aria-labelledby="summary-title">
       <span class="overline" id="summary-title">Rezumat</span>
       <p id="summary" style="margin:0;line-height:1.6"></p>
+    </section>
+    <section class="card raised" aria-labelledby="result-title" id="result" hidden>
+      <span class="overline" id="result-title">Rezultat</span>
+      <pre id="result-text" style="white-space:pre-wrap;margin:0;line-height:1.6;font:inherit"></pre>
+      <div class="actions">
+        <span class="hint">Nu se trimite nicăieri. Îl copiezi sau îl salvezi local, după ce vezi fișierul.</span>
+        <button type="button" class="btn" id="result-copy">Copiază</button>
+        <button type="button" class="btn" id="result-save">Salvează local</button>
+      </div>
+      <div id="result-preview" hidden></div>
     </section>
     <details class="card raised final-transcript" id="final-transcript">
       <summary>

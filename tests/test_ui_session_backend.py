@@ -457,6 +457,33 @@ class OthersTest(Case):
         self.ok(self.bridge.stop(session_id))
         self.assertEqual(self.store.get_session(session_id).others_prompt.instructions, instructions)
         self.assertEqual(self.ok(self.bridge.review(session_id))["actions"][0]["action_type"], "action_item")
+        self.assertEqual(self.ok(self.bridge.review(session_id))["completion"], "")
+
+    def test_the_result_is_shown_and_saved_only_as_the_user_saw_it(self):
+        result = "## Idei\n- Aplicație de rețete"
+        self.llm = SessionLlm([TRANSLATION, ROLES, ANSWERS["others"], {"output": result}], self.store)
+        self.bridge = Bridge(self.backend())
+        context, focus, request, instructions = "Brainstorming.", "Doar ce și-a asumat cineva.", "Extrage ideile.", "- ok"
+        shown = self.ok(self.bridge.others_completion_prompt(request))["prompt"]
+        self.assertIn("<<<REQUEST\nExtrage ideile.\nREQUEST>>>", shown)
+        self.ok(self.bridge.others_confirm(context, instructions, focus, request))
+        others = {"context": context, "prompt": instructions, "focus": focus, "completion": "Alt rezultat"}
+        self.assertEqual(self.error(self.bridge.start("others", "ro", "", others)), "prompt_not_confirmed")
+        others["completion"] = request
+        session_id = self.ok(self.bridge.start("others", "ro", "", others))["session_id"]
+        self.ok(self.bridge.stop(session_id))
+        self.assertEqual(self.store.get_session(session_id).others_prompt.completion_prompt, shown)
+        self.assertEqual(self.ok(self.bridge.review(session_id))["completion"], result)
+
+        payload = self.ok(self.bridge.completion_preview(session_id))["payload"]
+        self.assertEqual(payload["content"], result)
+        self.assertFalse(self.export_dir.exists())  # a preview writes nothing
+        changed = dict(payload, content="altceva")
+        self.assertEqual(self.error(self.bridge.completion_save(session_id, changed)), "not_executable")
+        self.assertFalse(self.export_dir.exists())
+        saved = self.ok(self.bridge.completion_save(session_id, payload))["saved"]
+        self.assertEqual(Path(saved["path"]).read_text(encoding="utf-8"), result)
+        self.assertEqual(Path(saved["path"]).parent, self.export_dir)
 
 
 if __name__ == "__main__":

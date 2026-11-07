@@ -63,3 +63,9 @@ def load_others(folder: Path) -> tuple[Domain, str, dict]:
     domain = load_domain(folder)
     prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
     return domain, _read_inside(folder, prompts["instructions"]), json.loads(_read_inside(folder, prompts["instructions_schema"]))
+
+
+def load_completion(folder: Path) -> tuple[str, dict]:
+    """The Others completion prompt and schema (#83): the result the User asks for, from the Transcript."""
+    prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
+    return _read_inside(folder, prompts["completion"]), json.loads(_read_inside(folder, prompts["completion_schema"]))

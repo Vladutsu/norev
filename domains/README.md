@@ -43,8 +43,10 @@ Top level:
 |---|---|
 | `domain_stage` | the prompt template |
 | `domain_stage_schema` | the JSON schema the answer is constrained to |
-| `instructions` | `others` only (#21): the prompt that writes the instructions from the User's context; `{{context}}` is its only placeholder |
+| `instructions` | `others` only (#21): the prompt that writes the instructions from the User's first two boxes; `{{conversation}}` and `{{focus}}` are its only placeholders |
 | `instructions_schema` | `others` only: the JSON schema of that answer, `{"instructions": "<text>"}` |
+| `completion` | `others` only (#83): the prompt that makes the result the User asked for in the third box; `{{transcript}}`, `{{session_date}}` and `{{user_completion}}`, once each |
+| `completion_schema` | `others` only: the JSON schema of that answer, `{"output": "<text>"}` |
 
 `[[roles]]`: one table per Role a Speaker can have, at least one.
 
@@ -161,9 +163,12 @@ The answer is untrusted: the core validates it again against `domain.toml` befor
 `others` keeps its Action Type, fields, Workflow and schema fixed; only `{{user_instructions}}`
 comes from the User (`norev/usecases/others_prompt.py`):
 
-1. The User describes the conversation: the context, at most **2000 characters** (`MAX_CONTEXT`);
-   an empty or longer one is refused before any model call.
-2. The local model writes instructions from `prompts/instructions.md`, given only the context
+1. The User fills three boxes (#83): the kind of conversation (required), what counts as an action
+   and what they want to obtain from the conversation (both optional); together at most
+   **2000 characters** (`MAX_CONTEXT`). An empty first box or a longer text is refused before any
+   model call. Each box is data: every template is filled in one pass, so a `{{...}}` typed in a box
+   stays as typed.
+2. The local model writes instructions from `prompts/instructions.md`, given only the first two boxes
    (no audio, Contact or other Session). The answer must be non-empty, at most **4000 characters**
    (`MAX_INSTRUCTIONS`) and contain no `{{` or `}}`; otherwise nothing changes and the User retries.
 3. The User sees the full prompt, edits the instructions (same rules) and confirms. The Session
@@ -171,3 +176,11 @@ comes from the User (`norev/usecases/others_prompt.py`):
    later, the Session's prompt is refused until the User confirms again; it is never regenerated
    silently. A new prompt for an analysed Session needs an explicit regeneration, which keeps decided
    Proposed Actions.
+4. The third box never goes through the instructions model: it fills `{{user_completion}}` in
+   `prompts/completion.md`, and the User sees that exact prompt before confirming (same rule if the
+   template changes). With it, one more local model call after the Domain stage
+   (`norev/usecases/others_completion.py`) makes the result, at most **8000 characters**
+   (`MAX_OUTPUT`). An invalid answer leaves the result empty with a Suggestion; the Proposed Actions
+   are not affected. The result is kept encrypted with the Session, replaced by each analysis and
+   deleted with it. In review the User copies it or saves it locally through `local_document`, after
+   seeing the exact file (ADR 0002); nothing is sent on its own.

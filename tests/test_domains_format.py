@@ -117,10 +117,17 @@ def check_domain(folder: Path) -> None:
     if folder.name == "others":  # #21: the User's confirmed instructions go in one fixed slot
         assert "user_instructions" in used, "the others prompt must have {{user_instructions}}"
         used -= {"user_instructions"}
-        for key in ("instructions", "instructions_schema"):
+        for key in ("instructions", "instructions_schema", "completion", "completion_schema"):
             assert (folder / prompts.get(key, "")).is_file() and prompts.get(key), f"prompts.{key} file missing"
         generation = (folder / prompts["instructions"]).read_text(encoding="utf-8")
-        assert re.findall(r"\{\{(.*?)\}\}", generation) == ["context"], "instructions prompt must use {{context}} once, nothing else"
+        assert re.findall(r"\{\{(.*?)\}\}", generation) == ["conversation", "focus"], \
+            "instructions prompt must use {{conversation}} and {{focus}} once each, nothing else"
+        # #83: the result the User asks for, with only the Transcript, the date and their third box
+        completion = re.findall(r"\{\{(.*?)\}\}", (folder / prompts["completion"]).read_text(encoding="utf-8"))
+        assert sorted(completion) == ["session_date", "transcript", "user_completion"], \
+            "completion prompt must use {{transcript}}, {{session_date}} and {{user_completion}} once each"
+        completion_schema = json.loads((folder / prompts["completion_schema"]).read_text(encoding="utf-8"))
+        assert completion_schema.get("required") == ["output"], "completion schema must require output"
     assert used <= PLACEHOLDERS, f"unknown placeholders {sorted(used - PLACEHOLDERS)}"
     assert REQUIRED_PLACEHOLDERS <= used, f"prompt must use {sorted(REQUIRED_PLACEHOLDERS - used)}"
 

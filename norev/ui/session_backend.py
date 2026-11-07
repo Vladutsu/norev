@@ -22,7 +22,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any
 
-from norev.adapters.domains.loader import load_others
+from norev.adapters.domains.loader import load_completion, load_others
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.recorder.recorder import Recorder
@@ -31,7 +31,7 @@ from norev.core.ports import Clock, PayloadBuilder, SessionStore
 from norev.processor.payloads import LocalDocumentPayloadBuilder
 from norev.processor.workflow import ExecutionRefused, WorkflowExecutor
 from norev.ui._live import LiveFeedback, monitor
-from norev.ui.backend import MODES, ROOT, DemoBackend, ModeUnavailable, PromptNotConfirmed, prompt_digest
+from norev.ui.backend import MODES, ROOT, DemoBackend, ModeUnavailable, PromptNotConfirmed, _others_digest
 from norev.usecases import others_prompt
 from norev.usecases.session_flow import run_session
 from norev.usecases.speaker_roles import set_speaker_role
@@ -116,17 +116,20 @@ class SessionBackend(DemoBackend):
             raise ModeUnavailable(name)
         return super().domain(name) if name != "others" else load_others(self.domains_dir / "others")[0]
 
-    def others_generate(self, context: str) -> dict[str, str]:
-        """Instructions for the context, from the local model; the User edits and confirms them."""
+    def others_generate(self, context: str, focus: str = "") -> dict[str, str]:
+        """Instructions for the first two boxes, from the local model; the User edits and confirms them."""
         domain, template, schema = load_others(self.domains_dir / "others")
-        others_prompt.check_context(context)  # before llama-server starts
+        others_prompt.check_boxes(context, focus)  # before llama-server starts
         with self.llm_session() as model:
             self.processor.free_gpu()
-            return {"prompt": others_prompt.generate_instructions(self.processor, template, schema, context, model=model)}
+            return {"prompt": others_prompt.generate_instructions(self.processor, template, schema, context,
+                                                                 focus=focus, model=model)}
 
-    def others_confirm(self, context: str, prompt: str) -> dict[str, str]:
-        confirmed = others_prompt.confirm(self.domain("others"), context, prompt)
-        digest = prompt_digest(confirmed.context, confirmed.instructions)
+    def others_confirm(self, context: str, prompt: str, focus: str = "", completion: str = "") -> dict[str, str]:
+        confirmed = others_prompt.confirm(self.domain("others"), context, prompt, focus=focus, completion=completion,
+                                          completion_template=load_completion(self.domains_dir / "others")[0])
+        digest = _others_digest({"context": confirmed.context, "prompt": confirmed.instructions,
+                                 "focus": confirmed.focus, "completion": confirmed.completion})
         self._others[digest] = confirmed
         return {"digest": digest}
 
@@ -138,8 +141,7 @@ class SessionBackend(DemoBackend):
         self.domain(mode)
         prompt = None
         if mode == "others":
-            others = others or {}
-            prompt = self._others.get(prompt_digest(str(others.get("context", "")).strip(), str(others.get("prompt", "")).strip()))
+            prompt = self._others.get(_others_digest(others))
             if prompt is None:
                 raise PromptNotConfirmed("others")
         return Session(id=f"s-{uuid.uuid4().hex[:10]}", started_at=self.clock.now(), domain=mode,
@@ -260,7 +262,8 @@ class SessionBackend(DemoBackend):
                         session_id, store=self.store, domain=self.domain(session.domain),
                         translator=TurnTranslator(self.processor, model=model, workers=self.workers),
                         extractor=self.make_extractor(self.processor, workers=self.workers), llm=self.processor,
-                        regenerate=regenerate)
+                        regenerate=regenerate,
+                        completion=load_completion(self.domains_dir / "others") if session.domain == "others" else None)
                 self._progress[session_id]["untranslated"] = len(result.untranslated)
             self._set_stage(session_id, "ready")
         except Exception as e:  # the stage and the error class only: messages can quote Session content
@@ -300,6 +303,34 @@ class SessionBackend(DemoBackend):
 
     def _summary(self, session_id: str) -> str:
         return self.store.load_summary(session_id)
+
+    def _completion(self, session_id: str) -> str:
+        return self.store.load_completion(session_id)
+
+    def _completion_payload(self, session_id: str) -> dict[str, str]:
+        if self.store.get_session(session_id) is None:
+            raise LookupError("Session does not exist")
+        content = self.store.load_completion(session_id)
+        if not content:
+            raise ExecutionRefused("the Session has no Others result")
+        return LocalDocumentPayloadBuilder(self.export_dir).document(content)
+
+    def completion_preview(self, session_id: str) -> dict[str, Any]:
+        """The exact file "Salvează local" would write (#83), for the User to approve (ADR 0002)."""
+        return {"payload": self._completion_payload(session_id)}
+
+    def completion_save(self, session_id: str, approved: dict[str, Any]) -> dict[str, Any]:
+        """Writes the Others result through local_document, only if it is the payload the User saw.
+
+        # shortcut: a one-off approved ProposedAction carries the approval, so the send gets the Central
+        # Processor's checks and audit like any action; give the result its own record if it needs a status.
+        """
+        payload = self._completion_payload(session_id)
+        if approved != payload:
+            raise ExecutionRefused("the Others result changed since the User saw it")
+        action = ProposedAction(f"{session_id}-result", "Rezultat Others", "", "", approved_by=self.approved_by)
+        action.approve({"steps": [{"step": "save_result", "connector": "local_document", "payload": payload}]})
+        return {"saved": self.processor.send(action, "local_document", payload, step="save_result")}
 
     def _refuse_if_busy(self, session_id: str) -> None:
         """Nothing else may start while the Session records or is analysed; the caller holds the lock."""

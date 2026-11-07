@@ -16,6 +16,9 @@ domain_stage_schema = "prompts/domain_stage.schema.json"
 # Others only: the prompt and schema the local model uses to write the context-specific instructions
 instructions = "prompts/instructions.md"
 instructions_schema = "prompts/instructions.schema.json"
+# Others only (#83): the result the User asks for in the third box, made from the Transcript
+completion = "prompts/completion.md"
+completion_schema = "prompts/completion.schema.json"
 
 [[roles]]
 name = "organizer"
