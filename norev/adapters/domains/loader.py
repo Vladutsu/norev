@@ -42,7 +42,8 @@ def load_domain(folder: Path) -> Domain:
                 ),
                 workflow=Workflow(
                     tuple(
-                        WorkflowStep(s["name"], s.get("connector"), tuple(s.get("sends", ())), s.get("label", ""))
+                        WorkflowStep(s["name"], s.get("connector"), tuple(s.get("sends", ())), s.get("label", ""),
+                                     tuple(s.get("alternatives", ())))
                         for s in a["workflow"]
                     )
                 ),

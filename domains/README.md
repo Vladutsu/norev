@@ -81,6 +81,7 @@ step. It runs only after the User approves the Proposed Action.
 | `label` | string | shown to the User |
 | `connector` | string | optional; the one Connector this step uses |
 | `sends` | list of strings | required with `connector`, not allowed without: the payload fields this step sends |
+| `alternatives` | list of strings | optional, only with `connector`: other Connectors the User may pick for this step at preview instead of `connector` (#72); the approved plan records the one chosen |
 
 `sends` may name the Action Type's fields and the generic fields of a Proposed Action: `title`,
 `description`, `owner`, `due_date`, `transcript_excerpt`. Steps with a Connector send through the
@@ -92,6 +93,7 @@ Known Connectors (core code, not part of a Domain):
 |---|---|
 | `google_calendar` | creates events in the User's Google Calendar |
 | `email_draft` | saves an email draft (.eml) on this machine; the User sends it from their mail app |
+| `trello` | creates a card in a Trello list the User chose |
 | `local_document` | saves a document on this machine |
 
 A new Connector is added in the core first, then to this table and to `KNOWN_CONNECTORS` in the test.

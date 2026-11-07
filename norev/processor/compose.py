@@ -17,6 +17,7 @@ from norev.adapters.connectors.google_calendar import (
     SecretStore,
 )
 from norev.adapters.connectors.local_document import LocalDocumentConnector
+from norev.adapters.connectors.trello import TrelloAccount, TrelloConnector, TrelloSettings
 from norev.core.ports import Clock, Connector, Diarizer, PayloadBuilder, Transcriber
 from norev.processor.central import CentralProcessor, ExecutionAuditLog
 from norev.processor.google_account import GoogleAccount
@@ -26,7 +27,9 @@ from norev.processor.payloads import (
     EmailDraftPayloadBuilder,
     GoogleCalendarPayloadBuilder,
     LocalDocumentPayloadBuilder,
+    TrelloPayloadBuilder,
 )
+from norev.processor.trello_account import TrelloLink
 
 
 class SystemClock:
@@ -66,23 +69,26 @@ LOCAL_STEPS = {"build_document": lambda action: None, "build_event": lambda acti
 
 def build_desktop_processor(
     store: ExecutionAuditLog, export_dir: Path, *, transcriber: Transcriber | None = None, diarizer: Diarizer | None = None,
-    calendar: GoogleCalendarConnector | None = None,
+    calendar: GoogleCalendarConnector | None = None, trello: TrelloConnector | None = None,
 ) -> CentralProcessor:
     """The desktop app's processor (#43): the local Connectors (document, email draft #61) write into
-    `export_dir`; `calendar` is the Google Calendar Connector when it is set up (build_google_calendar, #45)."""
+    `export_dir`; `calendar` and `trello` are the Google Calendar (#45) and Trello (#72) Connectors
+    when they are set up (build_google_calendar, build_trello)."""
     connectors = [LocalDocumentConnector(export_dir), EmailDraftConnector(export_dir)]
-    connectors += [calendar] if calendar is not None else []
+    connectors += [c for c in (calendar, trello) if c is not None]
     return build_central_processor(store, connectors=connectors, transcriber=transcriber, diarizer=diarizer)
 
 
-def desktop_payload_builder(export_dir: Path, *, calendar: bool) -> PayloadBuilder:
-    """The previews of the desktop app (#18): the builder of each Workflow's Connector. Without Google
-    Calendar set up, a calendar Action Type cannot be previewed (UnsupportedWorkflow), so nothing is
-    approved that could not be sent."""
+def desktop_payload_builder(export_dir: Path, *, calendar: bool, trello: TrelloLink | None = None) -> PayloadBuilder:
+    """The previews of the desktop app (#18): the builder of each Workflow's Connector, or of the
+    destination the User chose (#72). Without Google Calendar or Trello set up, nothing can be
+    previewed for them (UnsupportedWorkflow), so nothing is approved that could not be sent."""
     builders: dict[str, PayloadBuilder] = {"local_document": LocalDocumentPayloadBuilder(export_dir),
                                            "email_draft": EmailDraftPayloadBuilder(export_dir)}
     if calendar:
         builders["google_calendar"] = GoogleCalendarPayloadBuilder.from_environment()
+    if trello is not None and trello.status()["available"]:
+        builders["trello"] = TrelloPayloadBuilder.from_environment(trello.chosen_list)
     return ConnectorPayloadBuilder(builders)
 
 
@@ -98,3 +104,14 @@ def build_google_calendar(
         return GoogleAccount(None), None
     auth = GoogleAuth(settings, store)
     return GoogleAccount(auth), GoogleCalendarConnector(auth)
+
+
+def build_trello(store: object, settings: TrelloSettings | None = None) -> tuple[TrelloLink, TrelloConnector | None]:
+    """The User's Trello account (token, list, for the UI) and the Trello Connector (#72), which the app
+    gives to build_desktop_processor. Without NOREV_TRELLO_API_KEY, or without a store that keeps
+    secrets encrypted, there is no Connector and the account is unavailable. Connects to nothing."""
+    settings = settings or TrelloSettings.from_environment()
+    if not settings.api_key or not isinstance(store, SecretStore):
+        return TrelloLink(None), None
+    account = TrelloAccount(settings, store)
+    return TrelloLink(account), TrelloConnector(account)
