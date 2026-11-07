@@ -49,6 +49,7 @@ def load_domain(folder: Path) -> Domain:
                 ),
                 label=a.get("label", ""),
                 description=a.get("description", ""),
+                may_add=a.get("may_add", False) is True,
             )
             for a in data["action_types"]
         ),

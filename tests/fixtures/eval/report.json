@@ -68,7 +68,30 @@
      "numbers": 13,
      "numbers_changed": 0
     },
+    "asr": {
+     "sessions": [
+      "corporate_4_asr"
+     ],
+     "expected": 5,
+     "produced": 5,
+     "found": 5,
+     "omission_rate": 0.0,
+     "invented_rate": 0.0,
+     "owner_wrong_rate": 0.0,
+     "owner_missing": 0,
+     "date_wrong_rate": 0.0,
+     "date_missing": 0,
+     "cancelled_listed": 0,
+     "numbers": 6,
+     "numbers_changed": 0
+    },
     "domain_stage": {
+     "checked": 5,
+     "right": 5,
+     "wrong": {},
+     "cancelled_as_event": 0
+    },
+    "domain_stage_asr": {
      "checked": 5,
      "right": 5,
      "wrong": {},
@@ -629,6 +652,98 @@
       }
      ]
     },
+    "corporate_4_asr": {
+     "expected": 5,
+     "produced": 5,
+     "omitted": [],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [],
+     "owner_missing": [],
+     "date_wrong": [],
+     "date_missing": [],
+     "found": 5,
+     "matched": 5,
+     "numbers": 6,
+     "numbers_changed": [],
+     "details": {
+      "demo": {
+       "index": 3,
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Client demo",
+        "owner": "participant",
+        "due_date": null
+       }
+      },
+      "supplier-call": {
+       "index": 0,
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Call server provider",
+        "owner": "Victor",
+        "due_date": "2026-11-07"
+       }
+      },
+      "retrospective": {
+       "index": 4,
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Retrospective meeting",
+        "owner": "organizer",
+        "due_date": null
+       }
+      },
+      "training": {
+       "index": 2,
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule internal training",
+        "owner": null,
+        "due_date": "2026-11-12"
+       }
+      },
+      "demo-slides": {
+       "index": 1,
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Prepare demo presentation",
+        "owner": null,
+        "due_date": "2026-11-09"
+       }
+      }
+     },
+     "domain": {
+      "checked": 5,
+      "wrong": {},
+      "cancelled_as_event": []
+     },
+     "known_cases": [
+      {
+       "id": "calendar-missing-time-asr",
+       "what": "A calendar event with no time said keeps start_time and end_time empty",
+       "follow_up": "#66",
+       "solved": true
+      },
+      {
+       "id": "calendar-relative-date-asr",
+       "what": "'Tomorrow at three' becomes 2026-11-07 15:00-15:30",
+       "follow_up": "#66",
+       "solved": true
+      },
+      {
+       "id": "calendar-rescheduled-asr",
+       "what": "The rescheduled retrospective is an event at the new moment",
+       "follow_up": "#66",
+       "solved": true
+      }
+     ]
+    },
     "others_1": {
      "expected": 4,
      "produced": 4,
@@ -801,6 +916,23 @@
      "date_missing": 0,
      "cancelled_listed": 0,
      "numbers": 13,
+     "numbers_changed": 0
+    },
+    "asr": {
+     "sessions": [
+      "corporate_4_asr"
+     ],
+     "expected": 5,
+     "produced": 3,
+     "found": 3,
+     "omission_rate": 0.4,
+     "invented_rate": 0.0,
+     "owner_wrong_rate": 0.0,
+     "owner_missing": 0,
+     "date_wrong_rate": 0.0,
+     "date_missing": 0,
+     "cancelled_listed": 0,
+     "numbers": 6,
      "numbers_changed": 0
     }
    },
@@ -1365,6 +1497,76 @@
        "id": "calendar-rescheduled",
        "what": "The rescheduled retrospective is an event at the new moment",
        "follow_up": null,
+       "solved": null
+      }
+     ]
+    },
+    "corporate_4_asr": {
+     "expected": 5,
+     "produced": 3,
+     "omitted": [
+      "demo-slides",
+      "retrospective"
+     ],
+     "invented": [],
+     "cancelled_listed": [],
+     "owner_wrong": [],
+     "owner_missing": [],
+     "date_wrong": [],
+     "date_missing": [],
+     "found": 3,
+     "matched": 3,
+     "numbers": 6,
+     "numbers_changed": [],
+     "details": {
+      "demo": {
+       "index": 1,
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Prepare demo presentation",
+        "owner": "S2",
+        "due_date": "2026-11-09"
+       }
+      },
+      "supplier-call": {
+       "index": 0,
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Call server provider",
+        "owner": "Victor",
+        "due_date": "2026-11-07"
+       }
+      },
+      "training": {
+       "index": 2,
+       "owner": true,
+       "due": true,
+       "got": {
+        "title": "Schedule internal training",
+        "owner": null,
+        "due_date": null
+       }
+      }
+     },
+     "known_cases": [
+      {
+       "id": "calendar-missing-time-asr",
+       "what": "A calendar event with no time said keeps start_time and end_time empty",
+       "follow_up": "#66",
+       "solved": null
+      },
+      {
+       "id": "calendar-relative-date-asr",
+       "what": "'Tomorrow at three' becomes 2026-11-07 15:00-15:30",
+       "follow_up": "#66",
+       "solved": null
+      },
+      {
+       "id": "calendar-rescheduled-asr",
+       "what": "The rescheduled retrospective is an event at the new moment",
+       "follow_up": "#66",
        "solved": null
       }
      ]

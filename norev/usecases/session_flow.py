@@ -113,7 +113,7 @@ def run_session(
     generic = to_proposed_actions(raw, id_prefix=prefix)
     # Domain's model: it is loaded next for the Domain stage anyway
     speakers = propose_speaker_roles(session_id, store, domain, llm, model=domain.model)
-    actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date, speakers)
+    actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date, speakers, id_prefix=prefix)
     if regenerate:
         store.regenerate_actions(session_id, decided + actions, domain=domain.name,
                                  expected_revision=snapshot.revision, suggestions=suggestions,

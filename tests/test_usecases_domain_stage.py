@@ -1,6 +1,7 @@
 import dataclasses
 import json
 import unittest
+from unittest.mock import patch
 from datetime import date, datetime
 
 from norev.core.models import (
@@ -19,7 +20,7 @@ from norev.core.models import (
     WorkflowStep,
 )
 from norev.testing.fakes import FakeLlmClient, InMemorySessionStore
-from norev.usecases.domain_stage import apply_answer, build_prompt, run_domain_stage
+from norev.usecases.domain_stage import MAX_ADDED, apply_answer, build_prompt, run_domain_stage
 
 TEMPLATE = (
     "Date: {{session_date}}\nRoles:\n{{roles}}\nTypes:\n{{action_types}}\n"
@@ -310,6 +311,71 @@ class ApplyAnswerTest(unittest.TestCase):
         for answer in ({}, {"suggestions": None}, {"suggestions": {"text": "x"}}, {"suggestions": "x"}):
             with self.subTest(answer=answer):
                 self.assertEqual(self.apply(answer)[1], [])
+
+
+ADDING = dataclasses.replace(DOMAIN, action_types=(
+    dataclasses.replace(DOMAIN.action_types[0], may_add=True), DOMAIN.action_types[1]))
+
+
+def added(**overrides):
+    item = {"action_type": "schedule_visit", "title": "Lab visit", "description": "Come back on Monday",
+            "transcript_excerpt": "come back on  Monday at 9", "fields": {"reason": "lab", "visit_date": "2026-11-09"}}
+    item.update(overrides)
+    return item
+
+
+class AddedActionTest(unittest.TestCase):
+    """#66: the Domain stage adds a Proposed Action the generic stage missed, only when it is allowed."""
+
+    def apply(self, *items, domain=ADDING, transcript=TRANSCRIPT, typed=None):
+        answer = {"proposed_actions": typed if typed is not None else [], "added_actions": list(items)}
+        return apply_answer(domain, generic_actions(), answer, transcript, "s1")[0]
+
+    def test_an_action_of_a_may_add_type_with_its_excerpt_in_the_transcript_is_added(self):
+        actions = self.apply(added(owner="patient"))
+        self.assertEqual([a.id for a in actions], ["s1-3"])  # the next id after the 2 generic ones
+        new = actions[0]
+        self.assertEqual((new.title, new.description, new.transcript_excerpt, new.owner, new.action_type, new.status),
+                         ("Lab visit", "Come back on Monday", "come back on  Monday at 9", "patient",
+                          "schedule_visit", ActionStatus.PROPOSED))
+        self.assertEqual(new.fields, {"reason": "lab", "visit_date": "2026-11-09", "visit_time": None})
+
+    def test_nothing_is_added_without_may_add_an_excerpt_in_the_transcript_or_a_title(self):
+        cases = {
+            "type without may_add": dict(domain=DOMAIN),
+            "excerpt not said": dict(item=added(transcript_excerpt="come back on Tuesday")),
+            "no excerpt": dict(item=added(transcript_excerpt=" ")),
+            "no title": dict(item=added(title="")),
+            "no transcript": dict(transcript=None),
+            "other type": dict(item=added(action_type="medication_reminder", fields={"medication": "x"})),
+            "not a dict": dict(item="Lab visit"),
+        }
+        for name, case in cases.items():
+            with self.subTest(name):
+                item = case.pop("item", added())
+                self.assertEqual(self.apply(item, **case), [])
+
+    def test_an_action_already_kept_is_not_added_again(self):
+        kept = visit()  # s1-1, excerpt "Come back on Monday at 9."
+        self.assertEqual([a.id for a in self.apply(added(), typed=[kept])], ["s1-1"])  # same excerpt
+        same_fields = added(transcript_excerpt="Pot să vin luni?", fields=kept["fields"])
+        self.assertEqual([a.id for a in self.apply(same_fields, typed=[kept])], ["s1-1"])
+        self.assertEqual([a.id for a in self.apply(added(), added())], ["s1-3"])
+
+    def test_at_most_max_added(self):
+        self.assertEqual(MAX_ADDED, 10)
+        first, second = added(), added(title="Question", transcript_excerpt="Pot să vin luni?", fields={"reason": "q"})
+        with patch("norev.usecases.domain_stage.MAX_ADDED", 1):
+            self.assertEqual([a.title for a in self.apply(first, second)], ["Lab visit"])
+        self.assertEqual([a.id for a in self.apply(first, second)], ["s1-3", "s1-4"])
+
+    def test_run_domain_stage_saves_it_with_the_session_prefix(self):
+        store = InMemorySessionStore()
+        store.save_session(Session(id="s1", started_at=datetime(2026, 11, 6, 9, 30), domain="test"))
+        store.save_actions("s1", generic_actions(), expected_revision=store.load_actions_snapshot("s1").revision)
+        answer = {"proposed_actions": [visit(id="s1-2")], "added_actions": [added()], "suggestions": []}
+        run_domain_stage("s1", store, ADDING, FakeLlmClient([json.dumps(answer)]), TRANSCRIPT)
+        self.assertEqual([a.id for a in store.load_actions("s1")], ["s1-2", "s1-3"])
 
 
 class RunDomainStageTest(unittest.TestCase):

@@ -162,6 +162,8 @@ class ActionType:
     workflow: Workflow
     label: str = ""
     description: str = ""
+    # The Domain stage may add a Proposed Action of this type that the generic stage missed (ADR 0005, #66)
+    may_add: bool = False
 
 
 @dataclass(frozen=True)

@@ -75,7 +75,7 @@ class WhisperSettings:
             "int8" if model_device == "cpu" else "float16",
         )
         cpu_fallback_compute_type = os.getenv("WHISPER_CPU_COMPUTE_TYPE", "int8")
-        beam_size = int(os.getenv("WHISPER_BEAM_SIZE", "1"))
+        beam_size = int(os.getenv("WHISPER_BEAM_SIZE", "5"))  # 1 lost words a Domain needs ("retrospectiva", #66)
         vad_filter = _env_bool("WHISPER_VAD_FILTER", True)
         batch_size_default = "1" if model_device == "cpu" else "8"
         batch_size = int(os.getenv("WHISPER_BATCH_SIZE", batch_size_default))
