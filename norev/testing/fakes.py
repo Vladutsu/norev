@@ -72,6 +72,7 @@ class InMemorySessionStore:
         self._speakers: dict[str, list[Speaker]] = {}
         self._steps: dict[str, dict[str, StepRecord]] = {}
         self._summaries: dict[str, str] = {}
+        self._completions: dict[str, str] = {}
 
     def save_session(self, session: Session) -> None:
         with self._lock:
@@ -206,6 +207,16 @@ class InMemorySessionStore:
         with self._lock:
             return self._summaries.get(session_id, "")
 
+    def save_completion(self, session_id: str, completion: str) -> None:
+        with self._lock:
+            if session_id not in self._sessions:
+                raise LookupError("Session does not exist")
+            self._completions[session_id] = str(completion)
+
+    def load_completion(self, session_id: str) -> str:
+        with self._lock:
+            return self._completions.get(session_id, "")
+
     def delete_session(self, session_id: str) -> None:
         with self._lock:
             session = self._sessions.get(session_id)
@@ -219,7 +230,8 @@ class InMemorySessionStore:
             self._audio.pop(session.audio_ref, None)
             for a in actions:
                 self._steps.pop(a.id, None)
-            for table in (self._sessions, self._revisions, self._actions, self._suggestions, self._speakers, self._summaries):
+            for table in (self._sessions, self._revisions, self._actions, self._suggestions, self._speakers, self._summaries,
+                          self._completions):
                 table.pop(session_id, None)
 
     # ExecutionStore

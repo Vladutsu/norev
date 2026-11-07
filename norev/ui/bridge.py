@@ -23,8 +23,10 @@ class Bridge:
 
     def modes(self): return self._call(self._backend.modes)
     def sessions(self): return self._call(self._backend.sessions)
-    def others_generate(self, context): return self._call(self._backend.others_generate, context)
-    def others_confirm(self, context, prompt): return self._call(self._backend.others_confirm, context, prompt)
+    def others_completion_prompt(self, completion): return self._call(self._backend.others_completion_prompt, completion)
+    def others_generate(self, context, focus=""): return self._call(self._backend.others_generate, context, focus)
+    def others_confirm(self, context, prompt, focus="", completion=""):
+        return self._call(self._backend.others_confirm, context, prompt, focus, completion)
     def start(self, mode, language, contact, others=None): return self._call(self._backend.start, mode, language, contact, others)
     def import_example(self, mode, language, contact, others=None): return self._call(self._backend.import_example, mode, language, contact, others)
     def import_file(self, mode, language, contact, others=None): return self._call(self._backend.import_file, mode, language, contact, others)
@@ -44,6 +46,8 @@ class Bridge:
     def retry(self, session_id, action_id): return self._call(self._executing("retry"), session_id, action_id)
     def reconcile(self, session_id, action_id, step, happened): return self._call(self._executing("reconcile"), session_id, action_id, step, happened)
     def open_draft(self, session_id, action_id): return self._call(self._executing("open_draft"), session_id, action_id)
+    def completion_preview(self, session_id): return self._call(self._executing("completion_preview"), session_id)
+    def completion_save(self, session_id, payload): return self._call(self._executing("completion_save"), session_id, payload)
     def google_status(self): return self._call(self._backend.google_status)
     def trello_status(self): return self._call(self._backend.trello_status)
     def trello_authorize(self): return self._call(self._backend.trello_authorize)

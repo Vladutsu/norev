@@ -13,6 +13,7 @@ from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction
 from norev.core.ports import ActionExtractor, LlmClient, SessionStore, Translator
 from norev.usecases.domain_stage import ask_domain
 from norev.usecases.extract import to_proposed_actions
+from norev.usecases.others_completion import FAILED, check_template, complete
 from norev.usecases.others_prompt import others_domain
 from norev.usecases.speaker_roles import propose_speaker_roles
 
@@ -55,6 +56,7 @@ def run_session(
     translate: bool = True,
     regenerate: bool = False,
     others_prompt: OthersPrompt | None = None,
+    completion: tuple[str, dict] | None = None,
 ) -> SessionResult:
     """Analyse a Session transcribed by usecases.transcribe.transcribe_session and save the result for review.
 
@@ -70,6 +72,9 @@ def run_session(
     confirmed `others_prompt` replaces it only with `regenerate`, in the same write as the actions.
     Speaker Roles are proposed before the Domain stage (a Role the User confirmed is kept); an invalid
     answer leaves them unknown and the analysis goes on.
+    `completion` (#83) is the Others completion template and schema: with a requested result, one more
+    model call after the Domain stage; an invalid answer leaves the result empty with a Suggestion.
+    The result is saved with every analysis ("" without a request), so an old one never stays.
     A failing stage raises and leaves what was saved before it; nothing is ever executed here.
     """
     session = _session(session_id, store)
@@ -85,6 +90,10 @@ def run_session(
         if prompt is None:
             raise ValueError(f"Session {session_id!r}: Domain 'others' needs a prompt confirmed by the User")
         domain = others_domain(domain, prompt)
+        if prompt.completion:  # before any model call, as the Domain prompt
+            if completion is None:
+                raise ValueError(f"Session {session_id!r}: the Others result needs the completion template")
+            check_template(completion[0], prompt)
 
     transcript = store.load_transcript(session.transcript_ref)
     if not session.source_transcript_ref:  # first analysis: transcript_ref is still the spoken Transcript
@@ -114,6 +123,11 @@ def run_session(
     # Domain's model: it is loaded next for the Domain stage anyway
     speakers = propose_speaker_roles(session_id, store, domain, llm, model=domain.model)
     actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date, speakers, id_prefix=prefix)
+    result = ""
+    if domain.name == "others" and prompt.completion:
+        result = complete(llm, *completion, prompt, transcript, session_date, model=domain.model)
+        if result is None:
+            result, suggestions = "", [*suggestions, FAILED]
     if regenerate:
         store.regenerate_actions(session_id, decided + actions, domain=domain.name,
                                  expected_revision=snapshot.revision, suggestions=suggestions,
@@ -122,6 +136,7 @@ def run_session(
         store.save_actions(session_id, actions, expected_revision=snapshot.revision, suggestions=suggestions)
     summary = raw.get("session_summary") if isinstance(raw, dict) else None
     store.save_summary(session_id, summary.strip() if isinstance(summary, str) else "")  # the last analysis's (#59)
+    store.save_completion(session_id, result)
     return SessionResult(actions, suggestions, tuple(s for s in transcript.segments if s.untranslated))
 
 

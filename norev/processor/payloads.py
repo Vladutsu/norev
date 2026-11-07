@@ -43,6 +43,10 @@ class LocalDocumentPayloadBuilder:
     def __init__(self, export_dir: Path) -> None:
         self.export_dir = export_dir_of(export_dir)
 
+    def document(self, content: str) -> dict[str, str]:
+        """The `local_document` payload for `content`: the app chooses the path, never the caller."""
+        return {"destination": str(destination(self.export_dir, content)), "content": content}
+
     def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
         action_type = domain.action_type(action.action_type)
         if action_type is None:
@@ -64,7 +68,7 @@ class LocalDocumentPayloadBuilder:
                 content = render({name: _value(action, name) for name in step.sends})
             elif not isinstance(content, str) or not content.strip() or len(content) > MAX_CONTENT:
                 raise ValidationError("invalid_content", step.name)
-            payload = {"destination": str(destination(self.export_dir, content)), "content": content}
+            payload = self.document(content)
             steps.append({"step": step.name, "connector": NAME, "payload": payload})
         return {"version": 1, "domain": domain.name, "domain_digest": domain_digest(domain),
                 "action_type": action.action_type, "steps": steps}

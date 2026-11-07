@@ -304,6 +304,16 @@ class EncryptedStore:
     def load_summary(self, session_id: str) -> str:
         return self._get("summary", session_id) or ""
 
+    def save_completion(self, session_id: str, completion: str) -> None:
+        plaintext = _encode(str(completion))
+        with self._transaction():
+            if not self._exists("session", session_id):
+                raise LookupError("Session does not exist")
+            self._write("completion", session_id, plaintext)
+
+    def load_completion(self, session_id: str) -> str:
+        return self._get("completion", session_id) or ""
+
     def delete_session(self, session_id: str) -> None:
         """One transaction; secure_delete overwrites the freed pages. Audit and send results stay."""
         with self._transaction():
@@ -316,7 +326,7 @@ class EncryptedStore:
             records = [("transcript", session.get("transcript_ref")), ("transcript", session.get("source_transcript_ref")),
                        ("audio", session.get("audio_ref"))]
             records += [("steps", a.id) for a in actions]
-            records += [(kind, session_id) for kind in ("session", "revision", "actions", "suggestions", "speakers", "summary")]
+            records += [(kind, session_id) for kind in ("session", "revision", "actions", "suggestions", "speakers", "summary", "completion")]
             for kind, record_id in records:
                 if record_id:
                     self._db.execute("DELETE FROM records WHERE kind = ? AND id = ?", (kind, record_id))

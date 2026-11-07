@@ -155,9 +155,17 @@ class SessionStore(Protocol):
         """"" when the Session has none."""
         ...
 
+    def save_completion(self, session_id: str, completion: str) -> None:
+        """Replace the Others result of the last analysis (#83). Unknown Session raises LookupError."""
+        ...
+
+    def load_completion(self, session_id: str) -> str:
+        """"" when the Session has none."""
+        ...
+
     def delete_session(self, session_id: str) -> None:
         """The User's explicit deletion (#59): the Session, its audio, Transcripts, Proposed Actions,
-        Suggestions, Speakers, summary and Workflow steps, in one write. The audit log is kept.
+        Suggestions, Speakers, summary, Others result and Workflow steps, in one write. The audit log is kept.
         Unknown Session raises LookupError; an Approved action still waiting to execute raises
         ValueError and nothing is deleted."""
         ...

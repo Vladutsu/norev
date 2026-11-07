@@ -5,16 +5,29 @@ The model writes only the instructions; they fill {{user_instructions}} in the D
 template, which keeps the fixed rules, placeholders, Action Type, schema and Workflow. Everything
 after that is the usual Domain stage (ask_domain/apply_answer), so the answer is validated as for
 any Domain and every Proposed Action still waits for the User's approval (ADR 0002).
+
+#83: the User fills three boxes instead of one: the kind of conversation (required), what counts as an
+action and the result they want. The first two fill instructions.md; the third goes, as written, into
+the completion template (usecases/others_completion.py), never through the instructions model.
+Every box is data: each template is filled in one pass, so placeholder text in a box stays as typed.
 """
 import dataclasses
 import json
+import re
 
 from norev.core.models import Domain, OthersPrompt, ValidationError
 from norev.core.ports import LlmClient
 
-MAX_CONTEXT = 2000  # characters of the User's context
+MAX_CONTEXT = 2000  # characters of the User's three boxes together, so the 8B model's prompt does not grow
 MAX_INSTRUCTIONS = 4000  # characters of the generated or edited instructions
 SLOT = "{{user_instructions}}"
+COMPLETION_SLOT = "{{user_completion}}"
+
+
+def fill(template: str, values: dict[str, str]) -> str:
+    """Every `{{name}}` of `values` in one pass: text a value brings in is never replaced again."""
+    names = "|".join(map(re.escape, values))
+    return re.sub(r"\{\{(" + names + r")\}\}", lambda m: values[m[1]], template)
 
 
 def check_context(context: object) -> str:
@@ -25,6 +38,14 @@ def check_context(context: object) -> str:
     if len(text) > MAX_CONTEXT:
         raise ValidationError("too_long", "context")
     return text
+
+
+def check_boxes(conversation: object, focus: object = "", completion: object = "") -> tuple[str, str, str]:
+    """The three boxes as used: the first is required; together at most MAX_CONTEXT characters."""
+    boxes = (check_context(conversation), *(v.strip() if isinstance(v, str) else "" for v in (focus, completion)))
+    if sum(map(len, boxes)) > MAX_CONTEXT:
+        raise ValidationError("too_long", "context")
+    return boxes
 
 
 def check_instructions(instructions: object) -> str:
@@ -39,15 +60,15 @@ def check_instructions(instructions: object) -> str:
     return text
 
 
-def generate_instructions(llm: LlmClient, template: str, schema: dict, context: object, *, model: str | None = None) -> str:
-    """One local model call with only the User's context (no audio, Contact or other Session).
+def generate_instructions(llm: LlmClient, template: str, schema: dict, context: object, *,
+                          focus: object = "", model: str | None = None) -> str:
+    """One local model call with only the User's first two boxes (no audio, Contact or other Session).
 
     Anything but valid instructions raises and returns nothing, so the caller keeps the previous
     context and prompt; the User retries explicitly.
     """
-    text = check_context(context)
-    # one pass, as build_prompt: placeholder text inside the context is not replaced
-    raw = llm.generate_json(template.replace("{{context}}", text), model=model, json_schema=schema)
+    conversation, focus, _ = check_boxes(context, focus)
+    raw = llm.generate_json(fill(template, {"conversation": conversation, "focus": focus}), model=model, json_schema=schema)
     try:
         answer = json.loads(raw)
     except json.JSONDecodeError:  # not re-raised: the error would carry the raw answer
@@ -64,10 +85,20 @@ def render_prompt(domain: Domain, instructions: object) -> str:
     return domain.prompt_template.replace(SLOT, check_instructions(instructions))
 
 
-def confirm(domain: Domain, context: object, instructions: object) -> OthersPrompt:
-    """The User's confirmation of exactly this context, these instructions and the prompt they make."""
+def render_completion(template: str, completion: object) -> str:
+    """The completion prompt the User sees: their third box in its slot, the Transcript still unfilled."""
+    if template.count(COMPLETION_SLOT) != 1:
+        raise ValueError(f"the completion template has no single {COMPLETION_SLOT} slot")
+    return fill(template, {"user_completion": completion if isinstance(completion, str) else ""})
+
+
+def confirm(domain: Domain, context: object, instructions: object, *, focus: object = "", completion: object = "",
+            completion_template: str = "") -> OthersPrompt:
+    """The User's confirmation of exactly these boxes, these instructions and the prompts they make."""
     text = check_instructions(instructions)
-    return OthersPrompt(check_context(context), text, render_prompt(domain, text))
+    conversation, focus, completion = check_boxes(context, focus, completion)
+    completion_prompt = render_completion(completion_template, completion) if completion else ""
+    return OthersPrompt(conversation, text, render_prompt(domain, text), focus, completion, completion_prompt)
 
 
 def others_domain(domain: Domain, prompt: OthersPrompt) -> Domain:

@@ -69,7 +69,7 @@ const ICON = {
 
 const state = {
   modes: [], mode: null, lang: "ro",
-  others: { context: "", prompt: "", digest: null },
+  others: { context: "", focus: "", completion: "", prompt: "", completionPrompt: "", digest: null },
   sessionId: null, review: null, poll: null, rolesChanged: null,
   list: { kind: "recent", sessions: [], confirming: null },
   destination: {},  // action id -> the Connector the User picked (#72)
@@ -195,7 +195,17 @@ function updateStart() {
 }
 
 function othersPayload() {
-  return state.mode === "others" ? { context: state.others.context, prompt: state.others.prompt } : null;
+  const o = state.others;
+  return state.mode === "others" ? { context: o.context, focus: o.focus, completion: o.completion, prompt: o.prompt } : null;
+}
+
+// #83: the exact completion prompt, from the backend's template; shown before the User can confirm it
+async function showCompletionPrompt() {
+  const { prompt } = await api("others_completion_prompt", state.others.completion);
+  state.others.completionPrompt = prompt;
+  $("others-completion-prompt").textContent = prompt;
+  $("others-completion-box").hidden = !prompt;
+  return prompt;
 }
 
 function initNew() {
@@ -209,15 +219,30 @@ function initNew() {
     });
   }
   $("others-context").addEventListener("input", (e) => { state.others.context = e.target.value; invalidateOthers(); });
+  $("others-focus").addEventListener("input", (e) => { state.others.focus = e.target.value; invalidateOthers(); });
+  $("others-completion").addEventListener("input", (e) => {
+    state.others.completion = e.target.value;
+    state.others.completionPrompt = "";
+    $("others-completion-box").hidden = true;
+    invalidateOthers();
+  });
+  $("others-completion").addEventListener("change", () => showCompletionPrompt().catch(() => {}));
   $("others-prompt").addEventListener("input", (e) => { state.others.prompt = e.target.value; invalidateOthers(); });
   $("others-generate").addEventListener("click", (e) => guarded(e.currentTarget, async () => {
-    const { prompt } = await api("others_generate", state.others.context);
+    const { prompt } = await api("others_generate", state.others.context, state.others.focus);
     state.others.prompt = prompt;
     $("others-prompt").value = prompt;
     invalidateOthers();
+    await showCompletionPrompt();
   }));
   $("others-confirm").addEventListener("click", (e) => guarded(e.currentTarget, async () => {
-    const { digest } = await api("others_confirm", state.others.context, state.others.prompt);
+    const shown = state.others.completionPrompt;
+    if ((await showCompletionPrompt()) !== shown) { // the User confirms only a prompt they have seen
+      toast("Verifică promptul pentru rezultat, apoi confirmă.");
+      return;
+    }
+    const o = state.others;
+    const { digest } = await api("others_confirm", o.context, o.prompt, o.focus, o.completion);
     state.others.digest = digest;
     const chip = $("prompt-status");
     chip.textContent = "Confirmat";
@@ -399,6 +424,7 @@ function renderReview() {
   $("decided").textContent = `${decided} din ${r.actions.length} decise`;
   $("decided-bar").style.width = r.actions.length ? `${Math.round((decided / r.actions.length) * 100)}%` : "0";
   $("summary").textContent = r.summary || "—";
+  renderResult(r);
   const partial = r.untranslated ? h("p", { class: "small muted", role: "note" },
     `Rezultat parțial: ${r.untranslated} intervenții n-au putut fi traduse și au rămas în limba vorbită.`) : null;
   $("actions").replaceChildren(...[partial, ...r.actions.map(actionCard)].filter(Boolean));
@@ -424,6 +450,41 @@ function renderReview() {
   $("suggestions").replaceChildren(...(r.suggestions.length ? r.suggestions.map((s) => h("div", { class: "well inset suggestion" },
     h("strong", {}, s.text), s.transcript_excerpt ? h("em", {}, `„${s.transcript_excerpt}”`) : null))
     : [h("p", { class: "small muted" }, "Nimic de semnalat.")]));
+}
+
+// #83: the Others result; copied or saved only on the User's click, saving after they saw the exact file
+function renderResult(r) {
+  $("result").hidden = !r.completion;
+  $("result-text").textContent = r.completion || "";
+  $("result-save").hidden = !r.can_execute;
+  $("result-preview").hidden = true;
+  $("result-preview").replaceChildren();
+}
+
+async function copyResult() {
+  try {
+    await navigator.clipboard.writeText(state.review.completion);
+    toast("Rezultatul a fost copiat.");
+  } catch {
+    toast("Nu am putut copia. Selectează textul și copiază-l manual.");
+  }
+}
+
+async function previewResult() {
+  const { payload } = await api("completion_preview", state.sessionId);
+  const box = $("result-preview");
+  box.replaceChildren(h("div", { class: "well inset" },
+    h("span", { class: "overline" }, "Fișierul care va fi scris"),
+    h("p", { class: "small mono" }, payload.destination),
+    h("pre", { class: "mono", style: "white-space:pre-wrap;max-height:16rem;overflow:auto;margin:0" }, payload.content),
+    h("div", { class: "actions" },
+      h("button", { type: "button", class: "btn", onclick: () => { box.hidden = true; } }, "Renunță"),
+      h("button", { type: "button", class: "btn primary", onclick: (e) => guarded(e.currentTarget, async () => {
+        const { saved } = await api("completion_save", state.sessionId, payload);
+        box.hidden = true;
+        toast(saved.created ? `Salvat în ${saved.path}` : `Există deja: ${saved.path}`);
+      }) }, "Aprobă și salvează"))));
+  box.hidden = false;
 }
 
 function actionCard(a) {
@@ -776,6 +837,8 @@ async function googleButton(button) {
 
 function initList() {
   for (const id of ["f-text", "f-domain", "f-from", "f-to"]) $(id).addEventListener("input", () => renderList());
+  $("result-copy").addEventListener("click", () => copyResult());
+  $("result-save").addEventListener("click", (e) => guarded(e.currentTarget, previewResult));
 }
 
 function initNav() {
