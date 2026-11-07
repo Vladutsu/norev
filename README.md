@@ -173,10 +173,13 @@ To run CI on a branch: GitHub, Actions, CI, Run workflow.
 | `NOREV_DATE` | today | Session date used to resolve relative dates |
 | `NOREV_TIMEZONE` | `Europe/Bucharest` | IANA time zone of Google Calendar events (explicit in every payload) |
 | `NOREV_GOOGLE_CLIENT_ID` / `NOREV_GOOGLE_CLIENT_SECRET` | empty (Google Calendar off) | OAuth client of your Google Cloud project, type "Desktop app"; never commit them. The User's refresh token goes into the encrypted store |
+| `NOREV_JIRA_CLIENT_ID` / `NOREV_JIRA_CLIENT_SECRET` | empty (Jira off) | OAuth 2.0 (3LO) app from the Atlassian developer console, scopes `read:jira-work write:jira-work offline_access`; never commit them. The refresh token and the chosen project go into the encrypted store |
+| `NOREV_JIRA_REDIRECT_PORT` | `8765` | loopback port of the Jira sign-in; register `http://127.0.0.1:<port>` as the app's callback URL |
 | `LLAMA_SERVER` | `~/Repositories/llama.cpp/build/bin/llama-server` | llama.cpp server binary |
 | `LLAMACPP_PORT` / `LLAMACPP_CTX` / `LLAMACPP_GPU_LAYERS` | `8080` / `4096` / `99` | server options (`LLAMACPP_CTX` is per slot) |
 | `WHISPER_MODEL` | `large-v3-turbo` | `small`, `medium`, `large-v3-turbo`, … |
 | `WHISPER_DEVICE` | `cuda` | `cuda` or `cpu` (falls back to CPU on GPU OOM) |
+| `WHISPER_BEAM_SIZE` | `5` | 1 is ~5-13% faster but lost words a Domain needs (#66) |
 | `LLM_CHUNK_CHARS` | `4000` | Transcript chunk size sent to the extractor |
 | `LLM_PROVIDER` | `llamacpp` | `llamacpp` or `ollama` |
 | `NOREV_EXPORT_DIR` | `~/Documents/norev` | desktop app: where approved Proposed Actions are exported (`local_document`) |

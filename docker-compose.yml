@@ -64,4 +64,5 @@ services:
     depends_on: [demo]
     environment:
       - NGROK_AUTHTOKEN
-    command: ["http", "--url=${NOREV_DEMO_URL:?set NOREV_DEMO_URL in your local .env}", "8765"]
+    # not ${NOREV_DEMO_URL:?...}: Compose checks that for every service, so dev and gpu would not start without it
+    command: ["http", "--url=${NOREV_DEMO_URL:-set-NOREV_DEMO_URL-in-your-local-.env}", "8765"]

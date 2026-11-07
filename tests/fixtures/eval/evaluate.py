@@ -1,6 +1,6 @@
 """Evaluation of the generic extraction against expected results checked by a person (#25).
 
-    python tests/fixtures/eval/evaluate.py record           # GPU laptop: llama-server; rewrites the recordings
+    python tests/fixtures/eval/evaluate.py record [S...]    # GPU laptop: llama-server; rewrites the recordings (of S only)
     python tests/fixtures/eval/evaluate.py record-domain    # GPU laptop: llama-server; rewrites only domain.neutral.json
                                                             # (a Domain prompt changed; translation and extraction kept)
     python tests/fixtures/eval/evaluate.py variance [N]     # GPU laptop: N more extract runs per variant (default 2)
@@ -17,6 +17,11 @@ by a person, never copied from the model's answer) and the recordings:
                           result, as run_session makes them (#60), and the typed Proposed Actions
                           (action_type, fields, owner Role) they gave (#46)
 and next to them variance.json: the Proposed Actions of extra runs on the same English Transcript.
+Proposed Actions the Domain stage added (ids after the generic ones, #66) are scored with the generic ones.
+
+<session>_asr/ holds the ASR Transcript of <session>'s synthetic audio (Whisper and diarization as the
+app runs them, on the GPU laptop) with <session>'s expectations; the report keeps it in its own group,
+out of the thresholds (#66).
 
 Variants, on the same English Transcript:
   neutral   the generic extraction as the pipeline runs it (Segment texts only)
@@ -111,8 +116,8 @@ def domain_stage(english: Transcript, result: dict, source: dict, client) -> dic
     typed, suggestions = ask_domain(domain, client, english, actions, date.fromisoformat(source["session_date"]), speakers)
     return {
         "speaker_roles": {s.id: s.role for s in speakers},
-        "actions": [{"id": a.id, "title": a.title, "action_type": a.action_type, "fields": a.fields, "owner": a.owner}
-                    for a in typed],
+        "actions": [{"id": a.id, "title": a.title, "description": a.description, "transcript_excerpt": a.transcript_excerpt,
+                     "action_type": a.action_type, "fields": a.fields, "owner": a.owner} for a in typed],
         "suggestions": [s.text for s in suggestions],
     }
 
@@ -188,16 +193,42 @@ def _number_kept(text: str, english: list[str]) -> bool:
     return False
 
 
+def _assign(ordered: list[dict], actions: list[dict]) -> dict[str, int]:
+    """Expected key -> index of the produced action it matches, each action used once. Most specific
+    first and the first matching action, as before; when a later one would find no action left, an
+    earlier one moves to another action it also matches (most expected actions found)."""
+    candidates = {e["key"]: [i for i, a in enumerate(actions) if _matches(a, e["match"])] for e in ordered}
+    owner: dict[int, str] = {}
+
+    def take(key: str, seen: set[int]) -> bool:
+        free = next((i for i in candidates[key] if i not in owner), None)
+        if free is not None:
+            owner[free] = key
+            return True
+        for i in candidates[key]:
+            if i not in seen:
+                seen.add(i)
+                if take(owner[i], seen):
+                    owner[i] = key
+                    return True
+        return False
+
+    for e in ordered:
+        take(e["key"], set())
+    return {key: i for i, key in owner.items()}
+
+
 def score(expected: dict, actions: list[dict], english_text: str, typed: list[dict] | None = None) -> dict:
     """Per-Session counts. Expected actions are matched most specific first, each to one produced action.
     `typed`: the Domain stage result (ids pa-1, pa-2... in the order of `actions`), when it ran."""
-    pool = list(range(len(actions)))
+    ordered = sorted(expected["actions"], key=lambda e: -len(e["match"]))
+    hits = _assign(ordered, actions)
+    pool = [i for i in range(len(actions)) if i not in hits.values()]
     found: dict[str, dict] = {}
-    for exp in sorted(expected["actions"], key=lambda e: -len(e["match"])):
-        hit = next((i for i in pool if _matches(actions[i], exp["match"])), None)
+    for exp in ordered:
+        hit = hits.get(exp["key"])
         if hit is None:
             continue
-        pool.remove(hit)
         found[exp["key"]] = {
             "index": hit,
             "owner": _owner_ok(actions[hit].get("owner"), exp["owner"]),
@@ -288,6 +319,16 @@ def totals(per_session: dict[str, dict], names: list[str]) -> dict:
     }
 
 
+def _added(typed: list[dict] | None, generic: int) -> list[dict]:
+    """Proposed Actions the Domain stage added (#66): ids after the generic pa-1..pa-<generic>, in id order,
+    so that pa-<n> stays the n-th action. Scored like generic ones: one that matches nothing is invented."""
+    if not typed:
+        return []
+    extra = sorted((int(t["id"].rsplit("-", 1)[1]), t) for t in typed if int(t["id"].rsplit("-", 1)[1]) > generic)
+    return [{"title": t["title"], "description": t.get("description"), "transcript_excerpt": t.get("transcript_excerpt"),
+             "owner": t.get("owner"), "due_date": None} for _, t in extra]
+
+
 def build_report() -> dict:
     thresholds = _json(HERE / "thresholds.json")
     report: dict = {"thresholds": thresholds, "variants": {}}
@@ -299,24 +340,29 @@ def build_report() -> dict:
             actions = _json(folder / f"extract.{variant}.json")["result"].get("proposed_actions", [])
             domain_file = folder / f"domain.{variant}.json"
             typed = _json(domain_file)["result"]["actions"] if domain_file.exists() else None
+            actions = actions + _added(typed, len(actions))
             per_session[folder.name] = score(expected, actions, " ".join(s["text"] for s in english["segments"]), typed)
         names = list(per_session)
+        # *_asr: the same Session through Whisper and diarization (#66); kept out of the thresholds
+        asr = [n for n in names if n.endswith("_asr")]
         groups = {
-            "corporate_others": [n for n in names if not n.startswith("consult_")],
+            "corporate_others": [n for n in names if not n.startswith("consult_") and n not in asr],
             "medical": [n for n in names if n.startswith("consult_")],
+            **({"asr": asr} if asr else {}),
         }
         summary = {g: totals(per_session, members) for g, members in groups.items()}
         summary["corporate_others"]["meets_thresholds"] = {
             k: summary["corporate_others"][k] <= v for k, v in thresholds["limits"].items()
         }
-        domain = [r["domain"] for r in per_session.values() if "domain" in r]
-        if domain:
-            summary["domain_stage"] = {
-                "checked": sum(d["checked"] for d in domain),
-                "right": sum(d["checked"] - len(d["wrong"]) for d in domain),
-                "wrong": {n: r["domain"]["wrong"] for n, r in per_session.items() if r.get("domain", {}).get("wrong")},
-                "cancelled_as_event": sum(len(d["cancelled_as_event"]) for d in domain),
-            }
+        for key, members in (("domain_stage", groups["corporate_others"]), ("domain_stage_asr", asr)):
+            domain = {n: per_session[n]["domain"] for n in members if "domain" in per_session[n]}
+            if domain:
+                summary[key] = {
+                    "checked": sum(d["checked"] for d in domain.values()),
+                    "right": sum(d["checked"] - len(d["wrong"]) for d in domain.values()),
+                    "wrong": {n: d["wrong"] for n, d in domain.items() if d["wrong"]},
+                    "cancelled_as_event": sum(len(d["cancelled_as_event"]) for d in domain.values()),
+                }
         report["variants"][variant] = {"summary": summary, "sessions": per_session}
     report["variance"] = _variance_summary()
     return report
@@ -345,9 +391,10 @@ def _variance_summary() -> dict:
 
 # ── commands ────────────────────────────────────────────────────────────────────
 
-def record_all() -> int:
+def record_all(names: list[str] | None = None) -> int:
+    """`names`: record only these Sessions; the others keep their recordings."""
     settings = DeepSeekSettings.from_environment()
-    for folder in sessions():
+    for folder in [f for f in sessions() if not names or f.name in names]:
         source = source_of(folder)
         client = record.RecordingClient(build_llm_client(settings))
         started = time.perf_counter()
@@ -367,7 +414,8 @@ def record_all() -> int:
                 _write(folder / "domain.neutral.json", {"model": settings.model, "elapsed_seconds": round(time.perf_counter() - started, 1),
                                                         "calls": client.calls, "result": typed})
         print(folder.name, "recorded")
-    (HERE / "variance.json").unlink(missing_ok=True)  # it was measured on the previous recording
+    if not names:
+        (HERE / "variance.json").unlink(missing_ok=True)  # it was measured on the previous recording
     _write(HERE / "report.json", build_report())
     return 0
 
@@ -477,7 +525,7 @@ def print_report() -> int:
     for variant, data in report["variants"].items():
         print(f"== {variant}")
         for group, t in data["summary"].items():
-            if group == "domain_stage":
+            if group.startswith("domain_stage"):
                 continue
             print(f"  {group}: found {t['found']}/{t['expected']}, produced {t['produced']}, "
                   f"omissions {t['omission_rate']:.0%}, invented {t['invented_rate']:.0%}, "
@@ -486,10 +534,11 @@ def print_report() -> int:
                   f"cancelled listed {t['cancelled_listed']}, numbers changed {t['numbers_changed']}/{t['numbers']}")
         failing = [k for k, ok in data["summary"]["corporate_others"]["meets_thresholds"].items() if not ok]
         print(f"  thresholds ({report['thresholds']['status']}): {'all met' if not failing else 'not met: ' + ', '.join(failing)}")
-        d = data["summary"].get("domain_stage")
-        if d:
-            print(f"  Domain stage (Corporate): {d['right']}/{d['checked']} typed right, calendar events said cancelled kept: {d['cancelled_as_event']}"
-                  + "".join(f"\n    {n}: {w}" for n, w in d["wrong"].items()))
+        for key, label in (("domain_stage", "Corporate"), ("domain_stage_asr", "Corporate, ASR Transcript")):
+            d = data["summary"].get(key)
+            if d:
+                print(f"  Domain stage ({label}): {d['right']}/{d['checked']} typed right, calendar events said cancelled kept: {d['cancelled_as_event']}"
+                      + "".join(f"\n    {n}: {w}" for n, w in d["wrong"].items()))
         for name, r in data["sessions"].items():
             for case in r["known_cases"]:
                 link = f" ({case['follow_up']})" if case.get("follow_up") and not case["solved"] else ""
@@ -509,7 +558,7 @@ def print_report() -> int:
 if __name__ == "__main__":
     command = sys.argv[1] if len(sys.argv) > 1 else "check"
     if command == "record":
-        raise SystemExit(record_all())
+        raise SystemExit(record_all(sys.argv[2:]))
     if command == "record-domain":
         raise SystemExit(record_domain())
     if command == "variance":

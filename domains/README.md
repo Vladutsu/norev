@@ -61,6 +61,7 @@ Top level:
 | `name` | string | snake_case, unique; the value of `action_type` in the model's answer |
 | `label` | string | shown to the User |
 | `description` | string | when a Proposed Action is of this type; the model sees it |
+| `may_add` | bool | optional, default false; the Domain stage may add a Proposed Action of this type that the generic stage missed (#66) |
 
 `[[action_types.fields]]`: the Domain fields of the Action Type above it, at least one.
 
@@ -81,6 +82,7 @@ step. It runs only after the User approves the Proposed Action.
 | `label` | string | shown to the User |
 | `connector` | string | optional; the one Connector this step uses |
 | `sends` | list of strings | required with `connector`, not allowed without: the payload fields this step sends |
+| `alternatives` | list of strings | optional, only with `connector`: other Connectors the User may pick for this step at preview instead of `connector` (#72); the approved plan records the one chosen |
 
 `sends` may name the Action Type's fields and the generic fields of a Proposed Action: `title`,
 `description`, `owner`, `due_date`, `transcript_excerpt`. Steps with a Connector send through the
@@ -92,6 +94,8 @@ Known Connectors (core code, not part of a Domain):
 |---|---|
 | `google_calendar` | creates events in the User's Google Calendar |
 | `email_draft` | saves an email draft (.eml) on this machine; the User sends it from their mail app |
+| `trello` | creates a card in a Trello list the User chose |
+| `jira` | creates an issue in a Jira Cloud project the User chose |
 | `local_document` | saves a document on this machine |
 
 A new Connector is added in the core first, then to this table and to `KNOWN_CONNECTORS` in the test.
@@ -139,6 +143,14 @@ The model's output is constrained to this schema. It must be:
 - Every variant has a required `owner`: `anyOf` a string `enum` of every Role name and `null`. It
   replaces the generic owner, so an owner is a Role or empty, never a Speaker id or a name (#60).
 - A generic Proposed Action left out of the answer does not fit the Domain and is dropped.
+- `added_actions` (optional, #66): Proposed Actions the generic stage missed. Its `anyOf` has one
+  variant per Action Type with `may_add`, like the ones above but with no `id` and with required
+  `title`, `description` and `transcript_excerpt`. The core keeps one only if its excerpt is in the
+  Transcript and no kept action of that type has the same fields or excerpt, at most 10 per Session,
+  and gives it the next id; the User decides it like any other.
+- Any other top-level key is ignored by the core. Corporate asks first for `calendar_events_said`
+  (the words of each meeting set for a day): listing them before the actions makes the model add
+  the ones the generic stage missed.
 - A field whose schema is exactly `{"type": "null"}` is filled only by the User (e.g. attendee
   emails, since a Speaker is not a Contact): the core keeps it null whatever the model answers.
 

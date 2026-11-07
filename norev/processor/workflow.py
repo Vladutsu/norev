@@ -86,7 +86,8 @@ class WorkflowExecutor:
                 error_type = None
                 try:
                     if step.connector:
-                        result = self._processor.send(action, step.connector, payloads[step.name], step=step.name)
+                        connector, payload = payloads[step.name]  # the Connector the User chose (#72)
+                        result = self._processor.send(action, connector, payload, step=step.name)
                     else:
                         result = self._local[step.name](copy.deepcopy(action))
                 except ResultNotRecorded:  # the send may have happened: left started, so uncertain
@@ -155,27 +156,34 @@ class WorkflowExecutor:
         if action_type is None:
             raise ExecutionRefused(f"action {action.id} has no Action Type of Domain {self._domain.name}")
         for step in action_type.workflow.steps:
-            if step.connector:
-                if not self._processor.has_connector(step.connector):
-                    raise ExecutionRefused(f"step {step.name}: unknown Connector {step.connector!r}")
-            elif step.name not in self._local:
+            # a Connector step is checked against the Connector of the approved plan (_approved_payloads)
+            if not step.connector and step.name not in self._local:
                 raise ExecutionRefused(f"step {step.name}: no known local implementation")
         return action_type.workflow.steps
 
-    def _approved_payloads(self, action: ProposedAction, workflow: tuple[WorkflowStep, ...]) -> dict[str, dict]:
-        """Each Connector step's payload from the approval plan, checked as send() will check it."""
+    def _approved_payloads(self, action: ProposedAction, workflow: tuple[WorkflowStep, ...]) -> dict[str, tuple[str, dict]]:
+        """Each Connector step's Connector and payload from the approval plan, checked as send() will
+        check them. The Connector is the one the User chose at preview: the step's default or one of
+        its alternatives (#72), and it must be set up on this machine."""
         plan = action.approved_payload
         if (not isinstance(plan, dict) or plan.get("version") != 1 or plan.get("domain") != self._domain.name
                 or plan.get("domain_digest") != domain_digest(self._domain) or plan.get("action_type") != action.action_type):
             raise ExecutionRefused(f"the approved plan of action {action.id} does not match the Domain; approve it again")
         steps = plan.get("steps") if isinstance(plan.get("steps"), list) else []
-        by_name = {s.get("step"): s.get("payload") for s in steps if isinstance(s, dict)}
+        by_name = {s.get("step"): s for s in steps if isinstance(s, dict)}
         payloads = {}
         for step in workflow:
             if step.connector:
-                payload = by_name.get(step.name)
+                planned = by_name.get(step.name) or {}
+                # a step missing from the plan is refused by check_send below, as before #72
+                connector = planned.get("connector", step.connector)
+                if connector not in step.connectors():
+                    raise ExecutionRefused(f"step {step.name}: Connector {connector!r} is not allowed for this step")
+                if not self._processor.has_connector(connector):
+                    raise ExecutionRefused(f"step {step.name}: unknown Connector {connector!r}")
+                payload = planned.get("payload")
                 payload = payload if isinstance(payload, dict) else {}
-                payloads[step.name] = self._processor.check_send(action, step.connector, payload, step=step.name)
+                payloads[step.name] = (connector, self._processor.check_send(action, connector, payload, step=step.name))
         return payloads
 
     def _save_step(self, action_id: str, records: dict[str, StepRecord], record: StepRecord) -> None:

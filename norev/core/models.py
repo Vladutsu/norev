@@ -115,12 +115,19 @@ class Transcript:
 @dataclass(frozen=True)
 class WorkflowStep:
     """One step of a Workflow; `connector` names the Connector it uses, if any, and `sends` the
-    payload fields that step sends through the Central Processor (domains/README.md)."""
+    payload fields that step sends through the Central Processor (domains/README.md).
+    `alternatives`: other Connectors the User may pick for this step at preview (#72); the approved
+    plan records the one chosen, and only `connector` or one of these is accepted."""
 
     name: str
     connector: str | None = None
     sends: tuple[str, ...] = ()
     label: str = ""
+    alternatives: tuple[str, ...] = ()
+
+    def connectors(self) -> tuple[str, ...]:
+        """The Connectors this step may use: the default first."""
+        return ((self.connector,) + self.alternatives) if self.connector else ()
 
 
 @dataclass(frozen=True)
@@ -155,6 +162,8 @@ class ActionType:
     workflow: Workflow
     label: str = ""
     description: str = ""
+    # The Domain stage may add a Proposed Action of this type that the generic stage missed (ADR 0005, #66)
+    may_add: bool = False
 
 
 @dataclass(frozen=True)

@@ -79,6 +79,27 @@ delete every `additionalGids` field (with its values) from that file.
 Environment variables (`README.md`, Configuration) are passed with `-e`, for example
 `docker compose run --rm -e NOREV_LANGUAGES=ro,en dev ...`.
 
+## Microphone
+
+Linux hosts with PipeWire or PulseAudio (Pop!_OS, Ubuntu, Fedora). `devenv/microphone.yml` mounts the
+host's PulseAudio socket; both images send ALSA's `default` device to it, so the recorder and the
+Recording screen's backend use the host microphone. Nothing else on the host is shared.
+
+```bash
+docker compose -f docker-compose.yml -f devenv/microphone.yml run --rm dev python -m norev.adapters.recorder --list-devices
+docker compose -f docker-compose.yml -f devenv/microphone.yml run --rm dev python -m norev.adapters.recorder /tmp/a.wav
+```
+
+With podman (laptop 4), the same as two flags:
+
+```bash
+podman run --rm --device nvidia.com/gpu=all -v $XDG_RUNTIME_DIR/pulse/native:/run/pulse/native -e PULSE_SERVER=unix:/run/pulse/native -v .:/workspace -v /workspace/.venv -v ../norev-data:/data:ro -v ../norev-models:/models localhost/norev-gpu python -m norev.adapters.recorder /tmp/a.wav
+```
+
+On the host itself nothing is needed: the recorder points PyAV's bundled ALSA at the system's
+configuration and plugins (`ALSA_CONFIG_PATH`, `ALSA_PLUGIN_DIR`, kept if you set them). Windows hosts
+record outside the container (DirectShow).
+
 ## Host folders
 
 | Variable | Default | Mounted at |

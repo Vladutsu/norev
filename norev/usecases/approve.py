@@ -102,15 +102,16 @@ def _validate_plan(plan: Any, action: ProposedAction, domain: Domain) -> None:
             or plan['action_type'] != action.action_type):
         raise ValidationError('preview_changed', 'prepared_payload')
     action_type = domain.action_type(action.action_type)
-    expected = [(step.name, step.connector) for step in action_type.workflow.steps if step.connector]
+    # each Connector step with the Connector the User chose: the default or one of its alternatives (#72)
+    expected = [(step.name, step.connectors()) for step in action_type.workflow.steps if step.connector]
     if not expected or len({name for name, _ in expected}) != len(expected):
         raise UnsupportedWorkflow('Workflow needs distinct Connector steps')
     steps = plan['steps']
     if not isinstance(steps, list) or len(steps) != len(expected):
         raise ValidationError('invalid_steps', 'prepared_payload')
-    for step, (name, connector) in zip(steps, expected):
+    for step, (name, connectors) in zip(steps, expected):
         if (not isinstance(step, dict) or set(step) != {'step', 'connector', 'payload'}
-                or step['step'] != name or step['connector'] != connector
+                or step['step'] != name or step['connector'] not in connectors
                 or not isinstance(step['payload'], dict)):
             raise ValidationError('invalid_step', 'prepared_payload')
 

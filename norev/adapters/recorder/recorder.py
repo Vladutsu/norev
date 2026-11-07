@@ -3,8 +3,11 @@
 Capture uses the FFmpeg devices bundled with PyAV, which is already installed for faster-whisper,
 so no dependency is added: DirectShow on Windows, ALSA on Linux. PyAV is imported inside the
 functions that need it, so this module imports on a machine (or CI) without audio devices.
-The PyAV Linux wheel has ALSA but no PulseAudio, so record on the host OS, not in WSL or a container.
+The PyAV Linux wheel bundles its own ALSA library, built to look for its configuration and plugins
+in a folder that does not exist; `alsa_defaults` points it at the system's, so "default" reaches
+PipeWire or PulseAudio (in a container: devenv/README.md, Microphone).
 """
+import os
 import re
 import sys
 import threading
@@ -19,6 +22,23 @@ CHANNELS = 1
 
 # FFmpeg input format per platform
 _INPUT_FORMATS = {"win32": "dshow", "linux": "alsa"}
+
+# Where distributions keep ALSA's configuration and plugins (Debian/Ubuntu per architecture, Fedora, Arch)
+ALSA_CONFIG = (Path("/usr/share/alsa/alsa.conf"),)
+ALSA_PLUGIN_DIRS = (Path("/usr/lib/x86_64-linux-gnu/alsa-lib"), Path("/usr/lib/aarch64-linux-gnu/alsa-lib"),
+                    Path("/usr/lib64/alsa-lib"), Path("/usr/lib/alsa-lib"))
+
+
+def alsa_defaults(env=os.environ, configs=ALSA_CONFIG, plugin_dirs=ALSA_PLUGIN_DIRS) -> None:
+    """Point PyAV's bundled ALSA at the system's configuration and plugins (PipeWire, PulseAudio).
+    Without them only raw hw: devices open, and those are busy while PipeWire runs. What the User
+    set is kept; nothing is set when the system has no ALSA files."""
+    config = next((c for c in configs if c.is_file()), None)
+    plugins = next((d for d in plugin_dirs if d.is_dir()), None)
+    if config is not None:
+        env.setdefault("ALSA_CONFIG_PATH", str(config))
+    if plugins is not None:
+        env.setdefault("ALSA_PLUGIN_DIR", str(plugins))
 
 
 class Recorder:
@@ -155,9 +175,11 @@ def _dshow_device_log() -> str:
 def capture(device: str) -> Iterator[bytes]:
     """Opens the device now (so a wrong name fails before any file is written) and returns an
     iterator of 16 kHz mono s16 PCM blocks, about one per half second, until closed."""
+    fmt = input_format()
+    if fmt == "alsa":
+        alsa_defaults()  # before the first open: ALSA reads these when it loads its configuration
     import av
 
-    fmt = input_format()
     try:
         container = av.open(f"audio={device}" if fmt == "dshow" else device, format=fmt)
     except av.FFmpegError as exc:

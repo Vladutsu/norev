@@ -1,0 +1,131 @@
+{
+  "synthetic": "Written for tests. No real person.",
+  "about": "ASR Transcript (Whisper + diarization, as the app makes it) of the synthetic audio of corporate_4 (#66).",
+  "domain": "corporate",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "participant"
+    },
+    {
+      "id": "S2",
+      "role": "participant"
+    },
+    {
+      "id": "S3",
+      "role": "participant"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.4,
+      "end": 1.66,
+      "speaker_id": "S1",
+      "text": "Bună dimineața!"
+    },
+    {
+      "start": 1.8,
+      "end": 5.28,
+      "speaker_id": "S1",
+      "text": "Avem câteva întâlniri de stabilit pentru săptămâna viitoare."
+    },
+    {
+      "start": 5.58,
+      "end": 7.7,
+      "speaker_id": "S1",
+      "text": "Ioana, când facem demo-ul pentru client?"
+    },
+    {
+      "start": 8.18,
+      "end": 10.96,
+      "speaker_id": "S2",
+      "text": "Păpun marți, 10 noiembrie, la ora 10."
+    },
+    {
+      "start": 11.22,
+      "end": 12.08,
+      "speaker_id": "S2",
+      "text": "Durează o oră."
+    },
+    {
+      "start": 12.42,
+      "end": 14.42,
+      "speaker_id": "S1",
+      "text": "Perfect, rămâne marți la 10."
+    },
+    {
+      "start": 14.68,
+      "end": 17.04,
+      "speaker_id": "S1",
+      "text": "Victor, tu suni furnizorul de servere?"
+    },
+    {
+      "start": 17.7,
+      "end": 20.56,
+      "speaker_id": "S3",
+      "text": "Da, îl sun mâine la ora 3 după amiază."
+    },
+    {
+      "start": 20.7,
+      "end": 22.6,
+      "speaker_id": "S3",
+      "text": "Durează vreo jumătate de oră."
+    },
+    {
+      "start": 22.88,
+      "end": 26.28,
+      "speaker_id": "S1",
+      "text": "Cu echipa de marketing aveam întâlnire luni, dar o anulăm."
+    },
+    {
+      "start": 26.46,
+      "end": 27.3,
+      "speaker_id": "S1",
+      "text": "Nu mai e nevoie."
+    },
+    {
+      "start": 27.82,
+      "end": 29.24,
+      "speaker_id": "S2",
+      "text": "Și retrospectiva de joi?"
+    },
+    {
+      "start": 29.24,
+      "end": 32.86,
+      "speaker_id": "S1",
+      "text": "O mutăm vineri, 13 noiembrie, la ora 9."
+    },
+    {
+      "start": 33.06,
+      "end": 38.48,
+      "speaker_id": "S3",
+      "text": "Ar trebui să facem și un traind intern săptămâna viitoare, dar nu știu încă oara."
+    },
+    {
+      "start": 39.04,
+      "end": 42.02,
+      "speaker_id": "S1",
+      "text": "Bine, îl punem joi, 12 noiembrie."
+    },
+    {
+      "start": 42.32,
+      "end": 43.84,
+      "speaker_id": "S1",
+      "text": "Ora o stabilim mai târziu."
+    },
+    {
+      "start": 44.06,
+      "end": 46.78,
+      "speaker_id": "S2",
+      "text": "Eu pregătesc prezentarea pentru demo până luni."
+    },
+    {
+      "start": 47.36,
+      "end": 48.54,
+      "speaker_id": "S1",
+      "text": "Mulțumesc tuturor!"
+    }
+  ]
+}
