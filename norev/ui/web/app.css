@@ -193,5 +193,28 @@ blockquote{margin:0;display:flex;gap:.75rem;font-size:.875rem;line-height:1.55;c
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
 main > section{display:flex;flex-direction:column;gap:1.75rem}
+main:focus{outline:none}  /* focused by code on each view change, for screen readers; it is not a control */
+
+/* #87: the primary action of each screen stays visible */
+#new-title{font-size:2rem;letter-spacing:-.03rem}
+#view-new{gap:1.25rem}
+#view-new .start{gap:.5rem}
+#mode-note:empty{display:none}
+/* App shell on wide windows (like Mail or Notes): the window does not scroll, the content column does,
+   so the sidebar and inspector stay whole and nothing moves under the User's hand */
+@media (min-width:68.0625rem){
+  .app{height:100vh}
+  .columns{flex-wrap:nowrap;align-items:stretch;min-height:0;gap:0}
+  .sidebar,.inspector{overflow:auto}
+  main{overflow:auto;padding:1.5rem 2rem 2rem}
+  /* Recording: the Live Transcript takes the room left, Pause and Stop stay at the bottom */
+  #view-recording{flex:1 1 0;min-height:0}
+  #view-recording > .card{flex:1 1 0;min-height:9rem}
+  #live{flex:1;min-height:0;max-height:none}
+  /* on a short window the level meter (decoration; the status chip says "Se înregistrează") gives its room to the text */
+  @media (max-height:50rem){#meter{display:none}}
+  /* To Review: the title and "x din N decise" stay at the top while the actions scroll */
+  #view-review > .row:first-child{position:sticky;top:-1.5rem;z-index:3;margin:-1.5rem -1rem -.75rem;padding:1rem 1rem .75rem;background:var(--bg);box-shadow:0 12px 12px -12px var(--shadow-dark)}
+}
 #inspector-new,#inspector-recording,#inspector-review{display:flex;flex-direction:column;gap:1rem}
 .speakers label > span{white-space:nowrap}
