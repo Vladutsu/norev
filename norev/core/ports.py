@@ -92,6 +92,22 @@ class SessionStore(Protocol):
 
     def load_transcript(self, transcript_ref: str) -> Transcript: ...
 
+    def save_translation(self, session_id: str, transcript: Transcript) -> str:
+        """The translation extraction runs on, in one transaction: store it, keep the spoken Transcript as
+        source_transcript_ref, point transcript_ref at the translation and bump the revision; returns its ref.
+        Only while transcript_ref is the spoken one (first analysis, or after correct_transcript), else
+        ValueError; unknown Session raises LookupError. Any error: nothing saved, no orphan Transcript.
+        """
+        ...
+
+    def correct_transcript(self, session_id: str, transcript: Transcript) -> None:
+        """The User's correction of the spoken Transcript (#82), in one transaction: overwrite it in place
+        (same ref), delete the translation if it is another record, point transcript_ref at the spoken one
+        (translation to redo) and bump the revision. No old Transcript is left behind.
+        Unknown Session raises LookupError; a Session without a Transcript raises ValueError.
+        """
+        ...
+
     def load_actions_snapshot(self, session_id: str) -> ActionsSnapshot:
         """Detached snapshot; revision starts at zero. Unknown Session raises LookupError."""
         ...

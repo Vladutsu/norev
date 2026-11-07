@@ -209,6 +209,38 @@ class EncryptedStore:
             raise KeyError(f"no Transcript for ref {transcript_ref!r}")
         return Transcript(segments=tuple(Segment(**s) for s in d["segments"]), language=d["language"])
 
+    def save_translation(self, session_id: str, transcript: Transcript) -> str:
+        transcript_plaintext = _encode(dataclasses.asdict(transcript))  # TypeError before any write
+        with self._transaction():
+            d = self._get("session", session_id)
+            if d is None:
+                raise LookupError("Session does not exist")
+            spoken = d.get("transcript_ref")
+            if not spoken or d.get("source_transcript_ref") not in (None, spoken):
+                raise ValueError("Session has no spoken Transcript waiting for translation")
+            ref = f"t-{uuid.uuid4().hex}"
+            d["source_transcript_ref"], d["transcript_ref"] = spoken, ref
+            self._write("transcript", ref, transcript_plaintext)
+            self._write("session", session_id, _encode(d))
+            self._write("revision", session_id, _encode(self._stored_revision(session_id) + 1))
+            return ref
+
+    def correct_transcript(self, session_id: str, transcript: Transcript) -> None:
+        transcript_plaintext = _encode(dataclasses.asdict(transcript))  # TypeError before any write
+        with self._transaction():
+            d = self._get("session", session_id)
+            if d is None:
+                raise LookupError("Session does not exist")
+            spoken = d.get("source_transcript_ref") or d.get("transcript_ref")
+            if not spoken:
+                raise ValueError("Session has no Transcript")
+            if d.get("transcript_ref") and d["transcript_ref"] != spoken:
+                self._db.execute("DELETE FROM records WHERE kind = ? AND id = ?", ("transcript", d["transcript_ref"]))
+            d["transcript_ref"] = spoken
+            self._write("transcript", spoken, transcript_plaintext)
+            self._write("session", session_id, _encode(d))
+            self._write("revision", session_id, _encode(self._stored_revision(session_id) + 1))
+
     def load_actions_snapshot(self, session_id: str) -> ActionsSnapshot:
         with self._transaction():  # revision and actions from the same moment
             return ActionsSnapshot(self._revision(session_id), tuple(self.load_actions(session_id)))

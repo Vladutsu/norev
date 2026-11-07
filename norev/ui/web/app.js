@@ -70,7 +70,7 @@ const ICON = {
 const state = {
   modes: [], mode: null, lang: "ro",
   others: { context: "", prompt: "", digest: null },
-  sessionId: null, review: null, poll: null, rolesChanged: null,
+  sessionId: null, review: null, poll: null, rolesChanged: null, transcriptChanged: null,
   list: { kind: "recent", sessions: [], confirming: null },
   destination: {},  // action id -> the Connector the User picked (#72)
 };
@@ -368,6 +368,7 @@ async function regenerate(button) {
       await new Promise((r) => setTimeout(r, 1000));
     }
     state.rolesChanged = null;
+    state.transcriptChanged = null;
     if (state.sessionId === sessionId) await reloadReview();
   });
 }
@@ -398,6 +399,19 @@ function renderReview() {
   $("decided").textContent = `${decided} din ${r.actions.length} decise`;
   $("decided-bar").style.width = r.actions.length ? `${Math.round((decided / r.actions.length) * 100)}%` : "0";
   $("summary").textContent = r.summary || "—";
+  // the same numbering as the Speakers list in the inspector
+  const speakerLabel = (id) => { const i = r.speakers.findIndex((s) => s.id === id); return i < 0 ? "Vorbitor" : `Vorbitor ${i + 1}`; };
+  const regenerateButton = () => h("button", { type: "button", class: "btn", onclick: (e) => regenerate(e.currentTarget) }, "Regenerează acțiunile");
+  // #82: a corrected Segment changes the actions only on the User's click, like a Role
+  const corrected = (state.transcriptChanged === r.session_id || r.retranslate) && r.can_execute ? h("div", { class: "actions" },
+    h("span", { class: "hint" }, "Acțiunile deja decise rămân neschimbate. Până la regenerare, citatele acțiunilor rămân cele vechi."),
+    regenerateButton()) : null;
+  $("transcript").replaceChildren(...(r.transcript.length ? r.transcript.map((seg) => {
+    const label = speakerLabel(seg.speaker_id);
+    const row = h("p", {}, h("span", { class: "speaker" }, label),
+      h("button", { type: "button", class: "segment", title: "Corectează textul", onclick: () => editSegment(row, seg, label) }, seg.text));
+    return row;
+  }) : [h("p", { class: "small muted" }, "—")]), ...(corrected ? [corrected] : []));
   const partial = r.untranslated ? h("p", { class: "small muted", role: "note" },
     `Rezultat parțial: ${r.untranslated} intervenții n-au putut fi traduse și au rămas în limba vorbită.`) : null;
   $("actions").replaceChildren(...[partial, ...r.actions.map(actionCard)].filter(Boolean));
@@ -410,8 +424,7 @@ function renderReview() {
   const unknown = r.speakers.some((s) => !s.role) ? h("p", { class: "small muted", role: "note" },
     "Rolul unor vorbitori nu e cunoscut, așa că responsabilul acțiunilor lor rămâne gol. Alege rolul mai jos.") : null;
   const again = state.rolesChanged === r.session_id && r.can_execute ? h("div", { class: "actions" },
-    h("span", { class: "hint" }, "Acțiunile deja decise rămân neschimbate."),
-    h("button", { type: "button", class: "btn", onclick: (e) => regenerate(e.currentTarget) }, "Regenerează acțiunile")) : null;
+    h("span", { class: "hint" }, "Acțiunile deja decise rămân neschimbate."), regenerateButton()) : null;
   $("speakers").replaceChildren(...[unknown, ...r.speakers.map((s, i) => {
     const select = h("select", { id: `role-${s.id}`, onchange: (e) => guarded(e.target, async () => {
       state.review = await api("set_role", state.sessionId, s.id, e.target.value);
@@ -425,22 +438,49 @@ function renderReview() {
     : [h("p", { class: "small muted" }, "Nimic de semnalat.")]));
 }
 
+// One spoken Segment in place: saved on leaving the box, Escape cancels; only its text changes (#82)
+function editSegment(row, seg, label) {
+  const area = h("textarea", { class: "field", "aria-label": `Corectează textul, ${label}` }, seg.text);
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const text = area.value.trim();
+    if (save && text !== seg.text) {
+      await guarded(area, async () => {
+        state.review = await api("edit_transcript", state.sessionId, seg.index, text);
+        state.transcriptChanged = state.sessionId;
+      });
+    }
+    const other = [...document.querySelectorAll("#transcript textarea")].some((t) => t !== area);
+    if (!other) renderReview();  // never close another Segment the User opened meanwhile; it renders when done
+  };
+  area.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); finish(false); } });
+  area.addEventListener("blur", () => finish(true));
+  row.replaceChild(area, row.lastChild);
+  area.focus();
+}
+
 function actionCard(a) {
   const open = a.status === "proposed";
   const [statusLabel, statusClass] = STATUS[a.status] || [a.status, ""];
-  const input = (id, label, value, placeholder, change, missing = false, required = false) => h("label", { for: id },
+  // change gets the trimmed text; owner, due date and Domain fields send null when empty, title and description ""
+  const input = (id, label, value, placeholder, change, missing = false, required = false, multiline = false) => h("label", { for: id },
     h("span", { class: "field-label" }, label, missing ? h("span", { class: "need" }, "De completat") : null),
-    h("input", {
-      id, class: missing ? "field missing" : "field", value, placeholder,
+    h(multiline ? "textarea" : "input", {
+      id, class: missing ? "field missing" : "field", value: multiline ? null : value, placeholder,
       disabled: !open, "aria-required": String(required), "aria-invalid": String(missing),
-      onchange: (e) => act(e.target, "edit", a.id, change(e.target.value.trim() || null)),
-    }));
+      onchange: (e) => act(e.target, "edit", a.id, change(e.target.value.trim())),
+    }, multiline ? value : null));
+  const text = h("div", { class: "stack", style: "gap:1rem" },
+    input(`${a.id}-title`, "Titlu", a.title, "", (v) => ({ title: v }), !a.title.trim(), true),
+    input(`${a.id}-description`, "Descriere", a.description, "", (v) => ({ description: v }), false, false, true));
   const fields = [
-    input(`${a.id}-owner`, "Responsabil", a.owner, "", (v) => ({ owner: v })),
-    input(`${a.id}-due`, "Termen", a.due_date, "AAAA-LL-ZZ", (v) => ({ due_date: v })),
+    input(`${a.id}-owner`, "Responsabil", a.owner, "", (v) => ({ owner: v || null })),
+    input(`${a.id}-due`, "Termen", a.due_date, "AAAA-LL-ZZ", (v) => ({ due_date: v || null })),
     ...a.fields.map((f) => input(`${a.id}-${f.name}`, f.label, f.value,
       f.type === "date" ? "AAAA-LL-ZZ" : f.type === "time" ? "HH:MM" : "",
-      (v) => ({ fields: { [f.name]: v } }), f.missing, f.required)),
+      (v) => ({ fields: { [f.name]: v || null } }), f.missing, f.required)),
   ];
 
   const plan = a.plan.map((step) => h("div", { class: "payload inset" },
@@ -503,14 +543,14 @@ function actionCard(a) {
       next));
   }
 
-  return h("article", { class: `card raised${a.status === "rejected" ? " rejected" : ""}`, "aria-label": a.title },
+  return h("article", { class: `card raised${a.status === "rejected" ? " rejected" : ""}`, "aria-label": a.title || "Fără titlu" },
     h("div", { class: "card-head" },
       h("div", { class: "brand" },
         h("span", { class: "typeicon" }, icon(a.action_type === "medication_reminder" ? "pill"
           : a.action_type === "follow_up_email" ? "mail" : "calendar", 22)),
-        h("div", { class: "stack", style: "gap:.2rem" }, h("span", { class: "typename" }, a.type_label), h("span", { class: "atitle" }, a.title))),
+        h("div", { class: "stack", style: "gap:.2rem" }, h("span", { class: "typename" }, a.type_label), h("span", { class: "atitle" }, a.title || "Fără titlu"))),
       h("span", { class: `chip ${statusClass}` }, statusLabel)),
-    a.description ? h("p", { class: "small", style: "margin:0;color:var(--text-2)" }, a.description) : null,
+    text,
     h("div", { class: "fields" }, fields),
     a.transcript_excerpt ? h("blockquote", {}, icon("quote", 18), h("span", {}, `„${a.transcript_excerpt}”`)) : null,
     plan,

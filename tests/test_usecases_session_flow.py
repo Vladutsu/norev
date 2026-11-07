@@ -17,6 +17,7 @@ from norev.usecases.others_prompt import confirm
 from norev.usecases.session_flow import run_session, select_domain
 from norev.usecases.speaker_roles import set_speaker_role
 from norev.usecases.transcribe import transcribe_session
+from norev.usecases.transcript_correction import correct_transcript
 
 DOMAINS = Path(__file__).resolve().parents[1] / "domains"
 CORPORATE = load_domain(DOMAINS / "corporate")
@@ -172,6 +173,30 @@ class RunSessionTest(unittest.TestCase):
         result = flow.run()  # one translation answer only: a second translation would fail
         self.assertEqual([a.action_type for a in result.actions], ["work_item"])
         self.assertEqual(len(flow.extractor.calls), 2)
+
+    def test_run_after_a_correction_translates_the_corrected_text(self):
+        corrected = {"turns": [{"id": "1", "text": "I will send the ANAF report on Friday."}, {"id": "2", "text": "Fine, thanks."}]}
+        flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"], corrected, ROLES, ANSWERS["corporate"]])
+        flow.run()
+        old_translation = flow.store.get_session("s1").transcript_ref
+        correct_transcript("s1", 0, "Trimit raportul ANAF vineri.", flow.store)
+
+        flow.run()
+
+        self.assertIn("Trimit raportul ANAF vineri.", flow.llm.calls[3][0])  # the translation prompt
+        self.assertEqual(flow.extractor.calls[1][0].segments[0].text, "I will send the ANAF report on Friday.")
+        session = flow.store.get_session("s1")
+        self.assertNotIn(session.transcript_ref, (old_translation, session.source_transcript_ref))
+        self.assertRaises(KeyError, flow.store.load_transcript, old_translation)
+
+    def test_english_session_after_a_correction_is_still_not_translated(self):
+        english = Transcript((Segment(0.0, 2.0, "I will send the report."),), language="en")
+        flow = Flow(CORPORATE, [ROLES, ANSWERS["corporate"], ROLES, ANSWERS["corporate"]], spoken=english)
+        flow.run()
+        correct_transcript("s1", 0, "I will send the ANAF report.", flow.store)
+        flow.run()
+        self.assertEqual(len(flow.llm.calls), 4)  # Roles and Domain stage twice, no translation
+        self.assertEqual(flow.extractor.calls[1][0].segments[0].text, "I will send the ANAF report.")
 
     def test_decided_actions_are_never_overwritten(self):
         flow = Flow(CORPORATE, [TRANSLATION, ROLES, ANSWERS["corporate"], ROLES, ANSWERS["corporate"]])

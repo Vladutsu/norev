@@ -186,6 +186,56 @@ class RecordAndAnalyseTest(Case):
                          [(first["id"], "rejected", ""), (new_id, "proposed", "organizer")])
         self.assertEqual([s["role"] for s in review["speakers"]], ["organizer", "participant"])
 
+    def test_a_corrected_segment_is_saved_and_survives_reopening(self):
+        session_id = self.recorded()
+        review = self.ok(self.bridge.edit_transcript(session_id, 0, "  Trimit raportul ANAF vineri. "))
+        self.assertEqual([seg["text"] for seg in review["transcript"]], ["Trimit raportul ANAF vineri.", "Bine, mulțumesc."])
+        self.assertEqual(review["transcript"][0]["speaker_id"], "S1")
+        self.store.close()
+        self.store = self.open_store()
+        self.bridge = Bridge(self.backend())
+        review = self.ok(self.bridge.review(session_id))
+        self.assertEqual(review["transcript"][0]["text"], "Trimit raportul ANAF vineri.")
+        self.assertTrue(review["retranslate"])  # the regenerate button comes back after a restart
+
+    def test_an_invalid_correction_is_a_validation_error(self):
+        session_id = self.recorded()
+        self.assertEqual(self.error(self.bridge.edit_transcript(session_id, 2, "x")), "invalid_index")
+        self.assertEqual(self.error(self.bridge.edit_transcript(session_id, "0", "x")), "invalid_index")
+        self.assertEqual(self.error(self.bridge.edit_transcript(session_id, 0, "  ")), "required")
+        self.assertEqual(self.error(self.bridge.edit_transcript(session_id, 0, None)), "invalid_string")
+        self.assertEqual(self.error(self.bridge.edit_transcript("missing", 0, "x")), "not_found")
+
+    def test_correction_is_refused_while_recording(self):
+        session_id = self.ok(self.bridge.start("corporate", "ro", "Echipa"))["session_id"]
+        self.assertEqual(self.error(self.bridge.edit_transcript(session_id, 0, "x")), "session_busy")
+        self.ok(self.bridge.stop(session_id))
+
+    def test_regenerate_after_a_correction_translates_the_corrected_text_and_keeps_the_decided_action(self):
+        session_id = self.recorded()
+        review = self.ok(self.bridge.review(session_id))
+        first = review["actions"][0]
+        self.ok(self.bridge.reject(session_id, first["id"], review["revision"]))
+        review = self.ok(self.bridge.edit_transcript(session_id, 0, "Trimit raportul ANAF vineri."))
+        new_id = f"{session_id}-r{review['revision'] + 1}-1"  # saving the new translation bumps the revision
+        calls = len(self.llm.calls)
+        self.llm._responses += [json.dumps({"turns": [{"id": "1", "text": "I will send the ANAF report on Friday."},
+                                                      {"id": "2", "text": "Fine, thanks."}]}),
+                                json.dumps(ROLES), json.dumps({"proposed_actions": [
+                                    {"id": new_id, "action_type": "work_item", "fields": {}}]})]
+
+        self.ok(self.bridge.regenerate(session_id))
+
+        self.assertEqual(self.ok(self.bridge.progress(session_id)), {"stage": "ready", "failed": None})
+        self.assertIn("ANAF", self.llm.calls[calls][0])  # the translation ran on the corrected text
+        review = self.ok(self.bridge.review(session_id))
+        self.assertEqual([(a["id"], a["status"]) for a in review["actions"]],
+                         [(first["id"], "rejected"), (new_id, "proposed")])
+        session = self.store.get_session(session_id)
+        self.assertNotEqual(session.transcript_ref, session.source_transcript_ref)
+        self.assertIn("ANAF", self.store.load_transcript(session.transcript_ref).text)
+        self.assertFalse(review["retranslate"])
+
     def test_regenerate_is_refused_while_recording_and_in_the_demo(self):
         session_id = self.ok(self.bridge.start("corporate", "ro", "Echipa"))["session_id"]
         self.assertEqual(self.error(self.bridge.regenerate(session_id)), "session_busy")
@@ -303,6 +353,35 @@ class ExecuteTest(Case):
         [event] = self.store.load_events()
         self.assertEqual((event.action_id, event.connector, event.approved_by), (action["id"], "local_document", USER))
         self.assertEqual(self.error(self.bridge.execute(session_id, action["id"])), "not_executable")
+
+    def test_review_shows_the_spoken_transcript_with_speakers(self):
+        review = self.ok(self.bridge.review(self.recorded()))
+        self.assertFalse(review["retranslate"])
+        self.assertEqual(review["transcript"], [
+            {"index": 0, "speaker_id": "S1", "text": "Trimit raportul vineri."},
+            {"index": 1, "speaker_id": "S2", "text": "Bine, mulțumesc."},
+        ])
+
+    def test_corrected_title_and_description_are_what_is_approved(self):
+        session_id = self.recorded()
+        review = self.ok(self.bridge.review(session_id))
+        action = review["actions"][0]
+        review = self.ok(self.bridge.preview(session_id, action["id"], review["revision"]))
+        review = self.ok(self.bridge.edit(session_id, action["id"],
+                                          {"title": "Trimite raportul ANAF", "description": ""}, review["revision"]))
+        edited = review["actions"][0]
+        self.assertEqual((edited["title"], edited["description"], edited["prepared"]), ("Trimite raportul ANAF", "", False))
+
+        review = self.ok(self.bridge.preview(session_id, action["id"], review["revision"]))
+        self.assertIn("Trimite raportul ANAF", json.dumps(review["actions"][0]["plan"], ensure_ascii=False))
+
+    def test_an_empty_title_is_shown_missing_and_refused_at_preview(self):
+        session_id = self.recorded()
+        review = self.ok(self.bridge.review(session_id))
+        action = review["actions"][0]
+        review = self.ok(self.bridge.edit(session_id, action["id"], {"title": ""}, review["revision"]))
+        self.assertIn("Titlu", review["actions"][0]["missing"])
+        self.assertEqual(self.error(self.bridge.preview(session_id, action["id"], review["revision"])), "required")
 
     def test_a_proposed_action_is_never_executed(self):
         session_id = self.recorded()

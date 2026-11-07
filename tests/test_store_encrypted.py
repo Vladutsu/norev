@@ -306,6 +306,55 @@ class StoreContract:
         self.store.save_session(a_session())
         self.assertEqual(self.store.load_actions_snapshot("s1").revision, 0)
 
+    def test_correct_transcript_overwrites_the_spoken_one_and_drops_the_translation(self):
+        session, _ = self._filled_session()
+        revision = self.store.load_actions_snapshot("s1").revision
+        corrected = Transcript((Segment(0.0, 2.5, "Bună ziua, ANAF", "S1"),), language="ro")
+
+        self.store.correct_transcript("s1", corrected)
+
+        after = self.store.get_session("s1")
+        self.assertEqual((after.source_transcript_ref, after.transcript_ref),
+                         (session.source_transcript_ref, session.source_transcript_ref))
+        self.assertEqual(self.store.load_transcript(session.source_transcript_ref), corrected)
+        self.assertRaises(KeyError, self.store.load_transcript, session.transcript_ref)
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, revision + 1)
+        self.store.delete_session("s1")
+        self.assertRaises(KeyError, self.store.load_transcript, session.source_transcript_ref)
+
+    def test_save_translation_points_at_it_and_keeps_the_spoken_one(self):
+        session = a_session()
+        session.transcript_ref = self.store.save_transcript("s1", a_transcript())
+        self.store.save_session(session)
+        english = Transcript((Segment(0.0, 2.5, "Good morning", "S1"),), language="en")
+
+        ref = self.store.save_translation("s1", english)
+
+        after = self.store.get_session("s1")
+        self.assertEqual((after.source_transcript_ref, after.transcript_ref), (session.transcript_ref, ref))
+        self.assertEqual(self.store.load_transcript(ref), english)
+        self.assertEqual(self.store.load_actions_snapshot("s1").revision, 1)
+        # already translated: a second translation is refused, nothing changes
+        self.assertRaises(ValueError, self.store.save_translation, "s1", english)
+        self.assertEqual(self.store.get_session("s1"), after)
+        self.assertRaises(LookupError, self.store.save_translation, "s2", english)
+
+    def test_save_translation_after_a_correction_even_once_review_started(self):
+        session, _ = self._filled_session()
+        self.store.correct_transcript("s1", a_transcript())
+        english = Transcript((Segment(0.0, 2.5, "Good morning", "S1"),), language="en")
+        ref = self.store.save_translation("s1", english)
+        after = self.store.get_session("s1")
+        self.assertEqual((after.source_transcript_ref, after.transcript_ref), (session.source_transcript_ref, ref))
+        self.store.delete_session("s1")
+        for gone in (ref, session.source_transcript_ref):
+            self.assertRaises(KeyError, self.store.load_transcript, gone)
+
+    def test_correct_transcript_needs_a_transcribed_session(self):
+        self.assertRaises(LookupError, self.store.correct_transcript, "s1", a_transcript())
+        self.store.save_session(a_session())
+        self.assertRaises(ValueError, self.store.correct_transcript, "s1", a_transcript())
+
     def test_delete_is_refused_while_an_approved_action_waits(self):
         self._filled_session()
         self.store.save_actions("s1", [approved_action()], expected_revision=1)
@@ -414,6 +463,26 @@ class EncryptedStoreTest(TempStoreCase):
             t.join()
         self.assertEqual(errors, [])
         self.assertEqual([len(self.store.load_steps(f"a{n}")) for n in range(4)], [20] * 4)
+
+    def test_corrected_transcript_is_encrypted_survives_reopening_and_leaves_no_orphan(self):
+        StoreContract._filled_session(self)
+        corrected = Transcript((Segment(0.0, 2.5, f"corectat {SENTINEL}", "S1"),), language="ro")
+        self.store.correct_transcript("s1", corrected)
+        self.store.close()
+        self.assertNotIn(SENTINEL.encode(), self.data_bytes())
+        self.store = self.open()
+        self.assertEqual(self.store.load_transcript(self.store.get_session("s1").transcript_ref), corrected)
+
+        self.store.delete_session("s1")
+        with closing(sqlite3.connect(self.db)) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM records WHERE kind = 'transcript'").fetchone()[0], 0)
+
+    def test_a_failed_correction_changes_nothing(self):
+        session, _ = StoreContract._filled_session(self)
+        self.assertRaises(TypeError, self.store.correct_transcript, "s1",
+                          Transcript((Segment(0.0, 1.0, object()),)))  # not JSON: refused before any write
+        self.assertEqual(self.store.get_session("s1"), session)
+        self.assertEqual(self.store.load_transcript(session.transcript_ref), a_transcript())
 
     def test_deleted_session_leaves_no_sentinel_on_disk(self):
         self.store.save_session(a_session())
