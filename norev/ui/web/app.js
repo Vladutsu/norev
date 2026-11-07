@@ -158,6 +158,12 @@ function sessionInProgress(on) {
   if (on) setNav("new");
 }
 
+// show() locks the nav on the recording screen; a stopped analysis unlocks it so the User is never stuck there
+function navLocked(locked) {
+  for (const b of document.querySelectorAll(".navbtn")) b.disabled = locked;
+  sessionInProgress(locked);
+}
+
 function setNav(name) {
   for (const b of document.querySelectorAll(".navbtn")) {
     if (b.dataset.view === name) b.setAttribute("aria-current", "page");
@@ -366,7 +372,8 @@ async function waitAnalysis(sessionId, start = true) {
           : p.failed === "ModelMissing" ? "Lipsește modelul local cerut de o etapă a analizei. Rulează norev.cmd doctor și vezi logul aplicației. Ce s-a salvat până acolo e păstrat."
           : `Analiza s-a oprit la etapa „${STAGES[p.stage] || p.stage}”. Ce s-a salvat până acolo e păstrat.`;
         line.replaceChildren(what, " ", p.failed === "no_audio" ? "" : h("button", {
-          type: "button", class: "btn", onclick: (e) => guarded(e.currentTarget, () => waitAnalysis(sessionId)) }, "Încearcă din nou"));
+          type: "button", class: "btn", onclick: (e) => guarded(e.currentTarget, () => { navLocked(true); return waitAnalysis(sessionId); }) }, "Încearcă din nou"));
+        navLocked(false);
         return;
       }
       if (p.stage === "ready") break;
@@ -377,6 +384,7 @@ async function waitAnalysis(sessionId, start = true) {
     await openReview(sessionId);
   } catch (err) {
     line.replaceChildren(ERRORS[err.code] || ERRORS.internal);
+    navLocked(false);
   }
 }
 
@@ -589,8 +597,13 @@ function renderResult(r) {
   $("result").hidden = !r.completion;
   $("result-text").textContent = r.completion || "";
   $("result-save").hidden = !r.can_execute;
-  $("result-preview").hidden = true;
-  $("result-preview").replaceChildren();
+  // re-renders (an action prepared or edited) keep the file the User is looking at; another result closes it
+  const box = $("result-preview");
+  if (box.dataset.content !== r.completion) {
+    box.hidden = true;
+    box.replaceChildren();
+    delete box.dataset.content;
+  }
 }
 
 async function copyResult() {
@@ -605,6 +618,7 @@ async function copyResult() {
 async function previewResult() {
   const { payload } = await api("completion_preview", state.sessionId);
   const box = $("result-preview");
+  box.dataset.content = payload.content;
   box.replaceChildren(h("div", { class: "well inset" },
     h("span", { class: "overline" }, "Fișierul care va fi scris"),
     h("p", { class: "small mono" }, payload.destination),
