@@ -44,11 +44,12 @@ class SessionCliTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def _answers(self, *minutes):
-        """Recorded answers for Local council: Speaker Roles, then per fragment the follow-ups and the minutes,
-        then the decisions-and-votes pass. No translation: the minutes are written from the spoken Transcript."""
+        """Recorded answers for Local council: Speaker Roles, the agenda-and-votes pass, then per fragment the
+        follow-ups and the minutes. No translation: the minutes are written from the spoken Transcript."""
         empty = json.dumps({"proposed_actions": [], "added_actions": [], "suggestions": []})
         fragments = [answer for text in minutes for answer in (empty, json.dumps({"output": text}))]
-        self.processor = FakeProcessor([json.dumps(ROLES), *fragments, json.dumps({"items": []})])
+        agenda = {"meeting": {"locality": "", "type": "", "attendance": "", "chair": ""}, "items": []}
+        self.processor = FakeProcessor([json.dumps(ROLES), json.dumps(agenda), *fragments])
 
     def _fake_processor(self, store, **models):
         self.models = models  # what the CLI would give the real Central Processor
@@ -75,7 +76,7 @@ class SessionCliTest(unittest.TestCase):
         self.assertIn("Speakers: S1, S2", out)
         self.assertIn("Proces-verbal (draft, de verificat):", out)
         self.assertIn("Deschiderea ședinței și prezența.", out)
-        self.assertIn("## Hotărâri și voturi", out)
+        self.assertIn("## Hotărâri și voturi", out)  # no vote found: flagged, never invented
         self.assertNotIn("PARTIAL", out)
 
         with patch.dict(os.environ, self.env, clear=True):
