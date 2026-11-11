@@ -10,6 +10,7 @@ Review, edit, preview, approve and reject are DemoBackend's, on the real store. 
   Nothing here holds a Connector.
 """
 import io
+import json
 import logging
 import os
 import subprocess
@@ -22,7 +23,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any
 
-from norev.adapters.domains.loader import load_completion, load_others
+from norev.adapters.domains.loader import load_completion, load_others, optional_completion, optional_decisions
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.recorder.recorder import Recorder
@@ -37,6 +38,7 @@ from norev.usecases.session_flow import run_session
 from norev.usecases.speaker_roles import set_speaker_role
 from norev.usecases.transcribe import transcribe_session
 from norev.usecases.transcript_correction import correct_transcript
+from norev.usecases.document_completion import timestamp
 
 log = logging.getLogger(__name__)
 
@@ -266,7 +268,8 @@ class SessionBackend(DemoBackend):
                         translator=TurnTranslator(self.processor, model=model, workers=self.workers),
                         extractor=self.make_extractor(self.processor, workers=self.workers), llm=self.processor,
                         regenerate=regenerate,
-                        completion=load_completion(self.domains_dir / "others") if session.domain == "others" else None)
+                        completion=optional_completion(self.domains_dir / session.domain),
+                        decisions=optional_decisions(self.domains_dir / session.domain))
                 self._progress[session_id]["untranslated"] = len(result.untranslated)
             self._set_stage(session_id, "ready")
         except Exception as e:  # the stage and the error class only: messages can quote Session content
@@ -311,11 +314,18 @@ class SessionBackend(DemoBackend):
         return self.store.load_completion(session_id)
 
     def _completion_payload(self, session_id: str) -> dict[str, str]:
-        if self.store.get_session(session_id) is None:
+        session = self.store.get_session(session_id)
+        if session is None:
             raise LookupError("Session does not exist")
         content = self.store.load_completion(session_id)
         if not content:
             raise ExecutionRefused("the Session has no Others result")
+        if session.domain == "local_council":
+            content = ("# PROCES-VERBAL\n### al ședinței Consiliului Local\n\n"
+                       "PROIECT — necesită verificare pe înregistrare înainte de asumare.\n\n" + content +
+                       "\n\n## Verificare și semnături\nPreședinte de ședință: __________________\n"
+                       "Secretar general: __________________\nData verificării: __________________\n")
+            return LocalDocumentPayloadBuilder(self.export_dir).document(content, "docx")
         return LocalDocumentPayloadBuilder(self.export_dir).document(content)
 
     def completion_preview(self, session_id: str) -> dict[str, Any]:
@@ -334,6 +344,43 @@ class SessionBackend(DemoBackend):
         action = ProposedAction(f"{session_id}-result", "Rezultat Others", "", "", approved_by=self.approved_by)
         action.approve({"steps": [{"step": "save_result", "connector": "local_document", "payload": payload}]})
         return {"saved": self.processor.send(action, "local_document", payload, step="save_result")}
+
+    def _transcript_payload(self, session_id: str, format: str) -> dict[str, str]:
+        if format not in ("txt", "json", "docx"):
+            raise ValueError("unsupported Transcript format")
+        session = self.store.get_session(session_id)
+        if session is None:
+            raise LookupError("Session does not exist")
+        ref = session.source_transcript_ref or session.transcript_ref
+        if not ref:
+            raise ExecutionRefused("Session has no Transcript")
+        transcript = self.store.load_transcript(ref)
+        if format == "json":
+            content = json.dumps({"session_id": session.id, "language": transcript.language,
+                                  "segments": [{"start": s.start, "end": s.end, "speaker_id": s.speaker_id,
+                                                "text": s.text} for s in transcript.segments]}, ensure_ascii=False, indent=2)
+        else:
+            content = "# Conversația ședinței\n\nTranscriere automată — verificați pasajele neclare pe înregistrare.\n\n"
+            content += "\n\n".join(f"[{timestamp(s.start)}–{timestamp(s.end)}] {s.speaker_id or 'Vorbitor neidentificat'}: {s.text}"
+                                   for s in transcript.segments)
+        return LocalDocumentPayloadBuilder(self.export_dir).document(content, format)
+
+    def transcript_preview(self, session_id: str, format: str = "txt") -> dict[str, Any]:
+        with self._lock:
+            self._refuse_if_busy(session_id)
+            return {"payload": self._transcript_payload(session_id, format)}
+
+    def transcript_save(self, session_id: str, approved: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            self._refuse_if_busy(session_id)
+            if not isinstance(approved, dict):
+                raise ValueError("invalid export payload")
+            payload = self._transcript_payload(session_id, approved.get("format", ""))
+            if payload != approved:
+                raise ExecutionRefused("Transcript changed since preview")
+            action = ProposedAction(f"{session_id}-transcript", "Export conversație", "", "", approved_by=self.approved_by)
+            action.approve({"steps": [{"step": "save_transcript", "connector": "local_document", "payload": payload}]})
+            return {"saved": self.processor.send(action, "local_document", payload, step="save_transcript")}
 
     def _refuse_if_busy(self, session_id: str) -> None:
         """Nothing else may start while the Session records or is analysed; the caller holds the lock."""

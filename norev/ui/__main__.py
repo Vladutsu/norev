@@ -46,17 +46,22 @@ def session_backend(store, approved_by: str, pick_file):
     for name, value in LLM_DEFAULTS.items():
         os.environ.setdefault(name, value)
     models = models_from_environment(paths.logs / "llama-server.log")
+    # the analysis runs in a daemon thread: closing the window mid-analysis skips its `finally`
+    import atexit
+
+    atexit.register(models.stop)
     os.environ.setdefault("LLAMACPP_URL", models.template.url)
     os.environ["LLM_MODEL"] = os.environ["NOREV_EXTRACT_MODEL"]  # the model extraction asks for (#62)
     # Whisper and diarization each in a child process that ends before llama-server starts, so their
     # CUDA contexts do not stay on the GPU during the LLM stage (#65)
-    try:
-        from norev.adapters.diarization.sortformer import SortformerDiarizer  # noqa: F401  (same check as before)
+    from norev.adapters.diarization import pick
 
-        diarizer = ChildProcessAdapter(store, child_process.sortformer)
-    except ImportError:
-        print("requirements-diarization.txt is not installed: Transcripts have no Speakers", file=sys.stderr)
+    choice = pick()
+    if choice is None:
+        print("no diarizer installed (requirements-diarization.txt): Transcripts have no Speakers", file=sys.stderr)
         diarizer = _NoSpeakers()
+    else:
+        diarizer = ChildProcessAdapter(store, getattr(child_process, choice), wants_spans=choice == "sherpa")
     export_dir = Path(os.environ.get("NOREV_EXPORT_DIR") or Path.home() / "Documents" / "norev").resolve()
     google, calendar = build_google_calendar(store)  # no Connector without an OAuth client and the encrypted store
     trello, trello_connector = build_trello(store)  # none without NOREV_TRELLO_API_KEY and the encrypted store

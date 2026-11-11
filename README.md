@@ -1,6 +1,6 @@
-# norev — Romanian, Corporate
+# norev — Romanian, Local council
 
-A self-contained version of norev with **one language (Romanian)** and **one Domain (Corporate)**,
+A self-contained version of norev with **one language (Romanian)** and **one Domain (Local council)**,
 which sets itself up for the laptop it is installed on. Everything still runs locally (ADR 0001):
 the only network traffic is the one-time download of models and llama.cpp.
 
@@ -16,10 +16,10 @@ Transcript without Speakers). The first run then does, with no questions asked:
 
 1. **Detects the hardware** (RAM, GPU vendor and VRAM) and picks a tier, saved in
    `%LOCALAPPDATA%\norev\hardware.json` (Linux: `~/.local/share/norev/hardware.json`).
-2. **Installs only what that tier needs**: CUDA wheels only for NVIDIA, a CPU-only torch for
-   diarization elsewhere (~200 MB instead of ~6 GB).
-3. **Downloads**, once and checked by SHA-256: Whisper large-v3-turbo, the diarization model, the
-   tier's GGUF and the matching llama.cpp build (CUDA, Vulkan, Metal or CPU).
+2. **Installs only what that tier needs**: CUDA wheels only for NVIDIA; the sherpa-onnx diarization
+   (CPU, every tier).
+3. **Downloads**, once: Whisper large-v3-turbo, the two sherpa-onnx diarization models (~100 MB), and,
+   checked by SHA-256, the tier's GGUF and the matching llama.cpp build (CUDA, Vulkan, Metal or CPU).
 4. **Checks that the llama.cpp build runs** on this machine; if it does not (e.g. no Vulkan driver),
    it installs the CPU build instead.
 
@@ -42,12 +42,37 @@ tier except the **8 GB RAM** machines, which get the 4B model. Without an NVIDIA
 is slower, but the model and settings that produce the result are the same. Thresholds and rules: `norev/launcher/hardware.py`.
 Any variable set in the environment (README of the full app) still overrides the saved tier.
 
+## Local council
+
+Import the recording of a council meeting (or record one) and review:
+
+- **Proces-verbal (draft)**: written in Romanian from the spoken Transcript, in chronological,
+  timestamped sections of ~4000 characters each (one slot with an 8192-token context). Every
+  fragment is processed; a failed fragment fails the analysis instead of publishing half the minutes.
+- **Hotărâri și voturi**: one pass over every agenda and vote line of the whole meeting. A result is
+  kept only when an exact quote from the Transcript announces it; the rest is marked `[de verificat]`.
+- **Speakers**: diarization with sherpa-onnx on the CPU, with **no limit on the number of Speakers**
+  (a council meeting has 20+; the Sortformer model stops at 4). Each Transcript segment gets a TitaNet
+  embedding; the longer segments are grouped, groups whose mean voices are within 0.40 become one
+  Speaker (`NOREV_SPEAKER_MERGE`: lower splits more Speakers, higher merges more), and short replies
+  ("Da.", "5.") join the nearest Speaker instead of becoming one. On the 51-min Sibiu meeting of
+  27.04.2026 this finds 15 Speakers and keeps the 14 people identified from the content apart, for any
+  merge value from 0.35 to 0.45 (a single distance cut found 33 and put two people together).
+  Speaker Roles (chair, mayor, secretary...) are proposed, and only the ones the User confirms are
+  written into the minutes.
+- **Exports**: the minutes as an editable Word file; the conversation as Word, text or JSON with
+  timestamps and Speaker ids. An edited file is never overwritten.
+
+Names, votes, quorum and adopted decisions must be checked against the recording and the attendance list.
+
 ## What differs from the full app
 
-- The UI has no mode or language picker; the backend and the CLI accept only `corporate` and `ro`.
-- Translation RO → EN stays on: the extraction prompts are in English.
-- `medical` and `others` Domains live only in `tests/fixtures/domains/`, so the industry-agnostic
-  core keeps its tests (ADR 0003).
+- The app has no mode or language picker; the backend and the CLI accept only `local_council` and `ro`.
+- No translation: the minutes are written from the spoken Romanian Transcript.
+- `corporate` stays in `domains/` only for the synthetic examples of `--demo`; `medical` and `others`
+  live only in `tests/fixtures/domains/`, so the industry-agnostic core keeps its tests (ADR 0003).
+- Diarization is sherpa-onnx (`requirements-diarization.txt`), not NeMo: ~30 MB instead of ~6 GB.
+  `NOREV_DIARIZER=sortformer` still picks NeMo Sortformer when it is installed by hand.
 - llama.cpp is pinned to build `b12249` (`NOREV_LLAMA_BUILD` changes it).
 
 ## Checks

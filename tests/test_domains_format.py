@@ -179,8 +179,8 @@ def check_domain(folder: Path) -> None:
 
 
 class DomainsFormatTest(unittest.TestCase):
-    def test_this_version_ships_corporate_only(self):
-        self.assertEqual([f.name for f in shipped_folders()], ["corporate"])
+    def test_this_version_ships_local_council_and_the_demo_corporate(self):
+        self.assertEqual(sorted(f.name for f in shipped_folders()), ["corporate", "local_council"])
 
     def test_every_domain_follows_the_format(self):
         for folder in domain_folders():

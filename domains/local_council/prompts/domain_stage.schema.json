@@ -1,0 +1,196 @@
+{
+  "type": "object",
+  "properties": {
+    "proposed_actions": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "action_type": {
+                "const": "council_follow_up"
+              },
+              "owner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "chair",
+                      "mayor",
+                      "secretary",
+                      "councillor",
+                      "staff",
+                      "citizen"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "resolution": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "votes": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "responsible": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "subject",
+                  "resolution",
+                  "votes",
+                  "responsible"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "action_type",
+              "owner",
+              "fields"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "added_actions": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "transcript_excerpt": {
+                "type": "string"
+              },
+              "action_type": {
+                "const": "council_follow_up"
+              },
+              "owner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "chair",
+                      "mayor",
+                      "secretary",
+                      "councillor",
+                      "staff",
+                      "citizen"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "resolution": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "votes": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "responsible": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "subject",
+                  "resolution",
+                  "votes",
+                  "responsible"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "title",
+              "description",
+              "transcript_excerpt",
+              "action_type",
+              "owner",
+              "fields"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "transcript_excerpt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "transcript_excerpt"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "proposed_actions",
+    "added_actions",
+    "suggestions"
+  ],
+  "additionalProperties": false
+}

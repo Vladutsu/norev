@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# norev (Romanian, Corporate) for Linux: one-time install, the same steps as install.cmd.
+# norev (Romanian, Local council) for Linux: one-time install, the same steps as install.cmd.
 #   ./install.sh                 everything, with Speakers (diarization)
 #   ./install.sh --no-speakers   without diarization
 # ./norev-app.sh runs this by itself the first time.

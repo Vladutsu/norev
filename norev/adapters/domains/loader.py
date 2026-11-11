@@ -71,3 +71,16 @@ def load_completion(folder: Path) -> tuple[str, dict]:
     """The Others completion prompt and schema (#83): the result the User asks for, from the Transcript."""
     prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
     return _read_inside(folder, prompts["completion"]), json.loads(_read_inside(folder, prompts["completion_schema"]))
+
+
+def optional_completion(folder: Path) -> tuple[str, dict] | None:
+    prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
+    return load_completion(folder) if "completion" in prompts else None
+
+
+def optional_decisions(folder: Path) -> tuple[str, dict] | None:
+    """The prompt and schema of the decisions-and-votes section of a document Domain (whole meeting)."""
+    prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
+    if "decisions" not in prompts:
+        return None
+    return _read_inside(folder, prompts["decisions"]), json.loads(_read_inside(folder, prompts["decisions_schema"]))

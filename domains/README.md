@@ -102,6 +102,22 @@ Known Connectors (core code, not part of a Domain):
 
 A new Connector is added in the core first, then to this table and to `KNOWN_CONNECTORS` in the test.
 
+`local_document` also accepts explicit `docx`, `txt` and `json` formats for Session exports.
+The preview contains the exact text, format and destination; Word formatting is deterministic.
+
+## Local council document Domain
+
+`local_council` adds Roles for the chair, mayor, secretary, councillors, staff and citizens,
+and the `council_follow_up` Action Type for explicitly assigned measures. It has optional
+`completion` and `completion_schema` prompt paths. For a document Domain other than `others`,
+the completion template uses `{{transcript}}` and the schema requires `output` (string).
+The pipeline processes the original-language Transcript in bounded fragments, asks the Domain
+for missed follow-ups with empty generic actions, and generates a document section per fragment.
+It preserves all sections chronologically instead of compressing the entire meeting into a
+single context window. Speaker Roles already confirmed by the User remain available; this
+document flow does not infer Roles from the whole recording. Failure in any fragment leaves
+the previous result unchanged. The result uses the existing encrypted Session completion store.
+
 ## Prompt: prompts/domain_stage.md
 
 Plain text. The core replaces these placeholders before calling the model:

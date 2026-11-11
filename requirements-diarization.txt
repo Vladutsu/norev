@@ -1,10 +1,8 @@
-# diarization (candidate from the wave 1 spike, #5; not picked by the team yet)
-# `norev.cmd setup` installs it: with a CPU-only torch (~200 MB) unless the laptop has an NVIDIA GPU
+# diarization (Speakers): sherpa-onnx on the CPU, any number of Speakers (a council meeting has 20+)
+# `norev.cmd setup` installs it and downloads its two models into models/diarization (~100 MB).
 # Install on top of the main requirements, in one command so pip keeps their pins:
 #   .venv/bin/pip install -r requirements.txt -r requirements-diarization.txt
-# Pulls torch with CUDA (~6 GB of wheels). Installed alone, NeMo pulls av 19, which breaks
-# faster-whisper's decode_audio; requirements.txt pins av==17.0.0, which NeMo also accepts.
-nemo_toolkit[asr]==3.0.0
+sherpa-onnx==2.0.1
 
-# CPU-only alternative measured in the spike (no torch, ~130 MB, worse speaker error):
-# sherpa-onnx==2.0.1
+# Sortformer (nemo_toolkit[asr]==3.0.0, ~6 GB with CUDA torch) stops at 4 Speakers: not installed here.
+# It still runs when installed by hand and chosen with NOREV_DIARIZER=sortformer.

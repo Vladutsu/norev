@@ -1,4 +1,4 @@
-"""The medical and others Domains, kept only as test fixtures: this version ships Corporate alone.
+"""The medical and others Domains, kept only as test fixtures: this version ships Local council (and Corporate for the demo).
 
 The core is industry-agnostic (ADR 0003); its tests still exercise it with more than one Domain.
 """
@@ -8,6 +8,7 @@ TEST_DOMAINS = Path(__file__).resolve().parent / "fixtures" / "domains"
 
 # The modes of the full app, for tests that drive the UI with every Domain
 ALL_MODES = (
+    ("local_council", "Consiliu local", "Proces-verbal și conversație"),
     ("corporate", "Corporate", "Implicit"),
     ("medical", "Medical", "Exemplu"),
     ("others", "Others", "Prompt propriu"),
@@ -25,7 +26,8 @@ def all_domains_dir() -> Path:
 
         _ALL = Path(tempfile.mkdtemp(prefix="norev-domains-"))
         atexit.register(shutil.rmtree, _ALL, True)
-        shutil.copytree(TEST_DOMAINS.parent.parent.parent / "domains" / "corporate", _ALL / "corporate")
+        for name in ("corporate", "local_council"):
+            shutil.copytree(TEST_DOMAINS.parent.parent.parent / "domains" / name, _ALL / name)
         for name in ("medical", "others"):
             shutil.copytree(TEST_DOMAINS / name, _ALL / name)
     return _ALL

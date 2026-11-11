@@ -86,10 +86,16 @@ def apply_defaults(paths: AppPaths, env: MutableMapping[str, str], *, offline: b
     """
     from norev.launcher import hardware
 
-    # This version: Romanian, Corporate. Then the tier saved at install (models, devices, GPU layers);
+    # This version: Romanian, Local council. Then the tier saved at install (models, devices, GPU layers);
     # both only fill what the User did not set, and both come before the generic defaults below.
     env.setdefault("WHISPER_LANGUAGES", "ro")
-    env.setdefault("NOREV_DOMAIN", "corporate")
+    env.setdefault("NOREV_DOMAIN", "local_council")
+    # The minutes are written in ~4000-character fragments, one request at a time: one slot with an
+    # 8192-token context (domains/local_council) instead of the tier's 4 x 4096. It also needs less VRAM.
+    env.setdefault("LLAMACPP_CTX", "8192")
+    env.setdefault("LLM_PARALLEL", "1")
+    # A council meeting has 20+ Speakers; Sortformer stops at 4, sherpa-onnx has no limit.
+    env.setdefault("NOREV_DIARIZER", "sherpa")
     hardware.apply(paths.hardware, env)
     env.setdefault("HF_HOME", str(paths.hf_home))
     if offline:

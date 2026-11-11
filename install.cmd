@@ -1,5 +1,5 @@
 @echo off
-rem norev (Romana, Corporate) for Windows: one-time install. Everything is automatic:
+rem norev (Romana, Consiliu local) for Windows: one-time install. Everything is automatic:
 rem   Python packages, the hardware tier of this laptop, the models and llama.cpp for that tier.
 rem   install.cmd                 everything, with Speakers (diarization)
 rem   install.cmd --no-speakers   without diarization (smaller download, Transcript without Speakers)

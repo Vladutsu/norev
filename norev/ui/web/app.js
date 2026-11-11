@@ -594,6 +594,10 @@ function editSegment(node, seg, label) {
 
 // #83: the Others result; copied or saved only on the User's click, saving after they saw the exact file
 function renderResult(r) {
+  $("result-title").textContent = r.domain.name === "local_council" ? "Proiect de proces-verbal" : "Rezultat";
+  $("result-save").textContent = r.domain.name === "local_council" ? "Exportă Word" : "Salvează local";
+  $("transcript-export").hidden = !r.can_execute;
+  $("transcript-preview").hidden = true;
   $("result").hidden = !r.completion;
   $("result-text").textContent = r.completion || "";
   $("result-save").hidden = !r.can_execute;
@@ -615,10 +619,13 @@ async function copyResult() {
   }
 }
 
-async function previewResult() {
-  const { payload } = await api("completion_preview", state.sessionId);
-  const box = $("result-preview");
-  box.dataset.content = payload.content;
+async function previewResult(kind = "completion") {
+  const sessionId = state.sessionId;
+  const { payload } = kind === "transcript"
+    ? await api("transcript_preview", sessionId, $("transcript-format").value)
+    : await api("completion_preview", sessionId);
+  const box = $(kind === "transcript" ? "transcript-preview" : "result-preview");
+  box.dataset.content = state.review.completion;
   box.replaceChildren(h("div", { class: "well inset" },
     h("span", { class: "overline" }, "Fișierul care va fi scris"),
     h("p", { class: "small mono" }, payload.destination),
@@ -626,7 +633,7 @@ async function previewResult() {
     h("div", { class: "actions" },
       h("button", { type: "button", class: "btn", onclick: () => { box.hidden = true; } }, "Renunță"),
       h("button", { type: "button", class: "btn primary", onclick: (e) => guarded(e.currentTarget, async () => {
-        const { saved } = await api("completion_save", state.sessionId, payload);
+        const { saved } = await api(`${kind}_save`, sessionId, payload);
         box.hidden = true;
         toast(saved.created ? `Salvat în ${saved.path}` : `Există deja: ${saved.path}`);
       }) }, "Aprobă și salvează"))));
@@ -999,7 +1006,8 @@ async function googleButton(button) {
 function initList() {
   for (const id of ["f-text", "f-domain", "f-from", "f-to"]) $(id).addEventListener("input", () => renderList());
   $("result-copy").addEventListener("click", () => copyResult());
-  $("result-save").addEventListener("click", (e) => guarded(e.currentTarget, previewResult));
+  $("result-save").addEventListener("click", (e) => guarded(e.currentTarget, () => previewResult()));
+  $("transcript-save").addEventListener("click", (e) => guarded(e.currentTarget, () => previewResult("transcript")));
 }
 
 function initNav() {

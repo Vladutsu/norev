@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from norev.testing.fakes import FixedClock, InMemorySessionStore
-from norev.ui.backend import DemoBackend
+from norev.ui.backend import MODES, DemoBackend
 from norev.ui.bridge import Bridge
 from fixture_domains import ALL_MODES, all_domains_dir
 
@@ -48,21 +48,25 @@ class BridgeCase(unittest.TestCase):
 
 
 class ShippedModesTest(unittest.TestCase):
-    """This version: Corporate only, Romanian only, whatever the page asks for."""
+    """This version: Local council only, Romanian only, whatever the page asks for."""
 
     def setUp(self):
         self.store = InMemorySessionStore()
-        self.bridge = Bridge(DemoBackend(self.store, approved_by="local:test", clock=FixedClock(NOW)))
+        self.bridge = Bridge(DemoBackend(self.store, approved_by="local:test", clock=FixedClock(NOW), modes=MODES))
 
-    def test_corporate_is_the_only_mode(self):
-        self.assertEqual(self.bridge.modes()["data"], [{"id": "corporate", "label": "Corporate", "hint": "Implicit",
-                                                         "available": True}])
-        for mode in ("medical", "others"):
+    def test_the_demo_replays_only_the_synthetic_corporate_examples(self):
+        demo = Bridge(DemoBackend(self.store, approved_by="local:test", clock=FixedClock(NOW)))
+        self.assertEqual([m["id"] for m in demo.modes()["data"]], ["corporate"])
+
+    def test_local_council_is_the_only_mode(self):
+        self.assertEqual(self.bridge.modes()["data"], [{"id": "local_council", "label": "Consiliu local",
+                                                         "hint": "Proces-verbal și conversație", "available": True}])
+        for mode in ("corporate", "medical", "others"):
             with self.subTest(mode=mode):
                 self.assertEqual(self.bridge.start(mode, "ro", "")["error"]["code"], "mode_unavailable")
 
     def test_the_language_is_romanian_whatever_the_page_sends(self):
-        session_id = self.bridge.start("corporate", "en", "")["data"]["session_id"]
+        session_id = self.bridge.start("local_council", "en", "")["data"]["session_id"]
         self.assertEqual(self.bridge._backend._sessions[session_id]["language"], "ro")
 
     def test_the_page_offers_only_romanian(self):

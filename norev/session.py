@@ -1,6 +1,6 @@
 """Run the Session flow on a recorded file, all locally, into the encrypted store (#19).
 
-  python -m norev.session transcribe <audio_or_video>            (Corporate, Romanian: this version has no other)
+  python -m norev.session transcribe <audio_or_video>            (Local council, Romanian: this version has no other)
                                      [--date YYYY-MM-DD] [--no-speakers]     -> prints the Session id
   python -m norev.session analyse <session_id> [--no-translate]             (needs llama-server)
   python -m norev.session analyse <session_id> --regenerate                  analyse again, keep decisions
@@ -9,7 +9,7 @@
 transcribe runs Whisper and diarization and needs no LLM; analyse translates per Speaker turn,
 extracts and runs the Domain stage. They are separate so Whisper and the LLM never hold the GPU at
 the same time. With LLAMA_SERVER set, analyse starts llama-server itself, with the model of each
-stage (NOREV_TRANSLATE_MODEL, NOREV_EXTRACT_MODEL, the Domain's `[model]`), one at a time (#62). The Domain is Corporate unless chosen;
+stage (NOREV_TRANSLATE_MODEL, NOREV_EXTRACT_MODEL, the Domain's `[model]`), one at a time (#62). The Domain is Local council unless chosen;
 Others needs a prompt the User confirmed (#21), which the CLI cannot show, so it refuses Others. Needs NOREV_STORE_KEY_FILE: nothing is written in plaintext.
 """
 import argparse
@@ -19,7 +19,7 @@ import sys
 import uuid
 from datetime import date, datetime, time
 
-from norev.adapters.domains.loader import DOMAINS, load_domain
+from norev.adapters.domains.loader import DOMAINS, load_domain, optional_completion, optional_decisions
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.store.encrypted import StoreKeyError, StoreSettings, open_store
@@ -51,11 +51,20 @@ def transcribe(store, audio: str, domain: str, language: str | None, on: date | 
         raise FileNotFoundError(f"no file {audio}")
     from norev.adapters.whisper.transcriber import WhisperTranscriber
 
-    if speakers:
+    from norev.adapters.diarization import pick
+
+    choice = pick() if speakers else None
+    if choice == "sortformer":
         from norev.adapters.diarization.sortformer import SortformerDiarizer
 
         diarizer = SortformerDiarizer(store)
+    elif choice == "sherpa":
+        from norev.adapters.diarization.sherpa import SherpaDiarizer
+
+        diarizer = SherpaDiarizer(store)
     else:
+        if speakers:
+            print("no diarizer installed: the Transcript has no Speakers", file=sys.stderr)
         diarizer = _NoSpeakers()
     processor = _processor(store, transcriber=WhisperTranscriber(store), diarizer=diarizer)
     started = datetime.combine(on, time(12)).astimezone() if on else datetime.now().astimezone()
@@ -82,6 +91,8 @@ def analyse(store, session_id: str, translate: bool, regenerate: bool = False, d
             translator=TurnTranslator(processor, model=model, workers=WORKERS),
             extractor=LegacyActionExtractor(processor, workers=WORKERS), llm=processor, translate=translate,
             regenerate=regenerate,
+            completion=optional_completion(DOMAINS / select_domain(domain or session.domain)),
+            decisions=optional_decisions(DOMAINS / select_domain(domain or session.domain)),
         )
     finally:
         if models is not None:
@@ -128,6 +139,9 @@ def show(store, session_id: str) -> None:
         print("\nSuggestions:")
         for s in suggestions:
             print(f"  - {s.text}")
+    minutes = store.load_completion(session_id)
+    if minutes:
+        print(f"\nProces-verbal (draft, de verificat):\n{minutes}")
 
 
 def main(argv: list[str]) -> int:
@@ -136,7 +150,7 @@ def main(argv: list[str]) -> int:
     t = sub.add_parser("transcribe")
     t.add_argument("audio")
     # This version is Corporate-only and Romanian-only; the flags stay so existing scripts keep working
-    t.add_argument("--domain", default=None, choices=["corporate"], help="corporate (the only Domain here)")
+    t.add_argument("--domain", default=None, choices=["local_council"], help="local_council (the only Domain here)")
     t.add_argument("--language", default="ro", choices=["ro"], help="ro (the only language here)")
     t.add_argument("--date", type=date.fromisoformat, default=None, help="Session date for relative dates")
     t.add_argument("--no-speakers", action="store_true", help="skip diarization (no requirements-diarization.txt)")
@@ -145,7 +159,7 @@ def main(argv: list[str]) -> int:
     a.add_argument("--no-translate", action="store_true", help="extract from the spoken language")
     a.add_argument("--regenerate", action="store_true",
                    help="analyse again: replace the Proposed actions, keep every decided one")
-    a.add_argument("--domain", default=None, choices=["corporate"], help="with --regenerate: corporate")
+    a.add_argument("--domain", default=None, choices=["local_council"], help="with --regenerate: local_council")
     sub.add_parser("show").add_argument("session_id")
     args = parser.parse_args(argv)
 

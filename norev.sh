@@ -36,8 +36,8 @@ NOREV_TRANSLATE="${NOREV_TRANSLATE:-auto}"
 export WHISPER_LANGUAGES=ro
 # Session date (YYYY-MM-DD) used to resolve "Friday", "13 November"... Empty: today.
 export LLM_SESSION_DATE="${NOREV_DATE:-${LLM_SESSION_DATE:-}}"
-# This version has the Corporate Domain only
-NOREV_DOMAIN=corporate
+# This version has the Local council Domain only
+NOREV_DOMAIN=local_council
 # 1: Speakers by diarization (requirements-diarization.txt) | 0: one Transcript without Speakers
 NOREV_SPEAKERS="${NOREV_SPEAKERS:-1}"
 
@@ -129,7 +129,7 @@ fi
 
 # ── 1. Transcript with Speakers (Whisper + diarization, no LLM) ───────────────
 
-log "[1/3] Transcribing $1 (Whisper: ${WHISPER_MODEL:-large-v3-turbo}, language: ro, Domain: corporate)"
+log "[1/3] Transcribing $1 (Whisper: ${WHISPER_MODEL:-large-v3-turbo}, language: ro, Domain: local_council)"
 TRANSCRIBE_ARGS=()
 TRANSCRIBE_ARGS+=(--language ro)
 [[ -n "${NOREV_DOMAIN:-}" ]] && TRANSCRIBE_ARGS+=(--domain "$NOREV_DOMAIN")

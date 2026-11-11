@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# norev (Romanian, Corporate) for Linux: the same as norev.cmd. Installs everything the first time.
+# norev (Romanian, Local council) for Linux: the same as norev.cmd. Installs everything the first time.
 #   ./norev-app.sh [doctor | setup | new-key | setup-models | process <file>]
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"

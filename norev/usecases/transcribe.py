@@ -22,7 +22,10 @@ def transcribe_session(
     if not session.audio_ref:
         raise ValueError("Session has no audio")
     transcript = transcriber.transcribe(session.audio_ref, language)
-    turns = diarizer.diarize(session.audio_ref)
+    if getattr(diarizer, "wants_spans", False):  # a diarizer that groups the Transcript's own segments
+        turns = diarizer.diarize(session.audio_ref, spans=[(s.start, s.end) for s in transcript.segments])
+    else:
+        turns = diarizer.diarize(session.audio_ref)
     with_speakers = attach_speakers(transcript, turns)
     session.transcript_ref = store.save_transcript(session_id, with_speakers)
     store.save_session(session)

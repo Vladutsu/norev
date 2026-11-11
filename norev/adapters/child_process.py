@@ -43,7 +43,8 @@ class ChildProcessAdapter:
     """`make_adapter(store) -> adapter` must be a module-level function (the child imports it).
     The child starts on the first call and stays until `close()`."""
 
-    def __init__(self, store, make_adapter: Callable[[Any], Any]) -> None:
+    def __init__(self, store, make_adapter: Callable[[Any], Any], wants_spans: bool = False) -> None:
+        self.wants_spans = wants_spans  # the child's diarizer groups the Transcript's segments
         self._store = store
         self._make_adapter = make_adapter
         self._process = None
@@ -52,8 +53,8 @@ class ChildProcessAdapter:
     def transcribe(self, audio_ref: str, language: str | None = None):
         return self._call("transcribe", audio_ref, language)
 
-    def diarize(self, audio_ref: str):
-        return self._call("diarize", audio_ref)
+    def diarize(self, audio_ref: str, spans=None):
+        return self._call("diarize", audio_ref) if spans is None else self._call("diarize", audio_ref, spans)
 
     def close(self) -> None:
         """Ends the child, so its GPU memory and CUDA context are free before the next model loads."""
@@ -100,3 +101,9 @@ def sortformer(store):
     from norev.adapters.diarization.sortformer import SortformerDiarizer
 
     return SortformerDiarizer(store)
+
+
+def sherpa(store):
+    from norev.adapters.diarization.sherpa import SherpaDiarizer
+
+    return SherpaDiarizer(store)

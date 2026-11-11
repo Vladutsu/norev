@@ -48,9 +48,11 @@ def export_dir_of(path: Path) -> Path:
     return path
 
 
-def destination(export_dir: Path, content: str) -> Path:
+def destination(export_dir: Path, content: str, format: str = "md") -> Path:
+    if format not in ("md", "docx", "txt", "json"):
+        raise ValueError("unsupported document format")
     digest = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
-    return export_dir / f"norev-{digest}.md"
+    return export_dir / f"norev-{digest}.{format}"
 
 
 class LocalDocumentConnector:
@@ -60,14 +62,20 @@ class LocalDocumentConnector:
         self.export_dir = export_dir_of(export_dir)
 
     def send(self, payload: dict[str, Any]) -> dict[str, Any]:
-        if not isinstance(payload, dict) or set(payload) != {"destination", "content"} \
+        if not isinstance(payload, dict) or set(payload) not in ({"destination", "content"}, {"destination", "content", "format"}) \
                 or not isinstance(payload["content"], str):
             raise ValueError("local_document payload must be exactly destination and content")
         content = payload["content"]
-        target = destination(self.export_dir, content)
+        format = payload.get("format", "md")
+        target = destination(self.export_dir, content, format)
         if payload["destination"] != str(target):
             raise ValueError("destination is not the one the app chose for this content")
-        return {"path": str(target), "created": write_new(target, content.encode("utf-8"))}
+        if format == "docx":
+            from norev.adapters.connectors.word_document import render_docx
+            data = render_docx(content)
+        else:
+            data = content.encode("utf-8")
+        return {"path": str(target), "created": write_new(target, data)}
 
 
 def write_new(target: Path, data: bytes) -> bool:

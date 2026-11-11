@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "properties": {
+    "meeting": {
+      "type": "object",
+      "properties": {
+        "locality": {"type": "string"},
+        "type": {"type": "string"},
+        "attendance": {"type": "string"},
+        "chair": {"type": "string"}
+      },
+      "required": ["locality", "type", "attendance", "chair"],
+      "additionalProperties": false
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "time": {"type": "string"},
+          "title": {"type": "string"},
+          "announced": {"type": "array", "items": {"type": "string"}},
+          "result": {"type": "string", "enum": ["adoptat", "respins", "neclar"]}
+        },
+        "required": ["time", "title", "announced", "result"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["meeting", "items"],
+  "additionalProperties": false
+}
