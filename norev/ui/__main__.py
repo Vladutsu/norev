@@ -46,6 +46,10 @@ def session_backend(store, approved_by: str, pick_file):
     for name, value in LLM_DEFAULTS.items():
         os.environ.setdefault(name, value)
     models = models_from_environment(paths.logs / "llama-server.log")
+    # the analysis runs in a daemon thread: closing the window mid-analysis skips its `finally`
+    import atexit
+
+    atexit.register(models.stop)
     os.environ.setdefault("LLAMACPP_URL", models.template.url)
     os.environ["LLM_MODEL"] = os.environ["NOREV_EXTRACT_MODEL"]  # the model extraction asks for (#62)
     # Whisper and diarization each in a child process that ends before llama-server starts, so their

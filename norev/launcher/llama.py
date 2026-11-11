@@ -81,7 +81,8 @@ class LlamaServer:
         log = open(self.log_file, "ab")
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
         try:
-            self._process = self.popen(self.args(), stdout=log, stderr=subprocess.STDOUT, creationflags=flags)
+            extra = {"preexec_fn": _stop_with_parent} if sys.platform.startswith("linux") else {}
+            self._process = self.popen(self.args(), stdout=log, stderr=subprocess.STDOUT, creationflags=flags, **extra)
         finally:
             log.close()
         waited = 0.0
@@ -177,6 +178,15 @@ class LlamaModels:
         if self._server is not None:
             self._server.stop()
             self._server = None
+
+
+def _stop_with_parent() -> None:
+    """Linux: llama-server gets SIGTERM when norev ends, even when norev is killed or crashes, so it never
+    stays behind holding the GPU memory (the window closed during an analysis left it running)."""
+    import ctypes
+    import signal
+
+    ctypes.CDLL("libc.so.6", use_errno=True).prctl(1, signal.SIGTERM)  # PR_SET_PDEATHSIG
 
 
 def server_from_environment(log_file: Path, env=None) -> LlamaServer:
