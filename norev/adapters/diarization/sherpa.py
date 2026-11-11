@@ -1,9 +1,16 @@
 """Diarizer port: sherpa-onnx on the CPU, any number of Speakers (a council meeting has 20+).
 
 With the Transcript's segments (`spans`), each segment gets one TitaNet speaker embedding and the
-segments are grouped by average-linkage clustering on cosine distance. Measured on a 51-min council
-meeting: at 0.60 the chair's procedural lines stay one Speaker (32/35) while 11 other speakers stay
-apart, which sherpa's own pipeline (short pyannote windows) and smaller embedding models did not do.
+segments are grouped in two steps (`group`): fine average-linkage clusters of the longer segments, then
+clusters whose mean voices are within `merge_distance()` become one Speaker; a Speaker heard for less
+than MIN_SPEAKER_SECONDS and every short segment ("Da.", "5.") join the nearest Speaker.
+
+Tuned on the 51-min Sibiu council meeting of 27.04.2026 against 14 people identified from what they say
+(the chair, the opening speaker, 5 councillors, 7 citizens): one embedding-distance cut (the previous
+0.60) gave 33 Speakers and put two different women together; the two steps give 15 Speakers and keep
+everyone apart, for any merge distance from 0.35 to 0.45 (0.40 is the middle). Short replies used to
+become Speakers of their own. ERes2NetV2 and WeSpeaker embeddings were measured too: WeSpeaker could not
+tell these voices apart, ERes2NetV2 was exact at one setting only.
 Without spans it falls back to sherpa's pipeline (pyannote segmentation 3.0 + the same embeddings).
 `pip install sherpa-onnx`; `norev.cmd setup-models` downloads the models once into models\\diarization.
 Runs offline after that. The audio is decoded in memory, never written to a file (ADR 0004).
@@ -25,8 +32,19 @@ EMBEDDING = "titanet_large.onnx"
 MIN_SECONDS = 0.5  # shorter segments ("Da.", "5.") give no reliable embedding: they keep no Speaker
 
 
+LONG_SECONDS = 1.5  # only segments this long shape the Speakers; shorter ones are attached afterwards
+FIRST_PASS = 0.25  # fine clusters first: the merge step decides who is one Speaker
+MIN_SPEAKER_SECONDS = 10.0  # less than this in the whole meeting is not a Speaker of its own
+
+
 def threshold() -> float:
+    """sherpa's own pipeline (no spans): its clustering threshold."""
     return float(os.getenv("NOREV_DIARIZATION_THRESHOLD", "0.6"))
+
+
+def merge_distance() -> float:
+    """Two Speakers whose mean voices are this close (cosine distance) are one. Lower: more Speakers."""
+    return float(os.getenv("NOREV_SPEAKER_MERGE", "0.4"))
 
 
 def cluster(embeddings, limit: float) -> list[int]:
@@ -55,6 +73,54 @@ def cluster(embeddings, limit: float) -> list[int]:
         size[i] += size[j]
         label[label == j] = i
     return [int(v) for v in label]
+
+
+def _unit(x):
+    import numpy as np
+
+    return x / np.maximum(np.linalg.norm(x, axis=-1, keepdims=True), 1e-12)
+
+
+def group(embeddings, durations, merge: float | None = None) -> list[int]:
+    """One Speaker number per segment, numbered in order of first appearance.
+
+    1. average-linkage clusters (FIRST_PASS) of the segments of at least LONG_SECONDS;
+    2. the two clusters with the closest duration-weighted mean voices merge, while within `merge`;
+    3. clusters heard for less than MIN_SPEAKER_SECONDS are dissolved (unless none is that long);
+    4. every other segment joins the cluster with the nearest mean voice.
+    """
+    import numpy as np
+
+    merge = merge_distance() if merge is None else merge
+    x = _unit(np.asarray(embeddings, dtype=np.float64))
+    dur = np.asarray(durations, dtype=np.float64)
+    if len(x) == 0:
+        return []
+    long_ = [i for i in range(len(x)) if dur[i] >= LONG_SECONDS] or list(range(len(x)))
+    label = dict(zip(long_, cluster(x[long_], FIRST_PASS)))
+
+    def means(groups):
+        return {g: _unit(sum(x[i] * dur[i] for i in label if label[i] == g)) for g in groups}
+
+    while True:
+        groups = sorted(set(label.values()))
+        mean = means(groups)
+        pairs = [(1.0 - mean[a] @ mean[b], a, b) for n, a in enumerate(groups) for b in groups[n + 1:]]
+        closest = min(pairs, default=None)
+        if closest is None or not closest[0] <= merge:
+            break
+        for i in label:
+            if label[i] == closest[2]:
+                label[i] = closest[1]
+    heard = {g: sum(dur[i] for i in label if label[i] == g) for g in set(label.values())}
+    kept = sorted(g for g, seconds in heard.items() if seconds >= MIN_SPEAKER_SECONDS) or sorted(heard)
+    mean = means(kept)
+    centres = np.array([mean[g] for g in kept])
+    final = [label[i] if label.get(i) in kept else kept[int(np.argmax(centres @ x[i]))] for i in range(len(x))]
+    order: dict[int, int] = {}
+    for g in final:
+        order.setdefault(g, len(order))
+    return [order[g] for g in final]
 
 
 def models_dir() -> Path:
@@ -115,7 +181,7 @@ class SherpaDiarizer:
             stream.input_finished()
             kept.append((float(start), float(end)))
             vectors.append(extractor.compute(stream))
-        labels = cluster(vectors, threshold())
+        labels = group(vectors, [end - start for start, end in kept])
         return sorted((SpeakerTurn(start, end, str(label)) for (start, end), label in zip(kept, labels)),
                       key=lambda t: (t.start, t.end, t.speaker_id))
 

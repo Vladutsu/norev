@@ -53,9 +53,13 @@ Import the recording of a council meeting (or record one) and review:
   kept only when an exact quote from the Transcript announces it; the rest is marked `[de verificat]`.
 - **Speakers**: diarization with sherpa-onnx on the CPU, with **no limit on the number of Speakers**
   (a council meeting has 20+; the Sortformer model stops at 4). Each Transcript segment gets a TitaNet
-  embedding; segments are grouped at cosine distance 0.60 (`NOREV_DIARIZATION_THRESHOLD`: lower splits
-  more Speakers, higher merges more). Speaker Roles (chair, mayor, secretary...) are proposed, and only
-  the ones the User confirms are written into the minutes.
+  embedding; the longer segments are grouped, groups whose mean voices are within 0.40 become one
+  Speaker (`NOREV_SPEAKER_MERGE`: lower splits more Speakers, higher merges more), and short replies
+  ("Da.", "5.") join the nearest Speaker instead of becoming one. On the 51-min Sibiu meeting of
+  27.04.2026 this finds 15 Speakers and keeps the 14 people identified from the content apart, for any
+  merge value from 0.35 to 0.45 (a single distance cut found 33 and put two people together).
+  Speaker Roles (chair, mayor, secretary...) are proposed, and only the ones the User confirms are
+  written into the minutes.
 - **Exports**: the minutes as an editable Word file; the conversation as Word, text or JSON with
   timestamps and Speaker ids. An edited file is never overwritten.
 
