@@ -47,6 +47,11 @@ KNOWN = 2.0  # Zipf frequency from which a replacement is an ordinary Romanian w
 SPELLING = 0.75  # how close a replacement must be spelled to the word Whisper wrote
 NAME = 0.6  # the same, for a name from the Domain's list (names are misheard more freely)
 _TOKEN = re.compile(r"\w+|\s+|[^\w\s]")
+_COUNCIL_PHRASES = {
+    "lor de cuvânt": "luări de cuvânt",
+    "scuzele de vigoare": "scuzele de rigoare",
+    "în unanim": "în unanimitate",
+}
 
 
 @lru_cache(maxsize=20000)
@@ -126,9 +131,15 @@ def autocorrect(llm, transcript: Transcript, correction: tuple[str, dict, list[s
     allowed = vocabulary_words(vocabulary)
     listed = "\n".join(vocabulary) or "(nicio listă)"
     segments = list(transcript.segments)
-    changed = 0
     for batch in _batches(transcript):
-        source = "\n".join(f"[{i}] {' '.join(segments[i].text.split())}" for i in batch)
+        lines = []
+        for i in batch:
+            words = " ".join(segments[i].text.split())
+            suspects = dict.fromkeys(word for word in re.findall(r"[^\W\d_]+", words)
+                                     if _fold(word) not in allowed and frequency(word) < UNKNOWN)
+            hint = f" (de verificat: {', '.join(suspects)})" if suspects else ""
+            lines.append(f"[{i}] {words}{hint}")
+        source = "\n".join(lines)
         try:
             answer = json.loads(llm.generate_json(fill(template, {"vocabulary": listed, "transcript": source}),
                                                   model=model, json_schema=schema))
@@ -142,5 +153,12 @@ def autocorrect(llm, transcript: Transcript, correction: tuple[str, dict, list[s
             merged = merge(transcript.segments[i].text, fix["text"], allowed)
             if merged is not None:
                 segments[i] = dataclasses.replace(segments[i], text=merged)
-                changed += 1
+    for i, segment in enumerate(segments):
+        text = segment.text
+        for old, new in _COUNCIL_PHRASES.items():
+            if new in vocabulary:
+                text = re.sub(rf"(?<!\w){re.escape(old)}(?!\w)", new, text)
+        if text != segment.text:
+            segments[i] = dataclasses.replace(segment, text=text)
+    changed = sum(a.text != b.text for a, b in zip(transcript.segments, segments))
     return dataclasses.replace(transcript, segments=tuple(segments)), changed

@@ -48,7 +48,14 @@ class AutocorrectTest(unittest.TestCase):
                          [(s.start, s.end, s.speaker_id) for s in transcript.segments])
         prompt = llm.calls[0][0]
         self.assertIn('[0] Vai intra.', prompt)
+        self.assertIn('de verificat: dureria', prompt)
         self.assertIn('Zeno Karl Pinter', prompt)  # the Domain's names reach the model
+
+    def test_exact_council_phrase_corrections_keep_vote_counts(self):
+        transcript = Transcript((Segment(0, 2, 'S-a votat în unanim. Au fost 13 voturi.'),), 'ro')
+        fixed, changed = autocorrect(FakeLlmClient(['{"fixes": []}']), transcript, optional_correction(FOLDER))
+        self.assertEqual(changed, 1)
+        self.assertEqual(fixed.segments[0].text, 'S-a votat în unanimitate. Au fost 13 voturi.')
 
     def test_a_broken_answer_leaves_the_fragment_as_whisper_wrote_it(self):
         transcript = Transcript((Segment(0, 2, 'Vai intra.'),), 'ro')

@@ -102,7 +102,8 @@ class DocumentTest(unittest.TestCase):
         self.assertEqual(headings, ['## Deschiderea ședinței', '## 1. Proiectul 2, parcările', '## Dezbateri', '## 2. Proiectul 3'])
         item = result[result.index('## 1. Proiectul 2'):result.index('## Dezbateri')]
         self.assertIn('Text 1.', item)
-        self.assertIn('**Rezultatul votului:** respins.\n**Anunțat în ședință:** „5.”; „Proiectul a fost respins.”', item)
+        self.assertIn('**Rezultatul votului:** respins.\n**Anunțat în ședință:** „Proiectul a fost respins.”', item)
+        self.assertNotIn('„5.”', item)
         last = result[result.index('## 2. Proiectul 3'):]
         self.assertIn('**Rezultatul votului:** neclar [de verificat].', last)  # its only quote was never said
         self.assertNotIn('6 voturi', result)
@@ -139,6 +140,54 @@ class DocumentTest(unittest.TestCase):
                                          [], 's1', optional_decisions(FOLDER))
         self.assertIn('## Secvența 1', result)
         self.assertIn('[de verificat] Voturile nu au putut fi extrase', result)
+
+    def test_procedural_votes_and_late_attendance_note_survive_an_incomplete_extraction(self):
+        from norev.usecases.document_completion import parse_decisions
+        initial = 'Sunt prezenți 20 de consilieri.'
+        update = 'Doamna consilier nu s-a mai conectat.'
+        transcript = Transcript((
+            Segment(0, 2, initial),
+            Segment(20, 22, 'Ordinea de zi a fost aprobată în unanimitate.'),
+            Segment(90, 96, 'Persoanele înscrise la cuvânt să fie ascultate înainte de vot.'),
+            Segment(100, 102, 'Trei abțineri.'),
+            Segment(180, 182, update),
+        ), 'ro')
+        answer = {'meeting': {'attendance': initial}, 'items': [
+            {'time': '00:20', 'title': 'Aprobarea ordinii de zi', 'result': 'neclar', 'announced': []},
+        ]}
+        meeting, votes = parse_decisions(json.dumps(answer), transcript)
+        self.assertEqual(meeting['attendance_update'], update)
+        self.assertEqual([(vote['result'], vote['found']) for vote in votes], [
+            ('adoptat', ['Ordinea de zi a fost aprobată în unanimitate.']),
+            ('neclar [de verificat]', ['Trei abțineri.']),
+        ])
+
+    def test_a_quote_cannot_match_only_the_last_digit_of_a_vote_count(self):
+        from norev.usecases.document_completion import parse_decisions
+        transcript = Transcript((Segment(0, 1, '15 voturi pentru.'),), 'ro')
+        answer = json.dumps({'items': [{'time': '00:00', 'title': 'Proiect', 'result': 'neclar',
+                                        'announced': ['5 voturi pentru.']}]})
+        self.assertEqual(parse_decisions(answer, transcript)[1][0]['found'], [])
+
+    def test_presence_estimate_requires_the_same_person_and_expected_count(self):
+        from norev.usecases.document_completion import _inferred_attendance
+        opening = 'Doamna Ionescu online? Va intra, deci vom fi 20 de consilieri.'
+        self.assertEqual(_inferred_attendance(opening, ['Doamna Ionescu n-a intrat.'], '20'), 19)
+        self.assertIsNone(_inferred_attendance(opening, ['Doamna Popescu n-a intrat.'], '20'))
+        self.assertIsNone(_inferred_attendance('Sunt 20 de consilieri.', ['Doamna Ionescu n-a intrat.'], '20'))
+
+    def test_the_spoken_title_recovers_a_vote_whose_start_was_set_too_late(self):
+        from norev.usecases.document_completion import parse_decisions
+        title = 'Proiect de hotărâre privind parcările'
+        transcript = Transcript((
+            Segment(0, 3, f'Numărul trei, {title}.'),
+            Segment(4, 6, 'Proiectul a fost respins.'),
+            Segment(10, 11, 'Îmi cer scuze.'),
+        ), 'ro')
+        answer = json.dumps({'items': [{'time': '00:10', 'title': title, 'result': 'respins',
+                                        'announced': ['Proiectul a fost respins.']}]})
+        item = parse_decisions(answer, transcript)[1][0]
+        self.assertEqual((item['start'], item['result']), (0, 'respins'))
 
     def test_speaker_codes_never_reach_the_minutes(self):
         from norev.usecases.document_completion import _without_codes

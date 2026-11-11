@@ -13,6 +13,7 @@ import os
 from collections.abc import Iterable
 
 from LLM.Whisper.settings import WhisperSettings
+from norev.adapters.domains.loader import DOMAINS, load_vocabulary
 from norev.core.models import Segment, Transcript
 from norev.core.ports import SessionStore
 
@@ -73,10 +74,12 @@ class WhisperTranscriber:
         model = self._load()
         language = language or self._allowed_language(model, audio)
         s = self._settings
+        hints = load_vocabulary(DOMAINS / "local_council") if language == "ro" else []
         segments, info = model.transcribe(
             audio,
             language=language or None,
             beam_size=s.beam_size,
+            hotwords=", ".join(hints) or None,
             vad_filter=s.vad_filter,
             vad_parameters={"min_silence_duration_ms": s.vad_min_silence_ms},
             condition_on_previous_text=s.condition_on_previous_text,

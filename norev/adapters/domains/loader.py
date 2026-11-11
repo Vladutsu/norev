@@ -91,9 +91,13 @@ def optional_correction(folder: Path) -> tuple[str, dict, list[str]] | None:
     prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
     if "correction" not in prompts:
         return None
-    vocabulary = []
-    if "vocabulary" in prompts:
-        lines = _read_inside(folder, prompts["vocabulary"]).splitlines()
-        vocabulary = [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
     return (_read_inside(folder, prompts["correction"]), json.loads(_read_inside(folder, prompts["correction_schema"])),
-            vocabulary)
+            load_vocabulary(folder))
+
+
+def load_vocabulary(folder: Path) -> list[str]:
+    prompts = tomllib.loads((folder / "domain.toml").read_text(encoding="utf-8"))["prompts"]
+    if "vocabulary" not in prompts:
+        return []
+    lines = _read_inside(folder, prompts["vocabulary"]).splitlines()
+    return [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]

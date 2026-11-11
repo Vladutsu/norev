@@ -141,11 +141,18 @@ def _header(meeting: dict) -> str:
     place = meeting.get("locality") or CHECK
     lines = [f"**Ședința:** {kind} a Consiliului Local {place}",
              "**Data ședinței:** [de completat]",
-             f"**Prezență:** „{meeting['attendance']}”" if meeting.get("attendance")
+             f"**Prezență anunțată:** „{meeting['attendance']}”" if meeting.get("attendance_update")
+             else f"**Prezență:** „{meeting['attendance']}”" if meeting.get("attendance")
              else "**Prezență:** [de verificat în lista de prezență]",
              f"**Conducerea ședinței:** „{meeting['chair']}”" if meeting.get("chair")
              else "**Conducerea ședinței:** [de completat]",
              "Reperele de timp [hh:mm:ss] sunt timpi din înregistrare."]
+    if meeting.get("attendance_inferred") is not None:
+        lines.insert(3, f"**Prezență estimată din transcriere:** {meeting['attendance_inferred']} de consilieri "
+                        "(cifra anticipată includea o persoană care ulterior nu s-a conectat).")
+    elif meeting.get("attendance_update"):
+        lines.insert(3, f"{CHECK} Prezența anunțată inițial trebuie confruntată cu lista finală. "
+                        f"Precizare ulterioară: „{meeting['attendance_update']}”")
     return "\n".join(lines)
 
 
@@ -164,6 +171,7 @@ _LINE = re.compile(r"^\s*(\[\d{2}:\d{2}:\d{2}|La \d{2}:\d{2}:\d{2})", re.M)
 _INLINE = re.compile(r"\b[Ll]a \d{2}:\d{2}(:\d{2})?\b")
 VOTE = re.compile(r"proiect(ul)? de hotărâre|convocat|conducerea|supun|adoptat|respins|unanim|cine este pentru|se abține|împotrivă\?|abțineri|"
                   r"voturi|ordinea de zi|prezenți|legal constituit|ședința (închisă|deschisă)|declar ședința|reluăm|"
+                  r"înscri[șs][ei] la cuvânt|ascultat[eă]|abținer[ei]|nu s-a mai conectat|n-am văzut-o|"
                   r"proiectul (numărul|nr)", re.I)
 COUNT = re.compile(r"^\W*(\d+|unu|una|doi|două|trei|patru|cinci|șase|șapte|opt|nouă|zece)\W*$", re.I)
 VOTES_LIMIT = 8000  # with the prompt and the answer, inside an 8k context
@@ -210,6 +218,27 @@ def vote_excerpt(transcript: Transcript, who: dict[str, str]) -> str:
 
 
 RESULT = re.compile(r"adoptat|respins|aprobat|unanim|voturi|abțin|împotrivă(?!\?)", re.I)
+OUTCOME = re.compile(r"\b(?:a(?:u)? fost|este|s-a)\s+(?:adoptat[ăe]?|aprobat[ăe]?|respins[ăe]?)\b|"
+                     r"\b(?:adoptat|aprobat|respins)[.!]?$", re.I)
+TALLY = re.compile(r"\b(?:\d+|un|unu|una|doi|două|trei|patru|cinci|șase|șapte|opt|nouă|zece)\s+"
+                   r"(?:voturi? (?:pentru|împotrivă)|abținer[ei])\b", re.I)
+ATTENDANCE_UPDATE = re.compile(r"\b(?:nu s-a mai conectat|nu s-a conectat|n-am văzut-o deloc)\b", re.I)
+EXPECTED_ONLINE = re.compile(r"\bdoamna\s+(\w+)\s+online\b", re.I)
+EXPECTED_COUNT = re.compile(r"\b(?:vom fi|vom avea)\s+(\d+)\s+de consilieri\b", re.I)
+
+
+def _inferred_attendance(opening: str, updates: list[str], attendance: str) -> int | None:
+    """Subtract one only when the opening explicitly anticipates her in its count."""
+    expected = EXPECTED_ONLINE.findall(opening)
+    count = EXPECTED_COUNT.search(opening)
+    if len(expected) != 1 or not count or int(count[1]) < 2 or not _said_in(count[1], attendance):
+        return None
+    missing = re.compile(rf"\bdoamna\s+{re.escape(expected[0])}\b[^.!?]{{0,120}}"
+                         r"\b(?:n-a intrat|nu s-a(?: mai)? conectat)\b", re.I)
+    return int(count[1]) - 1 if any(missing.search(update) for update in updates) else None
+AGENDA_APPROVAL = re.compile(r"\bordinea de zi\b.*\b(?:a|au) fost aprobat[ăe] în unanimitate\b", re.I)
+AGENDA_TITLE = re.compile(r"\bordin(?:ea|ei|ii) de zi\b", re.I)
+PUBLIC_HEARING = re.compile(r"\b(?:persoanele|cei) înscri[șs]i?e? la cuvânt\b.*\b(?:înainte|ascultat)", re.I)
 MASKED = "[rezultatul votului: consemnat separat, sub punctul votat]"
 CHECK = "[de verificat]"
 _BRACKETED = re.compile(r"\s*\[S\d+(?: · [^\]]*)?\]")
@@ -258,11 +287,20 @@ def parse_decisions(raw: str, transcript: Transcript) -> tuple[dict, list[dict]]
     whole = " ".join(spoken)
 
     def said(quote) -> bool:
-        return isinstance(quote, str) and bool(_plain(quote)) and _plain(quote) in whole
+        return isinstance(quote, str) and _said_in(quote, whole)
 
     raw_meeting = answer.get("meeting") if isinstance(answer.get("meeting"), dict) else {}
     meeting = {key: " ".join(str(raw_meeting.get(key) or "").split()) for key in ("locality", "type", "attendance", "chair")}
     meeting = {key: value if said(value) else "" for key, value in meeting.items()}
+    if meeting["attendance"]:
+        initial = next((i for i, line in enumerate(spoken) if _said_in(meeting["attendance"], line)), len(spoken))
+        updates = [s.text for s in segments[initial + 1:] if ATTENDANCE_UPDATE.search(s.text)]
+        if updates:
+            meeting["attendance_update"] = updates[-1]
+            opening = " ".join(spoken[:initial + 4])
+            inferred = _inferred_attendance(opening, updates, meeting["attendance"])
+            if inferred is not None:
+                meeting["attendance_inferred"] = inferred
     items = []
     for item in answer.get("items") or []:
         if not isinstance(item, dict):
@@ -270,19 +308,52 @@ def parse_decisions(raw: str, transcript: Transcript) -> tuple[dict, list[dict]]
         start = _seconds(str(item.get("time") or ""))
         if start is None:
             continue
-        start = next((s.start for s in segments if s.end > start), start)  # the segment it falls in
+        title = " ".join(str(item.get("title") or "").split()) or CHECK
+        if _plain(title).startswith("proiect"):
+            read_at = [s.start for s, line in zip(segments, spoken)
+                       if 0 <= start - s.start <= 60 and _said_in(title, line)]
+            if len(read_at) == 1:
+                start = read_at[0]
+        start = next((s.start for s in segments if s.start <= start < s.end), start)
         quotes = [q.strip() for q in item.get("announced") or [] if isinstance(q, str) and q.strip()]
-        items.append({"title": " ".join(str(item.get("title") or "").split()) or CHECK, "start": start,
+        items.append({"title": title, "start": start,
                       "claimed": item.get("result"), "quotes": quotes})
+    for i, segment in enumerate(segments):
+        line = spoken[i]
+        if AGENDA_APPROVAL.search(line):
+            existing = next((item for item in items if 0 <= segment.start - item["start"] <= 90
+                             and AGENDA_TITLE.search(item["title"])), None)
+            if existing:
+                existing["quotes"].append(segment.text)
+                existing["claimed"] = "adoptat"
+            else:
+                items.append({"title": "Aprobarea ordinii de zi", "start": segment.start,
+                              "claimed": "adoptat", "quotes": [segment.text]})
+        if PUBLIC_HEARING.search(line):
+            if any(abs(item["start"] - segment.start) <= 30 for item in items):
+                continue
+            replies = [s.text for s in segments[i + 1:] if s.start <= segment.end + 15
+                       and (TALLY.search(s.text) or OUTCOME.search(s.text))]
+            if replies:
+                items.append({"title": "Audierea persoanelor înscrise la cuvânt", "start": segment.start,
+                              "claimed": "neclar", "quotes": replies})
     items.sort(key=lambda i: i["start"])
     for number, item in enumerate(items):
         # an announcement counts only where this item was voted: before the next item is read
         until = items[number + 1]["start"] if number + 1 < len(items) else float("inf")
         spans = [(s, line) for s, line in zip(segments, spoken) if item["start"] - 5 <= s.start < until]
-        found = [q for q in item["quotes"] if _plain(q) and any(_plain(q) in line for _, line in spans)]
-        ends = [s.end for q in found for s, line in spans if _plain(q) in line]
+        found = [q for q in item["quotes"]
+                 if (OUTCOME.search(q) or TALLY.search(q)) and not q.rstrip().endswith("?")
+                 and any(_said_in(q, line) for _, line in spans)]
+        ends = [s.end for q in found for s, line in spans if _said_in(q, line)]
         backed = {"adoptat": ("adoptat", "aprobat", "unanim"), "respins": ("respins",)}.get(item["claimed"], ())
-        result = item["claimed"] if any(w in _plain(q) for q in found for w in backed) else f"neclar {CHECK}"
-        item.update(end=max(ends, default=item["start"]), result=result, found=found,
-                    unchecked=len(found) < len(item["quotes"]) or not found)
+        result = item["claimed"] if any(OUTCOME.search(q) and w in _plain(q)
+                                       for q in found for w in backed) else f"neclar {CHECK}"
+        item.update(end=max(ends, default=item["start"]), result=result, found=list(dict.fromkeys(found)),
+                    unchecked=len(found) < len(item["quotes"]) or result.endswith(CHECK))
     return meeting, items
+
+
+def _said_in(quote: str, line: str) -> bool:
+    normalized = _plain(quote)
+    return bool(normalized and re.search(rf"(?<!\w){re.escape(normalized)}(?!\w)", line))

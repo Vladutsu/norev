@@ -1,5 +1,13 @@
 # Names and terms the transcript correction may write. One per line; lines starting with # are ignored.
 # This list is for the Municipality of Sibiu (council mandate 2024-2028); each council replaces it with its own.
+Ionela Mihai
+Cisnădie, Cisnădia
+luări de cuvânt
+în unanimitate
+scuzele de rigoare
+ordinea de zi a fost epuizată
+cod CAEN
+OUG
 Municipiul Sibiu
 sibieni, sibienii, sibienilor
 Consiliul Local al Municipiului Sibiu
@@ -36,11 +44,8 @@ AUR
 Forța Dreptei
 ASPASIB, Asociația Părinților din Județul Sibiu
 HCL
-OUG
-cod CAEN
 Loteria Română
 Hermannstadt
-Cisnădie
 Turda
 Rădăuți-Prut
 Slatina
@@ -53,7 +58,6 @@ Klaus Iohannis
 Holger Lux
 abțineri
 unanimitate
-luări de cuvânt
 ordinea de zi
 ordinea de zi suplimentară
 păcănele, păcănelele, păcănelelor
