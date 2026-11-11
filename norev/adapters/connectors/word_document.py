@@ -11,9 +11,11 @@ def render_docx(content: str) -> bytes:
         heading = len(line) - len(line.lstrip('#')) if line.startswith('#') else 0
         text = line[heading:].strip() if heading else line
         text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", text)
-        style = 'Title' if heading == 1 else 'Heading1' if heading else 'Normal'
-        paragraphs.append(f'<w:p><w:pPr><w:pStyle w:val="{style}"/></w:pPr>'
-                          f'<w:r><w:t xml:space="preserve">{escape(text)}</w:t></w:r></w:p>')
+        style = {0: 'Normal', 1: 'Title', 2: 'Heading1'}.get(heading, 'Heading2')
+        # **bold** runs; anything else stays plain text
+        runs = ''.join(f'<w:r>{"<w:rPr><w:b/></w:rPr>" if i % 2 else ""}<w:t xml:space="preserve">{escape(part)}</w:t></w:r>'
+                       for i, part in enumerate(text.split('**')) if part)
+        paragraphs.append(f'<w:p><w:pPr><w:pStyle w:val="{style}"/></w:pPr>{runs}</w:p>')
     ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
     files = {
         '[Content_Types].xml': '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
@@ -30,8 +32,9 @@ def render_docx(content: str) -> bytes:
         'word/styles.xml': f'<w:styles xmlns:w="{ns}">'
         '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/><w:color w:val="000000"/><w:lang w:val="ro-RO"/></w:rPr></w:rPrDefault></w:docDefaults>'
         '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/><w:widowControl/></w:pPr></w:style>'
-        '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:after="240"/></w:pPr><w:rPr><w:b/><w:sz w:val="32"/></w:rPr></w:style>'
-        '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/></w:rPr></w:style></w:styles>',
+        '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr><w:rPr><w:b/><w:sz w:val="32"/></w:rPr></w:style>'
+        '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/></w:rPr></w:style>'
+        '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:jc w:val="center"/><w:spacing w:after="240"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:sz w:val="24"/></w:rPr></w:style></w:styles>',
     }
     output = io.BytesIO()
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:

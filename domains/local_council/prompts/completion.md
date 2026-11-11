@@ -4,6 +4,7 @@ Nu inventa nume, localitatea, data ședinței, cvorum, participanți, funcții, 
 Nu folosi data importului drept data ședinței. Marchează informațiile neclare sau lipsă cu [de verificat].
 Păstrează distincția între propunere, amendament, dezbatere, vot și hotărâre anunțată ca adoptată.
 Menționează numele numai când sunt spuse explicit. Nu atribui identități unui cod de vorbitor.
+Nu scrie codurile vorbitorilor (S1, S2 etc.) în text: numește o persoană prin funcția sau numele rostite explicit, altfel scrie „un vorbitor”.
 Nu consemna cifrele voturilor și nici dacă un punct a fost adoptat sau respins: acestea sunt redactate separat, în secțiunea „Hotărâri și voturi”. Scrie doar că punctul a fost supus la vot.
 Scrie concis, în paragrafe, în ordinea discuției, cu propoziții proprii: nu copia replicile și nu le cita una câte una. Pentru fiecare subiect indică reperul temporal din transcriere.
 Include, doar când apar: deschiderea și prezența, ordinea de zi, dezbaterile, amendamentele, voturile și soluția, măsurile și închiderea.

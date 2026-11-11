@@ -321,11 +321,8 @@ class SessionBackend(DemoBackend):
         if not content:
             raise ExecutionRefused("the Session has no Others result")
         if session.domain == "local_council":
-            content = ("# Proces verbal al ședinței de consiliu local\n\n"
-                       "PROIECT — necesită verificare pe înregistrare înainte de asumare.\n"
-                       "Localitatea și data ședinței: de completat din sursa originală.\n"
-                       "Participanți și cvorum: de verificat în lista de prezență.\n"
-                       "Reperele de mai jos sunt timpi din înregistrare.\n\n" + content +
+            content = ("# PROCES-VERBAL\n### al ședinței Consiliului Local\n\n"
+                       "PROIECT — necesită verificare pe înregistrare înainte de asumare.\n\n" + content +
                        "\n\n## Verificare și semnături\nPreședinte de ședință: __________________\n"
                        "Secretar general: __________________\nData verificării: __________________\n")
             return LocalDocumentPayloadBuilder(self.export_dir).document(content, "docx")

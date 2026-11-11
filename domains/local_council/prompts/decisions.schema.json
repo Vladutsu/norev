@@ -1,6 +1,17 @@
 {
   "type": "object",
   "properties": {
+    "meeting": {
+      "type": "object",
+      "properties": {
+        "locality": {"type": "string"},
+        "type": {"type": "string"},
+        "attendance": {"type": "string"},
+        "chair": {"type": "string"}
+      },
+      "required": ["locality", "type", "attendance", "chair"],
+      "additionalProperties": false
+    },
     "items": {
       "type": "array",
       "items": {
@@ -16,6 +27,6 @@
       }
     }
   },
-  "required": ["items"],
+  "required": ["meeting", "items"],
   "additionalProperties": false
 }

@@ -36,49 +36,133 @@ def timestamp(seconds: float) -> str:
 
 
 def complete_document(llm, domain, transcript, session_date, completion, speakers, prefix, decisions=None):
-    template, schema = completion
+    """The document as Markdown. With `decisions` (local council), it follows the agenda: a header and,
+    for each item voted, its debate followed by its vote, both read from the whole meeting first.
+    Without them, numbered time sequences."""
     labels = {r.name: r.label or r.name for r in domain.roles}
     # only Roles the User confirmed: a guessed Role written into the minutes reads as a fact
     who = {s.id: f"{s.id} · {labels[s.role]}" for s in speakers if s.role_confirmed and s.role in labels}
-    actions, suggestions, sections = [], [], []
-    for index, part in enumerate(chunks(transcript), 1):
-        try:
-            found, hints = ask_domain(domain, llm, part, [], session_date, speakers,
-                                      id_prefix=f"{prefix}-part{index}")
-        except ValueError:  # the follow-ups of one fragment are lost, the minutes are not
-            found, hints = [], [Suggestion(f"Măsurile din secvența {index} nu au putut fi extrase; "
-                                           "verifică-le în procesul-verbal.")]
-        actions.extend(found)
-        suggestions.extend(hints)
-        source = "\n".join(f"[{timestamp(s.start)}–{timestamp(s.end)}] "
-                           f"[{who.get(s.speaker_id, s.speaker_id) if s.speaker_id else '?'}] "
-                           f"{MASKED if decisions and _announces_result(s.text) else s.text}"
-                           for s in part.segments)
-        prompt = fill(template, {"transcript": source})
-        output = _output(llm.generate_json(prompt, model=domain.model, json_schema=schema))
-        if _copied(output):  # the model repeated the transcript instead of writing the document
-            output = _output(llm.generate_json(prompt + RETRY, model=domain.model, json_schema=schema))
-            if _copied(output):
-                output = ("[de verificat] Secvența nu a putut fi redactată automat; "
-                          "consultați transcrierea pentru acest interval.")
-        sections.append(f"## Secvența {index} · {timestamp(part.segments[0].start)}–{timestamp(part.segments[-1].end)}\n\n{output.strip()}")
-    if not sections:
+    if not transcript.segments:
         raise ValueError("empty Transcript")
+    writer = _Writer(llm, domain, session_date, completion, speakers, prefix, who, masked=decisions is not None)
     if decisions:
         # one request over every vote line, so a vote is never cut at a fragment boundary
-        excerpt = vote_excerpt(transcript, who)
         template, decisions_schema = decisions
+        excerpt = vote_excerpt(transcript, who)
         raw = llm.generate_json(fill(template, {"transcript": excerpt or "(niciun vot în transcriere)"}),
                                 model=domain.model, json_schema=decisions_schema)
-        sections.append(f"## Hotărâri și voturi\n\n{render_decisions(raw, transcript)}")
-    return actions, suggestions, "\n\n".join(sections)
+        meeting, items = parse_decisions(raw, transcript)
+        if items:
+            return writer.actions, writer.suggestions, _agenda_document(writer, transcript, meeting, items)
+    sections = ["Reperele de timp sunt timpi din înregistrare. Localitatea, data, participanții și cvorumul "
+                "se completează din sursa originală."] if decisions else []
+    for part in chunks(transcript):
+        sections.append(f"## Secvența {writer.index + 1} · {timestamp(part.segments[0].start)}–"
+                        f"{timestamp(part.segments[-1].end)}\n\n{writer.write(part)}")
+    if decisions:
+        sections.append(f"## Hotărâri și voturi\n\n{CHECK} Voturile nu au putut fi extrase automat; consultați transcrierea.")
+    return writer.actions, writer.suggestions, "\n\n".join(sections)
+
+
+class _Writer:
+    """One fragment at a time: its follow-ups (Domain stage) and its prose (completion prompt)."""
+
+    def __init__(self, llm, domain, session_date, completion, speakers, prefix, who, masked):
+        self.llm, self.domain, self.session_date, self.speakers = llm, domain, session_date, speakers
+        self.template, self.schema = completion
+        self.prefix, self.who, self.masked = prefix, who, masked
+        self.index, self.actions, self.suggestions = 0, [], []
+
+    def write(self, part: Transcript) -> str:
+        self.index += 1
+        try:
+            found, hints = ask_domain(self.domain, self.llm, part, [], self.session_date, self.speakers,
+                                      id_prefix=f"{self.prefix}-part{self.index}")
+        except ValueError:  # the follow-ups of one fragment are lost, the minutes are not
+            found, hints = [], [Suggestion(f"Măsurile din fragmentul {self.index} nu au putut fi extrase; "
+                                           "verifică-le în procesul-verbal.")]
+        self.actions.extend(found)
+        self.suggestions.extend(hints)
+        source = "\n".join(f"[{timestamp(s.start)}–{timestamp(s.end)}] "
+                           f"[{self.who.get(s.speaker_id, s.speaker_id) if s.speaker_id else '?'}] "
+                           f"{MASKED if self.masked and _announces_result(s.text) else s.text}"
+                           for s in part.segments)
+        prompt = fill(self.template, {"transcript": source})
+        output = _output(self.llm.generate_json(prompt, model=self.domain.model, json_schema=self.schema))
+        if _copied(output):  # the model repeated the transcript instead of writing the document
+            output = _output(self.llm.generate_json(prompt + RETRY, model=self.domain.model, json_schema=self.schema))
+            if _copied(output):
+                output = (f"{CHECK} Fragmentul nu a putut fi redactat automat; "
+                          "consultați transcrierea pentru acest interval.")
+        return _without_codes(output.strip())
+
+
+GAP = 120  # seconds of talk between one vote and the next item: a debate of its own, not part of the vote
+
+
+def _agenda_document(writer: _Writer, transcript: Transcript, meeting: dict, items: list[dict]) -> str:
+    segments = transcript.segments
+    end = segments[-1].end + 1
+    plan = [("Deschiderea ședinței", 0.0, items[0]["start"], None)]
+    for number, item in enumerate(items, 1):
+        following = items[number]["start"] if number < len(items) else end
+        heading = f"{number}. {item['title']}"
+        done = min(following, item["end"] + 1)
+        if following - done > GAP:
+            plan.append((heading, item["start"], done, item))
+            plan.append(("Închiderea ședinței" if number == len(items) else "Dezbateri", done, following, None))
+        else:
+            plan.append((heading, item["start"], following, item))
+    out = [_header(meeting)]
+    for heading, start, stop, item in plan:
+        part = Transcript(tuple(s for s in segments if start <= s.start < stop), transcript.language)
+        fragments = list(chunks(part)) if part.segments else []
+        if item is None and heading == "Deschiderea ședinței" and stop - start > OPENING:
+            # a long stretch before the first vote is the debate: only its first fragment opens the meeting
+            out.append(f"## {heading}\n\n{writer_paragraph(writer, fragments[0])}")
+            heading, fragments = "Dezbateri", fragments[1:]
+        body = [writer_paragraph(writer, fragment) for fragment in fragments]
+        if item is not None:
+            body.append(_vote(item))
+        if body:
+            out.append(f"## {heading}\n\n" + "\n\n".join(body))
+    return "\n\n".join(out)
+
+
+OPENING = 600  # seconds; more than this before the first item voted is a debate, not just the opening
+
+
+def writer_paragraph(writer: _Writer, fragment: Transcript) -> str:
+    return f"[{timestamp(fragment.segments[0].start)}–{timestamp(fragment.segments[-1].end)}] {writer.write(fragment)}"
+
+
+def _header(meeting: dict) -> str:
+    kind = meeting.get("type") or CHECK
+    place = meeting.get("locality") or CHECK
+    lines = [f"**Ședința:** {kind} a Consiliului Local {place}",
+             "**Data ședinței:** [de completat]",
+             f"**Prezență:** „{meeting['attendance']}”" if meeting.get("attendance")
+             else "**Prezență:** [de verificat în lista de prezență]",
+             f"**Conducerea ședinței:** „{meeting['chair']}”" if meeting.get("chair")
+             else "**Conducerea ședinței:** [de completat]",
+             "Reperele de timp [hh:mm:ss] sunt timpi din înregistrare."]
+    return "\n".join(lines)
+
+
+def _vote(item: dict) -> str:
+    lines = [f"**Rezultatul votului:** {item['result']}."]
+    if item["found"]:
+        lines.append("**Anunțat în ședință:** " + "; ".join(f"„{q}”" for q in item["found"]))
+    if item["unchecked"]:
+        lines.append(f"{CHECK} Cifrele votului trebuie verificate pe înregistrare.")
+    return "\n".join(lines)
 
 
 RETRY = ("\n\nATENȚIE: nu copia replicile și nu le cita una câte una. Rezumă în propoziții proprii, "
          "cel mult 250 de cuvinte, cu reperele temporale ale subiectelor.")
 _LINE = re.compile(r"^\s*(\[\d{2}:\d{2}:\d{2}|La \d{2}:\d{2}:\d{2})", re.M)
 _INLINE = re.compile(r"\b[Ll]a \d{2}:\d{2}(:\d{2})?\b")
-VOTE = re.compile(r"proiect(ul)? de hotărâre|supun|adoptat|respins|unanim|cine este pentru|se abține|împotrivă\?|abțineri|"
+VOTE = re.compile(r"proiect(ul)? de hotărâre|convocat|conducerea|supun|adoptat|respins|unanim|cine este pentru|se abține|împotrivă\?|abțineri|"
                   r"voturi|ordinea de zi|prezenți|legal constituit|ședința (închisă|deschisă)|declar ședința|reluăm|"
                   r"proiectul (numărul|nr)", re.I)
 COUNT = re.compile(r"^\W*(\d+|unu|una|doi|două|trei|patru|cinci|șase|șapte|opt|nouă|zece)\W*$", re.I)
@@ -126,8 +210,18 @@ def vote_excerpt(transcript: Transcript, who: dict[str, str]) -> str:
 
 
 RESULT = re.compile(r"adoptat|respins|aprobat|unanim|voturi|abțin|împotrivă(?!\?)", re.I)
-MASKED = "[anunțarea rezultatului: consemnată în secțiunea „Hotărâri și voturi”]"
+MASKED = "[rezultatul votului: consemnat separat, sub punctul votat]"
 CHECK = "[de verificat]"
+_BRACKETED = re.compile(r"\s*\[S\d+(?: · [^\]]*)?\]")
+_NAMED = re.compile(r"\b(consilierul(?: local)?|cetățeanul|vorbitorul|primarul|președintele(?: de ședință)?|participantul) S\d+\b", re.I)
+_BARE = re.compile(r"(^|[.!?]\s+|\s)S\d+\b")
+
+
+def _without_codes(text: str) -> str:
+    """Speaker ids only tell voices apart in the Transcript; the minutes never show them."""
+    text = _NAMED.sub(r"\1", _BRACKETED.sub("", text))
+    return _BARE.sub(lambda m: m.group(1) + ("Un vorbitor" if m.group(1) == "" or m.group(1).strip() in (".", "!", "?")
+                                             else "un vorbitor"), text)
 
 
 def _announces_result(text: str) -> bool:
@@ -141,33 +235,54 @@ def _plain(text: str) -> str:
     return " ".join(text.lower().split()).strip(" .,!?;:")
 
 
-def render_decisions(raw: str, transcript: Transcript) -> str:
-    """The model's items, with every number and outcome taken only from announcements quoted
-    exactly from the Transcript; a quote that is not there, or an outcome no quote states, is flagged."""
+def _seconds(text: str) -> float | None:
+    match = re.fullmatch(r"\s*\[?(?:(\d{1,2}):)?(\d{1,2}):(\d{2})\]?\s*", text or "")
+    if not match:
+        return None
+    hours, minutes, seconds = (int(v) if v else 0 for v in match.groups())
+    return float(hours * 3600 + minutes * 60 + seconds)
+
+
+def parse_decisions(raw: str, transcript: Transcript) -> tuple[dict, list[dict]]:
+    """The header and the voted items, keeping only what exact quotes from the Transcript support:
+    a quote that is not there is dropped, an outcome no kept quote states becomes unclear, an item
+    with no usable time is dropped. Items come back in time order, each with where its vote ends."""
     try:
         answer = json.loads(raw)
     except json.JSONDecodeError:
-        answer = None
-    items = answer.get("items") if isinstance(answer, dict) else None
-    if not isinstance(items, list) or not items:
-        return f"{CHECK} Voturile nu au putut fi extrase automat; consultați transcrierea."
-    spoken = [_plain(s.text) for s in transcript.segments]
-    paragraphs = []
-    for item in items:
+        return {}, []
+    if not isinstance(answer, dict):
+        return {}, []
+    segments = transcript.segments
+    spoken = [_plain(s.text) for s in segments]
+    whole = " ".join(spoken)
+
+    def said(quote) -> bool:
+        return isinstance(quote, str) and bool(_plain(quote)) and _plain(quote) in whole
+
+    raw_meeting = answer.get("meeting") if isinstance(answer.get("meeting"), dict) else {}
+    meeting = {key: " ".join(str(raw_meeting.get(key) or "").split()) for key in ("locality", "type", "attendance", "chair")}
+    meeting = {key: value if said(value) else "" for key, value in meeting.items()}
+    items = []
+    for item in answer.get("items") or []:
         if not isinstance(item, dict):
             continue
-        title = " ".join(str(item.get("title") or "").split()) or CHECK
-        time = " ".join(str(item.get("time") or "").split()) or CHECK
-        quotes = [q for q in item.get("announced") or [] if isinstance(q, str) and q.strip()]
-        found = [q.strip() for q in quotes if any(_plain(q) and _plain(q) in line for line in spoken)]
-        result = item.get("result")
-        backed = {"adoptat": ("adoptat", "aprobat", "unanim"), "respins": ("respins",)}.get(result, ())
-        if not any(word in _plain(q) for q in found for word in backed):
-            result = f"neclar {CHECK}"
-        text = f"{time} — {title}\nRezultat anunțat: {result}."
-        if found:
-            text += "\nAnunțat în ședință: " + "; ".join(f"„{q}”" for q in found)
-        if len(found) < len(quotes) or not found:
-            text += f"\n{CHECK} Cifrele votului trebuie verificate pe înregistrare."
-        paragraphs.append(text)
-    return "\n\n".join(paragraphs) or f"{CHECK} Voturile nu au putut fi extrase automat; consultați transcrierea."
+        start = _seconds(str(item.get("time") or ""))
+        if start is None:
+            continue
+        start = next((s.start for s in segments if s.end > start), start)  # the segment it falls in
+        quotes = [q.strip() for q in item.get("announced") or [] if isinstance(q, str) and q.strip()]
+        items.append({"title": " ".join(str(item.get("title") or "").split()) or CHECK, "start": start,
+                      "claimed": item.get("result"), "quotes": quotes})
+    items.sort(key=lambda i: i["start"])
+    for number, item in enumerate(items):
+        # an announcement counts only where this item was voted: before the next item is read
+        until = items[number + 1]["start"] if number + 1 < len(items) else float("inf")
+        spans = [(s, line) for s, line in zip(segments, spoken) if item["start"] - 5 <= s.start < until]
+        found = [q for q in item["quotes"] if _plain(q) and any(_plain(q) in line for _, line in spans)]
+        ends = [s.end for q in found for s, line in spans if _plain(q) in line]
+        backed = {"adoptat": ("adoptat", "aprobat", "unanim"), "respins": ("respins",)}.get(item["claimed"], ())
+        result = item["claimed"] if any(w in _plain(q) for q in found for w in backed) else f"neclar {CHECK}"
+        item.update(end=max(ends, default=item["start"]), result=result, found=found,
+                    unchecked=len(found) < len(item["quotes"]) or not found)
+    return meeting, items

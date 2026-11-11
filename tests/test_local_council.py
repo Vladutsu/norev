@@ -68,48 +68,82 @@ class DocumentTest(unittest.TestCase):
         twice = FakeLlmClient([empty, copy, copy])
         _, _, result = complete_document(twice, load_domain(FOLDER), transcript, date.today(),
                                          optional_completion(FOLDER), [], 's1')
-        self.assertIn('[de verificat] Secvența nu a putut fi redactată', result)
+        self.assertIn('[de verificat] Fragmentul nu a putut fi redactat', result)
 
-    def test_votes_are_read_in_one_request_over_the_whole_meeting(self):
-        debate = 'Discutăm despre proiect, argumente pro și contra. ' * 120
+    def test_minutes_follow_the_agenda_with_each_vote_under_its_item(self):
+        debate = 'Discutăm despre proiect, argumente pro și contra. ' * 40
         transcript = Transcript((
-            Segment(0, 5, 'Proiect de hotărâre numărul 2 privind parcările.', 'S1'), Segment(5, 6, 'Cine este pentru?', 'S1'),
-            Segment(6, 300, debate, 'S2'), Segment(300, 301, '5.', 'S3'), Segment(301, 302, 'Proiectul a fost respins.', 'S3'),
+            Segment(0, 5, 'Pentru astăzi a fost convocat Consiliul Local Sibiu în ședință extraordinară.', 'S1'),
+            Segment(5, 8, 'Din 21 de consilieri sunt prezenți 20 de consilieri.', 'S1'),
+            Segment(10, 300, debate, 'S2'),
+            Segment(300, 305, 'Proiect de hotărâre numărul 2 privind parcările.', 'S1'), Segment(305, 306, 'Cine este pentru?', 'S1'),
+            Segment(306, 307, '5.', 'S3'), Segment(307, 308, 'Proiectul a fost respins.', 'S3'),
+            Segment(310, 600, debate, 'S2'),
+            Segment(600, 602, 'Proiectul 3 privind spațiile verzi.', 'S1'), Segment(602, 603, 'Cine este pentru?', 'S1'),
+            Segment(603, 604, 'Declar ședința închisă.', 'S1'),
         ), 'ro')
         excerpt = vote_excerpt(transcript, {})
-        self.assertIn('[S1] Proiect de hotărâre numărul 2', excerpt)
         self.assertIn('[S3] 5.', excerpt)
-        self.assertIn('respins', excerpt)
         self.assertNotIn('argumente pro', excerpt)
+        answer = {'meeting': {'locality': 'Sibiu', 'type': 'extraordinară', 'chair': 'Domnul X conduce ședința.',
+                              'attendance': 'Din 21 de consilieri sunt prezenți 20 de consilieri.'},
+                  'items': [{'time': '00:05:00', 'title': 'Proiectul 2, parcările', 'result': 'respins',
+                             'announced': ['5.', 'Proiectul a fost respins.']},
+                            {'time': '10:00', 'title': 'Proiectul 3', 'result': 'adoptat',
+                             'announced': ['6 voturi pentru, proiectul a fost adoptat.']}]}
         empty = json.dumps({'proposed_actions': [], 'added_actions': [], 'suggestions': []})
-        parts = len(list(chunks(transcript)))
-        items = {'items': [{'time': '00:00:00', 'title': 'Proiectul 2, parcările', 'result': 'respins',
-                            'announced': ['5.', 'Proiectul a fost respins.']},
-                           {'time': '00:05:00', 'title': 'Proiectul 3', 'result': 'adoptat',
-                            'announced': ['6 voturi pentru, proiectul a fost adoptat.']}]}
-        llm = FakeLlmClient([empty, '{"output":"Dezbatere."}'] * parts + [json.dumps(items)])
+        llm = FakeLlmClient([json.dumps(answer)] + [r for i in range(4) for r in (empty, json.dumps({'output': f'Text {i}.'}))])
         _, _, result = complete_document(llm, load_domain(FOLDER), transcript, date.today(), optional_completion(FOLDER),
                                          [], 's1', optional_decisions(FOLDER))
-        self.assertGreater(parts, 1)
-        self.assertIn('## Hotărâri și voturi\n\n00:00:00 — Proiectul 2, parcările\nRezultat anunțat: respins.\n'
-                      'Anunțat în ședință: „5.”; „Proiectul a fost respins.”', result)
-        # a quote that is not in the Transcript gives no outcome and no numbers
-        self.assertIn('00:05:00 — Proiectul 3\nRezultat anunțat: neclar [de verificat].', result)
+        self.assertIn('**Ședința:** extraordinară a Consiliului Local Sibiu', result)
+        self.assertIn('**Prezență:** „Din 21 de consilieri sunt prezenți 20 de consilieri.”', result)
+        self.assertIn('**Conducerea ședinței:** [de completat]', result)  # a chair nobody said is not written
+        headings = [line for line in result.splitlines() if line.startswith('## ')]
+        self.assertEqual(headings, ['## Deschiderea ședinței', '## 1. Proiectul 2, parcările', '## Dezbateri', '## 2. Proiectul 3'])
+        item = result[result.index('## 1. Proiectul 2'):result.index('## Dezbateri')]
+        self.assertIn('Text 1.', item)
+        self.assertIn('**Rezultatul votului:** respins.\n**Anunțat în ședință:** „5.”; „Proiectul a fost respins.”', item)
+        last = result[result.index('## 2. Proiectul 3'):]
+        self.assertIn('**Rezultatul votului:** neclar [de verificat].', last)  # its only quote was never said
         self.assertNotIn('6 voturi', result)
-        self.assertIn('Cine este pentru?', llm.calls[-1][0])
-        self.assertIn('[S3] Proiectul a fost respins', llm.calls[-1][0])
-        # the fragments never see an announced result, so they cannot write half a vote
-        fragments = ' '.join(call[0] for call in llm.calls[1:-1:2])
+        self.assertIn('[S3] Proiectul a fost respins', llm.calls[0][0])
+        fragments = ' '.join(call[0] for call in llm.calls[2::2])
         self.assertNotIn('Proiectul a fost respins', fragments)
-        self.assertIn('consemnată în secțiunea', fragments)
-        self.assertIn('Cine este pentru?', fragments)
+        self.assertIn('consemnat separat', fragments)
+
+    def test_a_repeat_vote_cannot_borrow_the_first_announcement(self):
+        from norev.usecases.document_completion import parse_decisions
+        transcript = Transcript((
+            Segment(0, 2, 'Proiectul 1.'), Segment(2, 4, '13 voturi pentru, proiectul a fost adoptat.'),
+            Segment(60, 62, 'Reluăm votul la proiectul 1.'), Segment(62, 64, 'Avem 3 abțineri.'),
+        ), 'ro')
+        answer = json.dumps({'meeting': {}, 'items': [
+            {'time': '00:00', 'title': 'Proiectul 1', 'result': 'adoptat', 'announced': ['13 voturi pentru, proiectul a fost adoptat.']},
+            {'time': '01:00', 'title': 'Reluarea votului: Proiectul 1', 'result': 'adoptat',
+             'announced': ['13 voturi pentru, proiectul a fost adoptat.', 'Avem 3 abțineri.']}]})
+        first, repeat = parse_decisions(answer, transcript)[1]
+        self.assertEqual((first['result'], first['found']), ('adoptat', ['13 voturi pentru, proiectul a fost adoptat.']))
+        self.assertEqual((repeat['result'], repeat['found']), ('neclar [de verificat]', ['Avem 3 abțineri.']))
+        self.assertTrue(repeat['unchecked'])
 
     def test_unreadable_decisions_are_flagged_not_invented(self):
-        from norev.usecases.document_completion import render_decisions
+        from norev.usecases.document_completion import parse_decisions
         transcript = Transcript((Segment(0, 1, 'Proiectul a fost adoptat.'),), 'ro')
-        self.assertIn('[de verificat] Voturile nu au putut fi extrase', render_decisions('{"items": [', transcript))
-        claimed = json.dumps({'items': [{'time': '1', 'title': 'P1', 'result': 'respins', 'announced': ['Proiectul a fost adoptat.']}]})
-        self.assertIn('Rezultat anunțat: neclar [de verificat].', render_decisions(claimed, transcript))
+        self.assertEqual(parse_decisions('{"items": [', transcript), ({}, []))
+        claimed = json.dumps({'meeting': {}, 'items': [{'time': '00:00', 'title': 'P1', 'result': 'respins',
+                                                        'announced': ['Proiectul a fost adoptat.']}]})
+        self.assertEqual(parse_decisions(claimed, transcript)[1][0]['result'], 'neclar [de verificat]')
+        empty = json.dumps({'proposed_actions': [], 'added_actions': [], 'suggestions': []})
+        llm = FakeLlmClient(['not json', empty, '{"output":"Text."}'])
+        _, _, result = complete_document(llm, load_domain(FOLDER), transcript, date.today(), optional_completion(FOLDER),
+                                         [], 's1', optional_decisions(FOLDER))
+        self.assertIn('## Secvența 1', result)
+        self.assertIn('[de verificat] Voturile nu au putut fi extrase', result)
+
+    def test_speaker_codes_never_reach_the_minutes(self):
+        from norev.usecases.document_completion import _without_codes
+        self.assertEqual(_without_codes('S8 a subliniat. Consilierul local S11 a spus că S3 e de acord [S2].'),
+                         'Un vorbitor a subliniat. Consilierul local a spus că un vorbitor e de acord.')
 
     def test_line_by_line_retelling_counts_as_a_copy(self):
         retold = ' '.join(f'La 00:3{i}:00, S10 a spus ceva.' for i in range(6))
