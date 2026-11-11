@@ -44,12 +44,13 @@ class SessionCliTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def _answers(self, *minutes):
-        """Recorded answers for Local council: Speaker Roles, the agenda-and-votes pass, then per fragment the
-        follow-ups and the minutes. No translation: the minutes are written from the spoken Transcript."""
+        """Recorded answers for Local council: the transcript correction (nothing to fix), Speaker Roles, the
+        agenda-and-votes pass, then per fragment the follow-ups and the minutes. No translation: the minutes
+        are written from the spoken Transcript."""
         empty = json.dumps({"proposed_actions": [], "added_actions": [], "suggestions": []})
         fragments = [answer for text in minutes for answer in (empty, json.dumps({"output": text}))]
         agenda = {"meeting": {"locality": "", "type": "", "attendance": "", "chair": ""}, "items": []}
-        self.processor = FakeProcessor([json.dumps(ROLES), json.dumps(agenda), *fragments])
+        self.processor = FakeProcessor([json.dumps({"fixes": []}), json.dumps(ROLES), json.dumps(agenda), *fragments])
 
     def _fake_processor(self, store, **models):
         self.models = models  # what the CLI would give the real Central Processor

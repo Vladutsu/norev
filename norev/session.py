@@ -19,7 +19,7 @@ import sys
 import uuid
 from datetime import date, datetime, time
 
-from norev.adapters.domains.loader import DOMAINS, load_domain, optional_completion, optional_decisions
+from norev.adapters.domains.loader import DOMAINS, load_domain, optional_completion, optional_correction, optional_decisions
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.store.encrypted import StoreKeyError, StoreSettings, open_store
@@ -93,6 +93,7 @@ def analyse(store, session_id: str, translate: bool, regenerate: bool = False, d
             regenerate=regenerate,
             completion=optional_completion(DOMAINS / select_domain(domain or session.domain)),
             decisions=optional_decisions(DOMAINS / select_domain(domain or session.domain)),
+            correction=optional_correction(DOMAINS / select_domain(domain or session.domain)),
         )
     finally:
         if models is not None:

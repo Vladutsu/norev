@@ -23,7 +23,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any
 
-from norev.adapters.domains.loader import load_completion, load_others, optional_completion, optional_decisions
+from norev.adapters.domains.loader import load_completion, load_others, optional_completion, optional_correction, optional_decisions
 from norev.adapters.llm.legacy_extractor import LegacyActionExtractor
 from norev.adapters.llm.translator import TurnTranslator
 from norev.adapters.recorder.recorder import Recorder
@@ -269,7 +269,8 @@ class SessionBackend(DemoBackend):
                         extractor=self.make_extractor(self.processor, workers=self.workers), llm=self.processor,
                         regenerate=regenerate,
                         completion=optional_completion(self.domains_dir / session.domain),
-                        decisions=optional_decisions(self.domains_dir / session.domain))
+                        decisions=optional_decisions(self.domains_dir / session.domain),
+                        correction=optional_correction(self.domains_dir / session.domain))
                 self._progress[session_id]["untranslated"] = len(result.untranslated)
             self._set_stage(session_id, "ready")
         except Exception as e:  # the stage and the error class only: messages can quote Session content

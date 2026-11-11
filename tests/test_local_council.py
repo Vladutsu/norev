@@ -206,6 +206,28 @@ class ExportReviewTest(Case):
         spoken = self.store.load_transcript(session.source_transcript_ref)
         self.assertIn(spoken.segments[0].text, llm.calls[1][0])
 
+    def test_the_transcript_is_corrected_once_when_the_meeting_is_over(self):
+        from dataclasses import replace
+        from norev.adapters.domains.loader import optional_correction
+        from norev.usecases.session_flow import run_session
+        session = self.store.get_session(self.recorded())
+        sid = 'council-correction'
+        ref = self.store.save_transcript(sid, Transcript((Segment(0, 3, 'Vai intra domnul Zenopint.', 'S1'),), 'ro'))
+        self.store.save_session(replace(session, id=sid, domain='local_council', transcript_ref=ref, source_transcript_ref=None))
+        empty = json.dumps({'proposed_actions': [], 'added_actions': [], 'suggestions': []})
+        fix = json.dumps({'fixes': [{'i': 0, 'text': 'Va intra domnul Zeno Pinter.'}]})
+        kwargs = dict(store=self.store, translator=None, extractor=None, domain=load_domain(FOLDER),
+                      completion=optional_completion(FOLDER), correction=optional_correction(FOLDER))
+        llm = FakeLlmClient([fix, empty, '{"output":"Document"}'])
+        result = run_session(sid, llm=llm, **kwargs)
+        corrected = self.store.get_session(sid)
+        self.assertEqual(self.store.load_transcript(corrected.transcript_ref).segments[0].text, 'Vai intra domnul Zeno Pinter.')
+        self.assertIn('Vai intra domnul Zeno Pinter.', llm.calls[2][0])  # the minutes read the corrected text
+        self.assertIn('corectată automat în 1 replici', result.suggestions[0].text)
+        again = FakeLlmClient([empty, '{"output":"Document"}'])  # a new analysis does not correct again
+        run_session(sid, llm=again, regenerate=True, **kwargs)
+        self.assertEqual(len(again.calls), 2)
+
     def test_transcript_exports_original_language_and_refuses_stale_preview(self):
         sid = self.recorded()
         preview = self.ok(self.bridge.transcript_preview(sid, 'json'))['payload']

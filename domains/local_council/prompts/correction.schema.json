@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "fixes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "i": {"type": "integer"},
+          "text": {"type": "string"}
+        },
+        "required": ["i", "text"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["fixes"],
+  "additionalProperties": false
+}

@@ -17,6 +17,7 @@ from norev.usecases.extract import to_proposed_actions
 from norev.usecases.others_completion import FAILED, check_template, complete
 from norev.usecases.others_prompt import others_domain
 from norev.usecases.speaker_roles import propose_speaker_roles
+from norev.usecases.transcript_autocorrect import autocorrect
 
 DEFAULT_DOMAIN = "local_council"
 DOMAINS = ("corporate", "medical", "local_council", "others")
@@ -59,6 +60,7 @@ def run_session(
     others_prompt: OthersPrompt | None = None,
     completion: tuple[str, dict] | None = None,
     decisions: tuple[str, dict] | None = None,
+    correction: tuple[str, dict, list[str]] | None = None,
 ) -> SessionResult:
     """Analyse a Session transcribed by usecases.transcribe.transcribe_session and save the result for review.
 
@@ -97,6 +99,15 @@ def run_session(
                 raise ValueError(f"Session {session_id!r}: the Others result needs the completion template")
             check_template(completion[0], prompt)
 
+    notes = []
+    if correction and not session.source_transcript_ref:
+        # once, when the meeting is over: the large model fixes what Whisper misheard, before anything reads it
+        spoken, changed = autocorrect(llm, store.load_transcript(session.transcript_ref), correction, model=domain.model)
+        if changed:
+            store.correct_transcript(session_id, spoken)
+            session = _session(session_id, store)
+            notes.append(Suggestion(f"Transcrierea a fost corectată automat în {changed} replici, după ședință. "
+                                    "Verificați numele și cifrele pe înregistrare."))
     transcript = store.load_transcript(session.transcript_ref)
     # first analysis, or after the User corrected the spoken Transcript (#82): transcript_ref is the spoken one
     if not session.source_transcript_ref or session.transcript_ref == session.source_transcript_ref:
@@ -137,6 +148,7 @@ def run_session(
         result = complete(llm, *completion, prompt, transcript, session_date, model=domain.model)
         if result is None:
             result, suggestions = "", [*suggestions, FAILED]
+    suggestions = [*notes, *suggestions]
     if regenerate:
         store.regenerate_actions(session_id, decided + actions, domain=domain.name,
                                  expected_revision=snapshot.revision, suggestions=suggestions,

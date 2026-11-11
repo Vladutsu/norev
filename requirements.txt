@@ -12,3 +12,6 @@ cryptography==50.0.2
 
 # time zones for Google Calendar payloads (#44): zoneinfo has no database on Windows
 tzdata==2026.1
+
+# Romanian word frequencies: the transcript correction only replaces words that are not Romanian
+wordfreq==3.1.1

@@ -1,0 +1,60 @@
+# Names and terms the transcript correction may write. One per line; lines starting with # are ignored.
+# This list is for the Municipality of Sibiu (council mandate 2024-2028); each council replaces it with its own.
+Municipiul Sibiu
+sibieni, sibienii, sibienilor
+Consiliul Local al Municipiului Sibiu
+Astrid Cora Fodor, primar
+Helmut Lerner, viceprimar
+Mihai Cercel Onițiu, viceprimar
+Dorin Ilie Nistor, secretar general
+Teodor Ioan Birț, administrator public
+Gabriel Tischer
+Paul Jürgen Porr
+Bianke Marion Grecu
+Wolfgang Alexander Guib
+Zeno Karl Pinter
+Paul Constantin Mezei
+Sara Konnerth
+Adrian Cosmin Bibu
+Corina Simona Dăncilă
+Gheorghe Lucian Hunyadi
+Ciprian Gheorghe Fulea
+Corina Bokor
+Laura Ionela Barac
+Nicolae Sebastian Cornel Forir
+Ruxandra Cibu Deaconu
+Maria Diana Mureșan
+Ionuț Ciprian Ghișe
+Victor Leția
+Constantin Dincă
+Claudiu Lucian Curiban
+FDGR
+PNL
+PSD
+USR
+AUR
+Forța Dreptei
+ASPASIB, Asociația Părinților din Județul Sibiu
+HCL
+OUG
+cod CAEN
+Loteria Română
+Hermannstadt
+Cisnădie
+Turda
+Rădăuți-Prut
+Slatina
+Brăila
+Hipodrom
+Mihai Viteazul
+Colegiul Național Octavian Goga
+Liceul Tehnologic Independența
+Klaus Iohannis
+Holger Lux
+abțineri
+unanimitate
+luări de cuvânt
+ordinea de zi
+ordinea de zi suplimentară
+păcănele, păcănelele, păcănelelor
+jocurilor de noroc

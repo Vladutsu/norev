@@ -13,6 +13,9 @@ completion = "prompts/completion.md"
 completion_schema = "prompts/completion.schema.json"
 decisions = "prompts/decisions.md"
 decisions_schema = "prompts/decisions.schema.json"
+correction = "prompts/correction.md"
+correction_schema = "prompts/correction.schema.json"
+vocabulary = "vocabulary.txt"
 
 [[roles]]
 name = "chair"
