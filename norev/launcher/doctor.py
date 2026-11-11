@@ -155,6 +155,15 @@ def _whisper(paths, env, probes):
 
 
 def _speakers(paths, env, probes):
+    from norev.adapters.diarization import sherpa
+
+    if probes.find_spec("sherpa_onnx") is not None and env.get("NOREV_DIARIZER", "sherpa") != "sortformer":
+        folder = Path(env.get("NOREV_DIARIZATION_DIR") or paths.models / "diarization")
+        missing = [name for name in (sherpa.EMBEDDING, sherpa.SEGMENTATION) if not (folder / name).is_file()]
+        yield Check("Model diarizare (sherpa-onnx)", not missing,
+                    str(folder) if not missing else f"lipsește {', '.join(missing)} din {folder}",
+                    "" if not missing else "Rulează: norev.cmd setup-models.", required=False)
+        return
     if probes.find_spec("nemo") is None:
         yield Check("Vorbitori (diarizare)", False, "neinstalată: Transcript-ul nu va avea Vorbitori",
                     "Rulează: norev.cmd setup (instalează și diarizarea).", required=False)

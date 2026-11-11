@@ -169,9 +169,15 @@ def setup_models(paths: AppPaths) -> int:
     name = os.environ.get("WHISPER_MODEL", "large-v3-turbo")
     print(f"Descarc modelul Whisper {name} în {paths.hf_home} ...")
     download_model(name, cache_dir=cache)
-    try:
-        import nemo  # noqa: F401
-    except ImportError:
+    from norev.adapters.diarization import pick
+
+    choice = pick()
+    if choice == "sherpa":
+        from norev.adapters.diarization.sherpa import download_models, models_dir
+
+        print(f"Descarc modelele de diarizare sherpa-onnx în {models_dir()} ...")
+        download_models(models_dir())
+    elif choice is None:
         print("Diarizarea nu e instalată (install.cmd --speakers); sar peste modelul ei.")
     else:
         from huggingface_hub import snapshot_download

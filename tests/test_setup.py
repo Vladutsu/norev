@@ -57,7 +57,7 @@ class RunTest(Case):
         self.run_setup(runs=lambda server: True)
         env = {}
         apply_defaults(self.paths, env)
-        self.assertEqual((env["WHISPER_LANGUAGES"], env["NOREV_DOMAIN"]), ("ro", "corporate"))
+        self.assertEqual((env["WHISPER_LANGUAGES"], env["NOREV_DOMAIN"]), ("ro", "local_council"))
         self.assertEqual(Path(env["NOREV_EXTRACT_MODEL"]).name, SMALL.file)
         with mock.patch.dict(os.environ, {"NOREV_DOMAIN_MODEL": env["NOREV_DOMAIN_MODEL"]}):
             self.assertEqual(load_domain(DOMAINS / "corporate").model, SMALL.file)
@@ -65,13 +65,18 @@ class RunTest(Case):
 
 
 class PackagesTest(unittest.TestCase):
-    def test_cpu_tier_installs_a_cpu_torch_and_no_cuda_wheels(self):
+    def test_cpu_tier_installs_sherpa_diarization_and_no_cuda_wheels(self):
         calls = []
         with mock.patch.object(setup, "pip", lambda *a: calls.append(a)), redirect_stdout(io.StringIO()):
             setup.install_packages(hardware.plan(IGPU_8GB), speakers=True, find_spec=lambda name: None)
-        self.assertEqual(calls[0], ("torch", "--index-url", setup.TORCH_CPU_INDEX))
-        self.assertIn("--extra-index-url", calls[1])
+        self.assertEqual([Path(c[-1]).name for c in calls], ["requirements-diarization.txt"])
+        self.assertFalse(any("torch" in " ".join(c) for c in calls))  # sherpa-onnx needs no torch
         self.assertFalse(any("requirements-cuda.txt" in " ".join(c) for c in calls))
+
+    def test_the_diarization_is_sherpa_with_no_speaker_limit(self):
+        text = (setup.ROOT / "requirements-diarization.txt").read_text(encoding="utf-8")
+        self.assertIn("sherpa-onnx==", text)
+        self.assertNotIn("\nnemo", text)
 
     def test_nvidia_tier_installs_the_cuda_wheels(self):
         calls = []

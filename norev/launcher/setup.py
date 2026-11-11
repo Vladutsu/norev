@@ -32,7 +32,6 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 # shortcut: pinned by hand; bump it after checking the flags in norev/launcher/llama.py still exist
 LLAMA_BUILD = os.environ.get("NOREV_LLAMA_BUILD", "b12249")
 LLAMA_RELEASE = "https://api.github.com/repos/ggml-org/llama.cpp/releases/tags/{build}"
-TORCH_CPU_INDEX = "https://download.pytorch.org/whl/cpu"
 
 # (system, arch, backend) -> (llama.cpp asset, CUDA runtime asset or None); {b} is the build
 LLAMA_ASSETS = {
@@ -74,16 +73,11 @@ def install_packages(profile: hardware.Profile, speakers: bool, find_spec=None) 
     if profile.cuda_wheels:
         say("Instalez bibliotecile CUDA pentru Whisper (placă NVIDIA) ...")
         pip("-r", str(ROOT / "requirements-cuda.txt"))
-    if speakers and find_spec("nemo") is None:
-        extra = []
-        if profile.diarization_device == "cpu":
-            say("Instalez diarizarea (Vorbitori), varianta pentru procesor ...")
-            pip("torch", "--index-url", TORCH_CPU_INDEX)
-            extra = ["--extra-index-url", TORCH_CPU_INDEX]  # NeMo then keeps the CPU torch
-        else:
-            say("Instalez diarizarea (Vorbitori), varianta CUDA (descărcare mare) ...")
-        # one command with requirements.txt, so pip keeps its av pin (see requirements-diarization.txt)
-        pip("-r", str(ROOT / "requirements.txt"), "-r", str(ROOT / "requirements-diarization.txt"), *extra)
+    if speakers and find_spec("sherpa_onnx") is None:
+        # sherpa-onnx runs on the CPU on every tier and has no Speaker limit (a council meeting has 20+)
+        say("Instalez diarizarea (Vorbitori, sherpa-onnx) ...")
+        # one command with requirements.txt, so pip keeps its pins (see requirements-diarization.txt)
+        pip("-r", str(ROOT / "requirements.txt"), "-r", str(ROOT / "requirements-diarization.txt"))
 
 
 # --- 3. downloads
@@ -138,11 +132,33 @@ def fetch_speech_models(paths: AppPaths, find_spec=None) -> None:
     name = os.environ.get("WHISPER_MODEL", "large-v3-turbo")
     say(f"Descarc modelul Whisper {name} (~1.6 GB, o singură dată) ...")
     download_model(name, cache_dir=cache)
-    if find_spec("nemo") is not None:
+    if find_spec("sherpa_onnx") is not None:
+        fetch_sherpa_models(paths.models / "diarization")
+    if find_spec("nemo") is not None:  # Sortformer, only when installed by hand (NOREV_DIARIZER=sortformer)
         from huggingface_hub import snapshot_download
 
         say(f"Descarc modelul de diarizare {DIARIZATION_MODEL} ...")
         snapshot_download(DIARIZATION_MODEL, cache_dir=cache)
+
+
+def fetch_sherpa_models(target: Path) -> None:
+    """The two sherpa-onnx diarization models (segmentation and TitaNet embeddings), once."""
+    from norev.adapters.diarization import sherpa
+
+    target.mkdir(parents=True, exist_ok=True)
+    if not (target / sherpa.EMBEDDING).is_file():
+        say("Descarc modelul de diarizare TitaNet (sherpa-onnx) ...")
+        download(sherpa.EMBEDDING_URL, target / sherpa.EMBEDDING, None)
+    if not (target / sherpa.SEGMENTATION).is_file():
+        say("Descarc modelul de segmentare pyannote (sherpa-onnx) ...")
+        with tempfile.TemporaryDirectory(dir=target) as tmp:
+            archive = download(sherpa.SEGMENTATION_URL, Path(tmp) / "segmentation.tar.bz2", None)
+            with tarfile.open(archive) as tar:
+                member = next((m for m in tar.getmembers() if m.name.endswith("/model.onnx")), None)
+                if member is None:
+                    raise SetupError("modelul de segmentare nu e în arhivă")
+                with tar.extractfile(member) as src:
+                    (target / sherpa.SEGMENTATION).write_bytes(src.read())
 
 
 def release_assets(build: str, opener=urllib.request.urlopen) -> dict[str, tuple[str, str | None]]:

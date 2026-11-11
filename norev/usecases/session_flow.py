@@ -12,17 +12,18 @@ from dataclasses import dataclass
 from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction, Segment, Session, Suggestion
 from norev.core.ports import ActionExtractor, LlmClient, SessionStore, Translator
 from norev.usecases.domain_stage import ask_domain
+from norev.usecases.document_completion import complete_document
 from norev.usecases.extract import to_proposed_actions
 from norev.usecases.others_completion import FAILED, check_template, complete
 from norev.usecases.others_prompt import others_domain
 from norev.usecases.speaker_roles import propose_speaker_roles
 
-DEFAULT_DOMAIN = "corporate"
-DOMAINS = ("corporate", "medical", "others")
+DEFAULT_DOMAIN = "local_council"
+DOMAINS = ("corporate", "medical", "local_council", "others")
 
 
 def select_domain(name: str | None = None) -> str:
-    """Corporate unless another Domain is chosen explicitly; an unknown name is an error, never a fallback."""
+    """Local council unless another Domain is chosen explicitly; an unknown name is an error, never a fallback."""
     if name is None:
         return DEFAULT_DOMAIN
     if name not in DOMAINS:
@@ -57,6 +58,7 @@ def run_session(
     regenerate: bool = False,
     others_prompt: OthersPrompt | None = None,
     completion: tuple[str, dict] | None = None,
+    decisions: tuple[str, dict] | None = None,
 ) -> SessionResult:
     """Analyse a Session transcribed by usecases.transcribe.transcribe_session and save the result for review.
 
@@ -98,7 +100,7 @@ def run_session(
     transcript = store.load_transcript(session.transcript_ref)
     # first analysis, or after the User corrected the spoken Transcript (#82): transcript_ref is the spoken one
     if not session.source_transcript_ref or session.transcript_ref == session.source_transcript_ref:
-        if translate and transcript.language != "en":
+        if translate and transcript.language != "en" and not (completion and domain.name != "others"):
             transcript = translator.translate(transcript, transcript.language or "")
             store.save_translation(session_id, transcript)  # one write: no orphan translation if it fails
         else:  # no-op after a correction: the spoken Transcript is already both refs
@@ -118,12 +120,19 @@ def run_session(
     session_date = (started.astimezone() if started.tzinfo else started).date()  # local day of the Session
     # A regeneration numbers its actions by revision, so new ids never collide with kept ones
     prefix = f"{session_id}-r{snapshot.revision}" if regenerate else session_id
-    raw = extractor.extract(transcript, session_date)
-    generic = to_proposed_actions(raw, id_prefix=prefix)
-    # Domain's model: it is loaded next for the Domain stage anyway
-    speakers = propose_speaker_roles(session_id, store, domain, llm, model=domain.model)
-    actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date, speakers, id_prefix=prefix)
     result = ""
+    if completion and domain.name != "others":
+        # Document Domains read every spoken segment in bounded requests; confirmed Roles remain available.
+        spoken = store.load_transcript(session.source_transcript_ref or session.transcript_ref)
+        speakers = propose_speaker_roles(session_id, store, domain, llm, model=domain.model)
+        actions, suggestions, result = complete_document(
+            llm, domain, spoken, session_date, completion, speakers, prefix, decisions)
+        raw = {}
+    else:
+        raw = extractor.extract(transcript, session_date)
+        generic = to_proposed_actions(raw, id_prefix=prefix)
+        speakers = propose_speaker_roles(session_id, store, domain, llm, model=domain.model)
+        actions, suggestions = ask_domain(domain, llm, transcript, generic, session_date, speakers, id_prefix=prefix)
     if domain.name == "others" and prompt.completion:
         result = complete(llm, *completion, prompt, transcript, session_date, model=domain.model)
         if result is None:

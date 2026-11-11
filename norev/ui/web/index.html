@@ -203,6 +203,12 @@
       </summary>
       <p class="small muted">Refăcută după oprire din tot audio-ul, cu vorbitori. Pe ea se bazează acțiunile, nu pe transcrierea live.</p>
       <div id="final-versions"></div>
+        <div class="actions" id="transcript-export">
+          <label for="transcript-format">Export conversație</label>
+          <select id="transcript-format"><option value="docx">Word</option><option value="txt">Text</option><option value="json">JSON cu timpi și vorbitori</option></select>
+          <button type="button" class="btn" id="transcript-save">Previzualizează exportul</button>
+        </div>
+        <div id="transcript-preview" hidden></div>
       <div class="transcript inset" id="final-lines"></div>
     </details>
     <h2>Acțiuni propuse</h2>

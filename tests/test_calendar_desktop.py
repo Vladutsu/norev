@@ -25,6 +25,7 @@ from norev.processor.compose import LOCAL_STEPS, build_desktop_processor, build_
 from norev.processor.google_account import GoogleAccount
 from norev.processor.identity import LocalUser
 from norev.testing.fakes import FakeLlmClient, FixedClock, InMemorySessionStore
+from fixture_domains import ALL_MODES
 from norev.ui.backend import DemoBackend
 from norev.ui.bridge import Bridge
 from norev.ui.session_backend import SessionBackend
@@ -167,7 +168,7 @@ class DesktopCalendarFlowTest(TempStore):
         account = GoogleAccount(FailingAuth())
         backend = SessionBackend(self.store, approved_by=USER, processor=processor, export_dir=export,
                                  llm_session=no_llm, record_source=lambda: iter(()), clock=FixedClock(NOW),
-                                 builder=desktop_payload_builder(export, calendar=True), google=account)
+                                 builder=desktop_payload_builder(export, calendar=True), google=account, modes=ALL_MODES)
         self.bridge = Bridge(backend)
         transcript = self.store.save_transcript("s1", Transcript((Segment(0, 1, "Ne vedem marți la 10.", "S1"),), "ro"))
         self.store.save_session(Session(id="s1", started_at=NOW, domain="corporate", transcript_ref=transcript))

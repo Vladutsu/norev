@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "time": {"type": "string"},
+          "title": {"type": "string"},
+          "announced": {"type": "array", "items": {"type": "string"}},
+          "result": {"type": "string", "enum": ["adoptat", "respins", "neclar"]}
+        },
+        "required": ["time", "title", "announced", "result"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}

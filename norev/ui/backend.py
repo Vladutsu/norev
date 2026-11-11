@@ -29,9 +29,11 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 DEMO = Path(__file__).resolve().parent / "demo_session.json"
 SECONDS_PER_SEGMENT = 1.6
 
-# This version is Romanian-only and Corporate-only: the core still takes any Domain (ADR 0003),
+# This version is Romanian-only and Local council-only: the core still takes any Domain (ADR 0003),
 # but the User can pick neither another mode nor another language.
-MODES = (("corporate", "Corporate", "Implicit"),)
+MODES = (("local_council", "Consiliu local", "Proces-verbal și conversație"),)
+# The demo (--demo, web demo) replays synthetic examples; Local council has none (real recordings only)
+DEMO_MODES = (("corporate", "Corporate", "Exemplu"),)
 LANGUAGE = "ro"
 CONNECTOR_LABELS = {"google_calendar": "Google Calendar", "local_document": "Document local",
                     "email_draft": "Draft de email", "trello": "Trello", "jira": "Jira"}
@@ -97,7 +99,7 @@ class DemoBackend:
     jira = None  # SessionBackend: the JiraAccount from the composition root (#73); none in the demo
 
     def __init__(self, store: SessionStore, *, approved_by: str, clock: Clock | None = None,
-                 domains_dir: Path = ROOT / "domains", monotonic=time.monotonic, modes=MODES) -> None:
+                 domains_dir: Path = ROOT / "domains", monotonic=time.monotonic, modes=DEMO_MODES) -> None:
         self.store = store
         self.approved_by = approved_by
         self.clock = clock or SystemClock()

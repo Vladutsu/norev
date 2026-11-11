@@ -106,7 +106,7 @@ class DoctorTest(unittest.TestCase):
 
     def test_an_empty_machine_explains_every_missing_piece(self):
         checks = self.by_name(run_checks(self.paths, {}, fake_probes(
-            find_spec=lambda name: None if name in {"webview", "nemo"} else object(),
+            find_spec=lambda name: None if name in {"webview", "nemo", "sherpa_onnx"} else object(),
             whisper_cached=lambda name, hf: None, cuda_devices=lambda: 0)))
         self.assertFalse(ready(list(checks.values())))
         self.assertIn("setup", checks["llama-server"].fix)

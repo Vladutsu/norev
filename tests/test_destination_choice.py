@@ -21,6 +21,7 @@ from norev.processor.payloads import ConnectorPayloadBuilder, LocalDocumentPaylo
 from norev.processor.trello_account import TrelloLink
 from norev.processor.workflow import ExecutionRefused, WorkflowExecutor
 from norev.testing.fakes import FakeLlmClient, FixedClock, InMemorySessionStore
+from fixture_domains import ALL_MODES
 from norev.ui.backend import DemoBackend
 from norev.ui.bridge import Bridge
 from norev.ui.session_backend import SessionBackend
@@ -175,7 +176,7 @@ class DesktopTrelloTest(unittest.TestCase):
         self.bridge = Bridge(SessionBackend(
             self.store, approved_by=USER, processor=processor, export_dir=self.export, llm_session=no_llm,
             record_source=lambda: iter(()), clock=FixedClock(NOW),
-            builder=desktop_payload_builder(self.export, calendar=False, trello=self.link), trello=self.link))
+            builder=desktop_payload_builder(self.export, calendar=False, trello=self.link), trello=self.link, modes=ALL_MODES))
         transcript = self.store.save_transcript("s1", Transcript((Segment(0, 1, "Send the Q4 report.", "S1"),), "en"))
         self.store.save_session(Session(id="s1", started_at=NOW, domain="corporate", transcript_ref=transcript))
         self.store.save_actions("s1", [work_item()], expected_revision=0)

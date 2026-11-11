@@ -43,9 +43,12 @@ class LocalDocumentPayloadBuilder:
     def __init__(self, export_dir: Path) -> None:
         self.export_dir = export_dir_of(export_dir)
 
-    def document(self, content: str) -> dict[str, str]:
+    def document(self, content: str, format: str = "md") -> dict[str, str]:
         """The `local_document` payload for `content`: the app chooses the path, never the caller."""
-        return {"destination": str(destination(self.export_dir, content)), "content": content}
+        payload = {"destination": str(destination(self.export_dir, content, format)), "content": content}
+        if format != "md":
+            payload["format"] = format
+        return payload
 
     def build(self, action: ProposedAction, domain: Domain, options: dict[str, Any]) -> dict[str, Any]:
         action_type = domain.action_type(action.action_type)

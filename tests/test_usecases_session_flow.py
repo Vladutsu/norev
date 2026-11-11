@@ -75,7 +75,7 @@ class Flow:
 
 class SelectDomainTest(unittest.TestCase):
     def test_corporate_is_the_default_and_medical_is_explicit(self):
-        self.assertEqual(select_domain(), "corporate")
+        self.assertEqual(select_domain(), "local_council")
         self.assertEqual(select_domain("medical"), "medical")
 
     def test_others_is_explicit(self):

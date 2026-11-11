@@ -49,6 +49,8 @@ class Bridge:
     def open_draft(self, session_id, action_id): return self._call(self._executing("open_draft"), session_id, action_id)
     def completion_preview(self, session_id): return self._call(self._executing("completion_preview"), session_id)
     def completion_save(self, session_id, payload): return self._call(self._executing("completion_save"), session_id, payload)
+    def transcript_preview(self, session_id, format="txt"): return self._call(self._executing("transcript_preview"), session_id, format)
+    def transcript_save(self, session_id, payload): return self._call(self._executing("transcript_save"), session_id, payload)
     def google_status(self): return self._call(self._backend.google_status)
     def trello_status(self): return self._call(self._backend.trello_status)
     def trello_authorize(self): return self._call(self._backend.trello_authorize)

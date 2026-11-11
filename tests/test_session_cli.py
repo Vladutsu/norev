@@ -15,7 +15,7 @@ from norev.adapters.store.encrypted import StoreSettings, create_key_file, open_
 from norev.core.models import Session
 from norev.launcher.llama import ModelMissing
 from norev.testing.fakes import FakeActionExtractor, FakeLlmClient
-from test_usecases_session_flow import ANSWERS, GENERIC, ROLES, SPOKEN, TRANSLATION, TURNS
+from test_usecases_session_flow import GENERIC, ROLES, SPOKEN, TURNS
 
 
 class FakeProcessor(FakeLlmClient):
@@ -43,10 +43,12 @@ class SessionCliTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def _answers(self, session_id, *translations):
-        """Recorded translation answers, then Roles and the Domain stage answer for this Session's ids."""
-        domain = json.dumps(ANSWERS["corporate"]).replace('"s1-1"', f'"{session_id}-1"')
-        self.processor = FakeProcessor([json.dumps(t) for t in translations] + [json.dumps(ROLES), domain])
+    def _answers(self, *minutes):
+        """Recorded answers for Local council: Speaker Roles, then per fragment the follow-ups and the minutes,
+        then the decisions-and-votes pass. No translation: the minutes are written from the spoken Transcript."""
+        empty = json.dumps({"proposed_actions": [], "added_actions": [], "suggestions": []})
+        fragments = [answer for text in minutes for answer in (empty, json.dumps({"output": text}))]
+        self.processor = FakeProcessor([json.dumps(ROLES), *fragments, json.dumps({"items": []})])
 
     def _fake_processor(self, store, **models):
         self.models = models  # what the CLI would give the real Central Processor
@@ -65,37 +67,38 @@ class SessionCliTest(unittest.TestCase):
         code, out, _ = self._main("transcribe", str(self.audio), "--date", "2026-11-06")
         self.assertEqual(code, 0)
         session_id = out.strip()
-        self._answers(session_id, TRANSLATION)
+        self._answers("Deschiderea ședinței și prezența.")
         self.assertEqual(self._main("analyse", session_id)[0], 0)
         code, out, _ = self._main("show", session_id)
         self.assertEqual(code, 0)
-        self.assertIn("Domain: corporate | 2026-11-06", out)
+        self.assertIn("Domain: local_council | 2026-11-06", out)
         self.assertIn("Speakers: S1, S2", out)
-        self.assertIn("[proposed] work_item: Send the report", out)
+        self.assertIn("Proces-verbal (draft, de verificat):", out)
+        self.assertIn("Deschiderea ședinței și prezența.", out)
+        self.assertIn("## Hotărâri și voturi", out)
         self.assertNotIn("PARTIAL", out)
 
         with patch.dict(os.environ, self.env, clear=True):
             store = open_store(StoreSettings.from_environment())
         try:
-            self.assertEqual(store.get_session(session_id).domain, "corporate")
+            self.assertEqual(store.get_session(session_id).domain, "local_council")
         finally:
             store.close()
         self.assertEqual(os.listdir(Path(self.env["NOREV_STORE_PATH"]).parent), ["norev.db"])
         self.assertNotIn(b"not really audio", Path(self.env["NOREV_STORE_PATH"]).read_bytes())  # audio sealed
 
-    def test_untranslated_turns_are_shown_as_partial(self):
+    def test_the_minutes_are_written_from_the_spoken_romanian_without_translation(self):
         session_id = self._main("transcribe", str(self.audio))[1].strip()
-        self._answers(session_id, {"turns": [TRANSLATION["turns"][0]]}, {"turns": []})
-        code, _, err = self._main("analyse", session_id)
-        self.assertEqual(code, 0)
-        self.assertIn("1 turn(s) not translated; the result is partial", err)
-        out = self._main("show", session_id)[1]
-        self.assertIn("PARTIAL: 1 turn(s) could not be translated", out)
-        self.assertIn("S2] Bine, mulțumesc.", out)
+        self._answers("Proces-verbal.")
+        self.assertEqual(self._main("analyse", session_id)[0], 0)
+        prompts = " ".join(call[0] for call in self.processor.calls)
+        for segment in SPOKEN.segments:
+            self.assertIn(segment.text, prompts)
+        self.assertNotIn("PARTIAL", self._main("show", session_id)[1])
 
-    def test_only_corporate_and_romanian_are_accepted_before_anything_runs(self):
+    def test_only_local_council_and_romanian_are_accepted_before_anything_runs(self):
         # this version: argparse refuses any other Domain or language
-        for args in (("--domain", "finance"), ("--domain", "medical"), ("--domain", "others"), ("--language", "en")):
+        for args in (("--domain", "corporate"), ("--domain", "medical"), ("--domain", "others"), ("--language", "en")):
             with self.subTest(args=args), self.assertRaises(SystemExit) as raised:
                 self._main("transcribe", str(self.audio), *args)
             self.assertEqual(raised.exception.code, 2)
@@ -120,7 +123,7 @@ class SessionCliTest(unittest.TestCase):
         with patch.dict(os.environ, self.env, clear=True):
             store = open_store(StoreSettings.from_environment())
         try:
-            store.save_session(Session("s-new", datetime(2026, 11, 6, tzinfo=timezone.utc), "corporate", audio_ref="a"))
+            store.save_session(Session("s-new", datetime(2026, 11, 6, tzinfo=timezone.utc), "local_council", audio_ref="a"))
         finally:
             store.close()
         code, _, err = self._main("analyse", "s-new")

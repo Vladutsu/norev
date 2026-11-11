@@ -1,0 +1,89 @@
+format = 1
+name = "local_council"
+label = "Consiliu local"
+
+[model]
+gguf = "Qwen3-8B-Q4_K_M.gguf"
+context = 8192
+
+[prompts]
+domain_stage = "prompts/domain_stage.md"
+domain_stage_schema = "prompts/domain_stage.schema.json"
+completion = "prompts/completion.md"
+completion_schema = "prompts/completion.schema.json"
+decisions = "prompts/decisions.md"
+decisions_schema = "prompts/decisions.schema.json"
+
+[[roles]]
+name = "chair"
+label = "Președinte de ședință"
+description = "Chairs the local council meeting."
+
+[[roles]]
+name = "mayor"
+label = "Primar"
+description = "The mayor."
+
+[[roles]]
+name = "secretary"
+label = "Secretar general"
+description = "The secretary general of the municipality."
+
+[[roles]]
+name = "councillor"
+label = "Consilier local"
+description = "A local council member."
+
+[[roles]]
+name = "staff"
+label = "Personal de specialitate"
+description = "Municipal specialist presenting a report."
+
+[[roles]]
+name = "citizen"
+label = "Cetățean"
+description = "A citizen or invited participant."
+
+[[action_types]]
+name = "council_follow_up"
+label = "Măsură de urmărit"
+description = "An explicit follow-up assigned during a local council meeting. Do not treat a mere discussion or a vote as a new commitment."
+may_add = true
+
+[[action_types.fields]]
+name = "subject"
+label = "Subiect"
+type = "string"
+required = false
+description = "The agenda item or concrete follow-up."
+
+[[action_types.fields]]
+name = "resolution"
+label = "Soluție consemnată"
+type = "string"
+required = false
+description = "Only the explicitly announced outcome; a proposal is not an adopted decision."
+
+[[action_types.fields]]
+name = "votes"
+label = "Voturi"
+type = "string"
+required = false
+description = "Exact announced votes for, against and abstentions; never infer unanimity."
+
+[[action_types.fields]]
+name = "responsible"
+label = "Responsabil nominalizat"
+type = "string"
+required = false
+description = "A person or department explicitly assigned; never guess from a speaker id."
+
+[[action_types.workflow]]
+name = "build_document"
+label = "Pregătește documentul"
+
+[[action_types.workflow]]
+name = "save_document"
+label = "Salvează măsura local"
+connector = "local_document"
+sends = ["title", "description", "owner", "due_date", "subject", "resolution", "votes", "responsible", "transcript_excerpt"]

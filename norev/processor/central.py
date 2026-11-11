@@ -141,10 +141,16 @@ class CentralProcessor:
         with self._gpu.use("transcriber", getattr(self._transcriber, "close", None)):
             return self._transcriber.transcribe(audio_ref, language)
 
-    def diarize(self, audio_ref: str) -> list[SpeakerTurn]:
+    @property
+    def wants_spans(self) -> bool:
+        return bool(getattr(self._diarizer, "wants_spans", False))
+
+    def diarize(self, audio_ref: str, spans=None) -> list[SpeakerTurn]:
         if self._diarizer is None:
             raise RuntimeError("no Diarizer configured")
         with self._gpu.use("diarizer", getattr(self._diarizer, "close", None)):
+            if spans is not None and self.wants_spans:
+                return self._diarizer.diarize(audio_ref, spans=spans)
             return self._diarizer.diarize(audio_ref)
 
     def free_gpu(self) -> None:

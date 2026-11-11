@@ -16,6 +16,7 @@ from norev.processor.central import CentralProcessor
 from norev.processor.compose import LOCAL_STEPS, desktop_payload_builder
 from norev.processor.identity import LocalUser
 from norev.testing.fakes import FakeLlmClient, FixedClock, InMemorySessionStore
+from fixture_domains import ALL_MODES
 from norev.ui.backend import DemoBackend
 from norev.ui.bridge import Bridge
 from norev.ui.session_backend import SessionBackend
@@ -52,7 +53,7 @@ class EmailDraftDesktopTest(unittest.TestCase):
         backend = SessionBackend(self.store, approved_by=USER, processor=processor, export_dir=self.export_dir,
                                  llm_session=no_llm, record_source=lambda: iter(()), clock=FixedClock(NOW),
                                  builder=desktop_payload_builder(self.export_dir, calendar=False),
-                                 open_file=self.opened.append)
+                                 open_file=self.opened.append, modes=ALL_MODES)
         self.bridge = Bridge(backend)
         transcript = self.store.save_transcript("s1", Transcript((Segment(0, 1, "I'll email you the figures.", "S1"),), "en"))
         self.store.save_session(Session(id="s1", started_at=NOW, domain="corporate", transcript_ref=transcript))
