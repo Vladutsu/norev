@@ -1,0 +1,217 @@
+"""Domain stage use case (ADR 0005): generic Proposed Actions -> Action Types, Domain fields and Suggestions.
+
+The prompt is the Domain's template with the placeholders of domains/README.md filled in. The
+model's answer is untrusted: it is validated here against the Domain, never decides status
+(ADR 0002) and never fills a value that is not valid (OPEN-QUESTIONS #6).
+"""
+import dataclasses
+import json
+import re
+from collections.abc import Sequence
+from datetime import date
+from typing import Any
+
+from norev.core.models import ActionStatus, Domain, ProposedAction, Speaker, Suggestion, Transcript
+from norev.core.ports import LlmClient, SessionStore
+
+_PLACEHOLDER = re.compile(r"\{\{(.*?)\}\}")
+_ISO_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+_TIME = re.compile(r"([01][0-9]|2[0-3]):[0-5][0-9]")
+MAX_ADDED = 10  # Proposed Actions the Domain stage may add to one Session (#66)
+
+
+def _action_types_text(domain: Domain) -> str:
+    lines = []
+    for action_type in domain.action_types:
+        lines.append(f"- {action_type.name}: {action_type.description}")
+        for f in action_type.fields:
+            required = "required" if f.required else "optional"
+            lines.append(f"  - {f.name} ({f.type}, {required})" + (f": {f.description}" if f.description else ""))
+    return "\n".join(lines)
+
+
+def build_prompt(
+    domain: Domain, transcript: Transcript, actions: list[ProposedAction], session_date: date,
+    speakers: Sequence[Speaker] = (),
+) -> str:
+    """Fill the Domain stage prompt; any `{{...}}` other than the six known placeholders is a ValueError."""
+    role_names = {r.name for r in domain.roles}
+    values = {
+        # One line per segment: newlines inside the text could forge Speaker lines or sections
+        "transcript": "\n".join(f"[{s.speaker_id or '?'}] {' '.join(s.text.split())}" for s in transcript.segments),
+        "proposed_actions": json.dumps(
+            [
+                {
+                    "id": a.id,
+                    "title": a.title,
+                    "description": a.description,
+                    "owner": a.owner,
+                    "due_date": a.due_date.isoformat() if a.due_date else None,
+                    "transcript_excerpt": a.transcript_excerpt,
+                }
+                for a in actions
+            ],
+            ensure_ascii=False,
+        ),
+        "session_date": session_date.isoformat(),
+        "roles": "\n".join(f"{r.name}: {r.description}" for r in domain.roles),
+        "action_types": _action_types_text(domain),
+        # a Role kept from before a Domain change is not one of this Domain's: unknown here
+        "speaker_roles": "\n".join(f"{s.id}: {s.role if s.role in role_names else 'unknown'}" for s in speakers)
+        or "(no speakers)",
+    }
+    # Checked on the template and replaced in one pass, so placeholder text inside the Transcript
+    # is neither replaced nor rejected.
+    unknown = sorted({name for name in _PLACEHOLDER.findall(domain.prompt_template) if name not in values})
+    if unknown:
+        raise ValueError(f"unknown placeholders in the {domain.name} prompt: {unknown}")
+    return _PLACEHOLDER.sub(lambda m: values[m.group(1)], domain.prompt_template)
+
+
+def _text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _field_value(field_type: str, value: Any) -> str | None:
+    text = _text(value)
+    if field_type == "date":
+        if not _ISO_DATE.fullmatch(text):
+            return None
+        try:
+            date.fromisoformat(text)
+        except ValueError:  # e.g. 2026-02-30
+            return None
+    elif field_type == "time" and not _TIME.fullmatch(text):
+        return None
+    return text or None
+
+
+def _user_only_fields(domain: Domain, type_name: str) -> set[str]:
+    """Fields the answer schema allows only as null (e.g. attendee emails): the model never fills them."""
+    variants = domain.answer_schema.get("properties", {}).get("proposed_actions", {}).get("items", {}).get("anyOf", [])
+    for variant in variants:
+        props = variant.get("properties", {})
+        if props.get("action_type", {}).get("const") == type_name:
+            fields = props.get("fields", {}).get("properties", {})
+            return {name for name, schema in fields.items() if schema == {"type": "null"}}
+    return set()
+
+
+def _plain(text: str) -> str:
+    return " ".join(text.split()).casefold()
+
+
+def apply_answer(
+    domain: Domain, actions: list[ProposedAction], answer: dict,
+    transcript: Transcript | None = None, id_prefix: str = "pa",
+) -> tuple[list[ProposedAction], list[Suggestion]]:
+    """Validate the model's answer against the Domain; return the typed Proposed Actions and the Suggestions.
+
+    Generic actions the answer leaves out are dropped. Items with an unknown id or Action Type are
+    skipped; for a repeated id the first valid item wins. The owner is one of the Domain's Roles or
+    None (#60): never a Speaker id or a person's name, whatever the generic stage or the model said.
+
+    `added_actions` (#66) are Proposed Actions the generic stage missed. One is kept only when its
+    Action Type has `may_add`, it has a title, its `transcript_excerpt` is in `transcript`, and no kept
+    action of the same type has the same fields or overlapping excerpt; at most MAX_ADDED. It gets the
+    id `<id_prefix>-<n>` after the generic ones and is proposed like any other.
+    """
+    roles = {r.name for r in domain.roles}
+    by_id = {a.id: a for a in actions}
+    typed: dict[str, ProposedAction] = {}
+
+    def typed_as(base: ProposedAction, item: dict, action_type) -> ProposedAction:
+        raw_fields = item.get("fields")
+        raw_fields = raw_fields if isinstance(raw_fields, dict) else {}
+        user_only = _user_only_fields(domain, action_type.name)
+        return dataclasses.replace(
+            base,
+            action_type=action_type.name,
+            owner=item["owner"] if isinstance(item.get("owner"), str) and item["owner"] in roles else None,
+            prepared_payload=None,
+            fields={f.name: None if f.name in user_only else _field_value(f.type, raw_fields.get(f.name))
+                    for f in action_type.fields},
+        )
+
+    items = answer.get("proposed_actions")
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        action_id, type_name = item.get("id"), item.get("action_type")
+        if not isinstance(action_id, str) or action_id not in by_id or action_id in typed:
+            continue
+        action_type = domain.action_type(type_name) if isinstance(type_name, str) else None
+        if action_type is None:
+            continue
+        typed[action_id] = typed_as(by_id[action_id], item, action_type)
+
+    spoken = _plain(" ".join(s.text for s in transcript.segments)) if transcript is not None else ""
+    added = 0
+    items = answer.get("added_actions")
+    for item in items if isinstance(items, list) and spoken else []:
+        if not isinstance(item, dict) or added >= MAX_ADDED:
+            continue
+        type_name, title = item.get("action_type"), _text(item.get("title"))
+        excerpt = _plain(_text(item.get("transcript_excerpt")))
+        action_type = domain.action_type(type_name) if isinstance(type_name, str) else None
+        if action_type is None or not action_type.may_add or not title or not excerpt or excerpt not in spoken:
+            continue
+        action_id = f"{id_prefix}-{len(actions) + added + 1}"
+        new = typed_as(ProposedAction(id=action_id, title=title, description=_text(item.get("description")),
+                                      transcript_excerpt=_text(item.get("transcript_excerpt"))), item, action_type)
+        kept = [_plain(a.transcript_excerpt) for a in typed.values() if a.action_type == new.action_type]
+        same_fields = any(a.fields == new.fields for a in typed.values() if a.action_type == new.action_type)
+        if same_fields or any(k and (excerpt in k or k in excerpt) for k in kept):
+            continue  # the model added again an action it already kept
+        added += 1
+        typed[action_id] = new
+
+    suggestions = []
+    raw_suggestions = answer.get("suggestions")
+    for item in raw_suggestions if isinstance(raw_suggestions, list) else []:
+        if isinstance(item, dict) and _text(item.get("text")):
+            suggestions.append(Suggestion(_text(item.get("text")), _text(item.get("transcript_excerpt"))))
+    return list(typed.values()), suggestions
+
+
+def ask_domain(
+    domain: Domain, llm: LlmClient, transcript: Transcript, actions: list[ProposedAction], session_date: date,
+    speakers: Sequence[Speaker] = (), id_prefix: str = "pa",
+) -> tuple[list[ProposedAction], list[Suggestion]]:
+    """One Domain stage call, validated; saves nothing. A non-JSON or non-object answer raises ValueError."""
+    prompt = build_prompt(domain, transcript, actions, session_date, speakers)
+    raw = llm.generate_json(prompt, model=domain.model, json_schema=domain.answer_schema)
+    try:
+        answer = json.loads(raw)
+    except json.JSONDecodeError:  # not re-raised: the error object would carry the raw answer (patient data)
+        answer = None
+    if not isinstance(answer, dict):
+        raise ValueError("Domain stage answer is not a JSON object")
+    return apply_answer(domain, actions, answer, transcript, id_prefix)
+
+
+def run_domain_stage(
+    session_id: str, store: SessionStore, domain: Domain, llm: LlmClient, transcript: Transcript
+) -> tuple[list[ProposedAction], list[Suggestion]]:
+    """Run the Domain stage on the Session's generic Proposed Actions; save and return the result.
+
+    `transcript` is the one the generic stage used (the English translation). Refuses to run once
+    the User has decided any action, or a second time: actions it dropped are gone, so a re-run needs
+    the generic extraction first. A non-JSON or non-object answer raises ValueError and saves nothing.
+    """
+    snapshot = store.load_actions_snapshot(session_id)
+    session = store.get_session(session_id)
+    if session is None:
+        raise LookupError(f"no Session {session_id!r}")
+    actions = list(snapshot.actions)
+    if any(a.status is not ActionStatus.PROPOSED for a in actions):
+        raise ValueError(f"Session {session_id!r} already has decided Proposed Actions")
+    if any(a.action_type is not None for a in actions):
+        raise ValueError(f"Session {session_id!r} already went through the Domain stage; run the generic extraction again first")
+    started = session.started_at
+    session_date = (started.astimezone() if started.tzinfo else started).date()  # local day of the Session
+    typed, suggestions = ask_domain(domain, llm, transcript, actions, session_date, store.load_speakers(session_id),
+                                    id_prefix=session_id)
+    # Actions and Suggestions commit together, or neither does if a User decision won.
+    store.save_actions(session_id, typed, expected_revision=snapshot.revision, suggestions=suggestions)
+    return typed, suggestions

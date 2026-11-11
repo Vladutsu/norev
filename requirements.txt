@@ -1,0 +1,14 @@
+faster-whisper==1.2.1
+ctranslate2==4.7.1
+av==17.0.0
+onnxruntime==1.24.4
+tokenizers==0.22.2
+numpy==2.4.4
+
+# CUDA libraries for Whisper are in requirements-cuda.txt: setup installs them only on NVIDIA machines
+
+# store (encrypted SessionStore, #26)
+cryptography==50.0.2
+
+# time zones for Google Calendar payloads (#44): zoneinfo has no database on Windows
+tzdata==2026.1

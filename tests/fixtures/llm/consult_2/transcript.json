@@ -1,0 +1,161 @@
+{
+  "synthetic": "Written for tests. No real patient, no real person.",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "doctor"
+    },
+    {
+      "id": "S2",
+      "role": "patient"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.8,
+      "end": 4.361,
+      "speaker_id": "S1",
+      "text": "Bună ziua, domnule Popa. Cum vă mai simțiți de data trecută?"
+    },
+    {
+      "start": 4.799,
+      "end": 12.845,
+      "speaker_id": "S2",
+      "text": "Bună ziua. Nu prea bine, domnule doctor. Tusea nu a trecut și de trei zile am iar febră, treizeci și opt și ceva seara."
+    },
+    {
+      "start": 13.426,
+      "end": 14.479,
+      "speaker_id": "S1",
+      "text": "Tușiți cu flegmă?"
+    },
+    {
+      "start": 15.041,
+      "end": 21.577,
+      "speaker_id": "S2",
+      "text": "Da, dimineața mai ales, e verzuie. Și obosesc foarte repede, abia urc la etajul doi."
+    },
+    {
+      "start": 22.32,
+      "end": 23.465,
+      "speaker_id": "S1",
+      "text": "Fumați în continuare?"
+    },
+    {
+      "start": 23.929,
+      "end": 27.525,
+      "speaker_id": "S2",
+      "text": "Am redus la zece țigări pe zi, dar nu m-am lăsat de tot."
+    },
+    {
+      "start": 28.234,
+      "end": 32.263,
+      "speaker_id": "S1",
+      "text": "Să vă ascult plămânii. Respirați adânc pe gură. Încă o dată."
+    },
+    {
+      "start": 33.136,
+      "end": 36.05,
+      "speaker_id": "S2",
+      "text": "Mă cam doare în partea dreaptă când respir adânc."
+    },
+    {
+      "start": 36.583,
+      "end": 42.834,
+      "speaker_id": "S1",
+      "text": "Aud niște raluri la baza plămânului drept. Vreau o radiografie pulmonară astăzi sau cel târziu mâine."
+    },
+    {
+      "start": 43.13,
+      "end": 43.913,
+      "speaker_id": "S2",
+      "text": "Unde o fac?"
+    },
+    {
+      "start": 44.716,
+      "end": 51.017,
+      "speaker_id": "S1",
+      "text": "La spitalul județean, la radiologie. Vă dau biletul de trimitere acum și le sunați să vă programeze."
+    },
+    {
+      "start": 51.331,
+      "end": 53.451,
+      "speaker_id": "S2",
+      "text": "Bine. Și cu febra ce fac?"
+    },
+    {
+      "start": 53.712,
+      "end": 64.2,
+      "speaker_id": "S1",
+      "text": "Vă prescriu amoxicilină cu acid clavulanic, o mie de miligrame, de două ori pe zi, timp de șapte zile. Pentru febră luați paracetamol, cel mult patru tablete pe zi."
+    },
+    {
+      "start": 64.584,
+      "end": 67.76,
+      "speaker_id": "S2",
+      "text": "Pot să merg la serviciu? Lucrez pe șantier."
+    },
+    {
+      "start": 68.26,
+      "end": 73.861,
+      "speaker_id": "S1",
+      "text": "Nu. Vă dau concediu medical cinci zile, până marți inclusiv. Odihnă și multe lichide."
+    },
+    {
+      "start": 74.154,
+      "end": 76.564,
+      "speaker_id": "S2",
+      "text": "Am nevoie de adeverință pentru patron."
+    },
+    {
+      "start": 77.058,
+      "end": 82.187,
+      "speaker_id": "S1",
+      "text": "Certificatul de concediu medical vi-l eliberez acum, îl duceți la resurse umane."
+    },
+    {
+      "start": 82.78,
+      "end": 85.032,
+      "speaker_id": "S2",
+      "text": "Mulțumesc. Și analizele?"
+    },
+    {
+      "start": 85.918,
+      "end": 91.102,
+      "speaker_id": "S1",
+      "text": "Faceți și o hemoleucogramă și proteina C reactivă, mâine dimineață, pe nemâncate."
+    },
+    {
+      "start": 91.372,
+      "end": 93.661,
+      "speaker_id": "S2",
+      "text": "Le fac mâine. Când vin înapoi?"
+    },
+    {
+      "start": 94.135,
+      "end": 106.2,
+      "speaker_id": "S1",
+      "text": "Vă aștept marți, zece noiembrie, la ora opt și jumătate, cu radiografia și analizele. Dacă vă e greu să respirați sau febra trece de treizeci și nouă, veniți imediat sau sunați la urgență."
+    },
+    {
+      "start": 106.974,
+      "end": 109.222,
+      "speaker_id": "S2",
+      "text": "Am înțeles. Și cu fumatul?"
+    },
+    {
+      "start": 109.842,
+      "end": 117.758,
+      "speaker_id": "S1",
+      "text": "Vă recomand programul de renunțare la fumat de la dispensar. Vă trec pe listă și vă sună doamna asistentă Elena săptămâna viitoare."
+    },
+    {
+      "start": 118.066,
+      "end": 122.22,
+      "speaker_id": "S2",
+      "text": "Bine, o să încerc. Mulțumesc, domnule doctor."
+    }
+  ]
+}

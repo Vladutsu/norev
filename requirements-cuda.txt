@@ -1,0 +1,4 @@
+# CUDA runtime libs for Whisper (and diarization) on NVIDIA GPUs.
+# Installed by `norev.cmd setup` only when the hardware tier puts Whisper on the GPU.
+nvidia-cublas-cu12
+nvidia-cudnn-cu12==9.*

@@ -1,0 +1,115 @@
+"""Where norev keeps its data, key, models and logs on this machine (#48).
+
+Everything lives in the User's profile, never in the app folder:
+
+  %LOCALAPPDATA%\\norev\\norev.db          encrypted store (same default as the store itself, #26)
+  %LOCALAPPDATA%\\norev\\keys\\norev.key.dpapi   store key sealed to the Windows account (#63)
+  %LOCALAPPDATA%\\norev\\keys\\norev.key         plain key: Linux, or Windows before `protect-key`
+  %LOCALAPPDATA%\\norev\\models\\          GGUF models; Whisper and diarization under models\\hf
+  %LOCALAPPDATA%\\norev\\llama.cpp\\       llama-server.exe and its DLLs
+  %LOCALAPPDATA%\\norev\\logs\\            llama-server.log
+  %LOCALAPPDATA%\\norev\\hardware.json     the hardware tier picked at install (launcher/hardware.py)
+
+NOREV_HOME moves all of it; every single path can still be set by its own variable.
+On Linux (the dev container) the root is $XDG_DATA_HOME/norev or ~/.local/share/norev.
+"""
+import os
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Mapping, MutableMapping
+
+DEFAULT_GGUF = "Qwen3-8B-Q4_K_M.gguf"
+
+
+@dataclass(frozen=True)
+class AppPaths:
+    root: Path
+    windows: bool
+
+    @classmethod
+    def from_environment(cls, env: Mapping[str, str] | None = None, windows: bool | None = None) -> "AppPaths":
+        env = os.environ if env is None else env
+        windows = sys.platform == "win32" if windows is None else windows
+        if env.get("NOREV_HOME"):
+            root = Path(env["NOREV_HOME"])
+        elif env.get("LOCALAPPDATA"):
+            root = Path(env["LOCALAPPDATA"]) / "norev"
+        else:
+            root = Path(env.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "norev"
+        return cls(root=root, windows=windows)
+
+    @property
+    def store(self) -> Path:
+        return self.root / "norev.db"
+
+    @property
+    def key(self) -> Path:
+        """Where the key belongs: DPAPI-sealed on Windows, a plain file elsewhere (#63)."""
+        return self.plain_key.with_name("norev.key.dpapi") if self.windows else self.plain_key
+
+    @property
+    def plain_key(self) -> Path:
+        return self.root / "keys" / "norev.key"
+
+    @property
+    def models(self) -> Path:
+        return self.root / "models"
+
+    @property
+    def hf_home(self) -> Path:
+        return self.models / "hf"
+
+    @property
+    def gguf(self) -> Path:
+        return self.models / DEFAULT_GGUF
+
+    @property
+    def llama_server(self) -> Path:
+        return self.root / "llama.cpp" / ("llama-server.exe" if self.windows else "llama-server")
+
+    @property
+    def logs(self) -> Path:
+        return self.root / "logs"
+
+    @property
+    def hardware(self) -> Path:
+        return self.root / "hardware.json"
+
+
+def apply_defaults(paths: AppPaths, env: MutableMapping[str, str], *, offline: bool = True) -> None:
+    """Fill the variables the rest of norev reads, without overriding what the User set.
+
+    offline=True keeps Hugging Face from downloading anything; only `setup-models` turns it off.
+    The key variable is set only when a key exists (the sealed one first), so a missing key is
+    reported, not opened.
+    """
+    from norev.launcher import hardware
+
+    # This version: Romanian, Corporate. Then the tier saved at install (models, devices, GPU layers);
+    # both only fill what the User did not set, and both come before the generic defaults below.
+    env.setdefault("WHISPER_LANGUAGES", "ro")
+    env.setdefault("NOREV_DOMAIN", "corporate")
+    hardware.apply(paths.hardware, env)
+    env.setdefault("HF_HOME", str(paths.hf_home))
+    if offline:
+        env.setdefault("HF_HUB_OFFLINE", "1")
+    env.setdefault("NOREV_STORE_PATH", str(paths.store))
+    for key in (paths.key, paths.plain_key):
+        if key.is_file():
+            env.setdefault("NOREV_STORE_KEY_FILE", str(key))
+            break
+    env.setdefault("LLAMA_SERVER", str(paths.llama_server))
+    env.setdefault("NOREV_EXTRACT_MODEL", env.get("LLAMACPP_MODEL") or str(paths.gguf))
+    env.setdefault("NOREV_TRANSLATE_MODEL", env["NOREV_EXTRACT_MODEL"])
+    env.setdefault("NOREV_MODELS_DIR", str(paths.models))  # where a Domain's `[model] gguf` is looked up (#62)
+
+
+def cuda_dll_dirs(site_packages: list[Path]) -> list[Path]:
+    """The bin folders of the nvidia-* wheels (cuBLAS, cuDNN): on Windows they must be on the DLL path."""
+    found = []
+    for base in site_packages:
+        nvidia = base / "nvidia"
+        if nvidia.is_dir():
+            found.extend(sorted(p for p in nvidia.glob("*/bin") if p.is_dir()))
+    return found

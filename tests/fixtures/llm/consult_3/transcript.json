@@ -1,0 +1,171 @@
+{
+  "synthetic": "Written for tests. No real patient, no real person.",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "doctor"
+    },
+    {
+      "id": "S2",
+      "role": "patient"
+    },
+    {
+      "id": "S3",
+      "role": "family member"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.8,
+      "end": 4.947,
+      "speaker_id": "S1",
+      "text": "Bună ziua, doamna Georgescu. Văd că ați venit cu fiica dumneavoastră."
+    },
+    {
+      "start": 5.751,
+      "end": 11.175,
+      "speaker_id": "S2",
+      "text": "Bună ziua, domnule doctor. Da, Ana m-a adus, că eu nu mai țin minte tot ce trebuie."
+    },
+    {
+      "start": 11.752,
+      "end": 17.677,
+      "speaker_id": "S3",
+      "text": "Bună ziua. Mama și-a pierdut din nou tabletele de diabet săptămâna trecută și glicemia i-a fost mare."
+    },
+    {
+      "start": 18.361,
+      "end": 18.932,
+      "speaker_id": "S1",
+      "text": "Cât a avut?"
+    },
+    {
+      "start": 19.555,
+      "end": 24.461,
+      "speaker_id": "S3",
+      "text": "Dimineața două sute zece, aseară o sută optzeci. Am măsurat eu cu aparatul ei."
+    },
+    {
+      "start": 24.789,
+      "end": 27.359,
+      "speaker_id": "S1",
+      "text": "Doamna Georgescu, ce tablete luați acum?"
+    },
+    {
+      "start": 28.231,
+      "end": 33.618,
+      "speaker_id": "S2",
+      "text": "Metformin, cred că de o mie, dimineața și seara. Dar uneori uit pe cea de seară."
+    },
+    {
+      "start": 34.516,
+      "end": 38.816,
+      "speaker_id": "S1",
+      "text": "Și piciorul stâng cum mai este? Data trecută aveați o rană mică la călcâi."
+    },
+    {
+      "start": 39.389,
+      "end": 41.876,
+      "speaker_id": "S2",
+      "text": "Mă mai ustură și se înroșește seara."
+    },
+    {
+      "start": 42.266,
+      "end": 47.724,
+      "speaker_id": "S1",
+      "text": "Să mă uit. Rana nu s-a închis și pielea din jur e roșie. Trebuie să o vadă un chirurg."
+    },
+    {
+      "start": 48.462,
+      "end": 49.457,
+      "speaker_id": "S3",
+      "text": "Unde mergem?"
+    },
+    {
+      "start": 50.232,
+      "end": 58.279,
+      "speaker_id": "S1",
+      "text": "Vă fac trimitere la chirurgie, la ambulatoriul spitalului județean. Încercați să obțineți o programare în cursul săptămânii viitoare."
+    },
+    {
+      "start": 58.623,
+      "end": 61.921,
+      "speaker_id": "S3",
+      "text": "Mă ocup eu de programare, sun mâine dimineață."
+    },
+    {
+      "start": 62.599,
+      "end": 71.502,
+      "speaker_id": "S1",
+      "text": "Foarte bine. Până atunci, pansament zilnic cu ser fiziologic și betadină. Asistenta comunitară poate veni acasă să vă arate cum se face."
+    },
+    {
+      "start": 72.063,
+      "end": 75.09,
+      "speaker_id": "S3",
+      "text": "Ar fi de mare ajutor, eu lucrez până la cinci."
+    },
+    {
+      "start": 75.953,
+      "end": 81.261,
+      "speaker_id": "S1",
+      "text": "O anunț eu pe asistenta comunitară, doamna Ioana, să treacă pe la dumneavoastră luni după-amiază."
+    },
+    {
+      "start": 81.711,
+      "end": 84.367,
+      "speaker_id": "S2",
+      "text": "Și cu tabletele ce fac, că le uit mereu?"
+    },
+    {
+      "start": 84.881,
+      "end": 92.004,
+      "speaker_id": "S1",
+      "text": "Vă recomand o cutie de pastile pe zile ale săptămânii. Ana, vă rog să i-o pregătiți duminică seara pentru toată săptămâna."
+    },
+    {
+      "start": 92.47,
+      "end": 95.02,
+      "speaker_id": "S3",
+      "text": "Sigur, o cumpăr de la farmacie azi."
+    },
+    {
+      "start": 95.586,
+      "end": 101.409,
+      "speaker_id": "S1",
+      "text": "Vreau și o hemoglobină glicată și un examen de urină. Le faceți la laborator până vineri."
+    },
+    {
+      "start": 102.283,
+      "end": 104.0,
+      "speaker_id": "S3",
+      "text": "Le facem joi, că am liber."
+    },
+    {
+      "start": 104.697,
+      "end": 111.985,
+      "speaker_id": "S1",
+      "text": "Reveniți apoi pe douăzeci noiembrie, la ora unsprezece, cu rezultatele și cu scrisoarea medicală de la chirurg."
+    },
+    {
+      "start": 112.726,
+      "end": 116.805,
+      "speaker_id": "S2",
+      "text": "Douăzeci noiembrie, la unsprezece. Ana, scrie-ți, te rog."
+    },
+    {
+      "start": 117.186,
+      "end": 120.375,
+      "speaker_id": "S3",
+      "text": "Am notat. Mulțumim frumos, domnule doctor."
+    },
+    {
+      "start": 120.935,
+      "end": 125.172,
+      "speaker_id": "S1",
+      "text": "Cu plăcere. Dacă apare febră sau piciorul se umflă, veniți imediat."
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+# Corporate Domain: work meetings, Proposed Actions are work items. Format: domains/README.md
+format = 1
+name = "corporate"
+label = "Corporate"
+
+[model]
+# Candidate only: the generic model (norev.sh default), not yet validated for this Domain (#25).
+gguf = "Qwen3-8B-Q4_K_M.gguf"
+context = 8192
+
+[prompts]
+domain_stage = "prompts/domain_stage.md"
+domain_stage_schema = "prompts/domain_stage.schema.json"
+
+[[roles]]
+name = "organizer"
+label = "Organizator"
+description = "The person who records the Session (the User)."
+
+[[roles]]
+name = "participant"
+label = "Participant"
+description = "A colleague, client or partner who takes part in the meeting."
+
+[[action_types]]
+name = "work_item"
+label = "Sarcină de lucru"
+description = "A piece of work someone committed to or was asked to do and accepted."
+
+# title, description, owner, due_date and transcript_excerpt are generic fields of every
+# Proposed Action; only what they do not cover is a Domain field.
+[[action_types.fields]]
+name = "deliverable"
+label = "Livrabil"
+type = "string"
+required = false
+description = "The concrete output of the work (a document, a report, a fix, an email), only if it was said."
+
+[[action_types.workflow]]
+name = "build_document"
+label = "Pregătește documentul"
+
+# shortcut: the local_document payload is the proposal for #18/#23; change it here once agreed.
+# The User may send the work item to Trello or Jira instead, chosen per action at preview (#72, #73).
+[[action_types.workflow]]
+name = "save_document"
+label = "Trimite sarcina"
+connector = "local_document"
+alternatives = ["trello", "jira"]
+sends = ["title", "description", "owner", "due_date", "deliverable", "transcript_excerpt"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"
+
+[[action_types]]
+name = "calendar_event"
+label = "Eveniment în calendar"
+description = "A meeting or call that was agreed on, with a day and a clock time, to put in the User's calendar."
+# The Domain stage may add one the generic stage missed: a meeting agreed on can read like a decision (#66)
+may_add = true
+
+[[action_types.fields]]
+name = "event_date"
+label = "Data"
+type = "date"
+required = true
+description = "Day of the meeting, only if it was said or follows from a relative date."
+
+[[action_types.fields]]
+name = "start_time"
+label = "Ora de început"
+type = "time"
+required = true
+description = "Clock time the meeting starts, only if it was said."
+
+[[action_types.fields]]
+name = "end_time"
+label = "Ora de sfârșit"
+type = "time"
+required = true
+description = "Clock time the meeting ends, only if it was said or follows from a duration that was said."
+
+[[action_types.fields]]
+name = "location"
+label = "Locație"
+type = "string"
+required = false
+description = "Where the meeting takes place (a room, an address, a video call), only if it was said."
+
+# Filled only by the User: a Speaker label (S1) is not a Contact, so the model always answers null.
+[[action_types.fields]]
+name = "attendees"
+label = "Participanți (emailuri)"
+type = "string"
+required = false
+description = "Always null: the User adds attendee emails, separated by commas."
+
+[[action_types.workflow]]
+name = "build_event"
+label = "Pregătește evenimentul"
+
+[[action_types.workflow]]
+name = "send_event"
+label = "Trimite în Google Calendar"
+connector = "google_calendar"
+sends = ["title", "description", "event_date", "start_time", "end_time", "location", "attendees"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"
+
+[[action_types]]
+name = "follow_up_email"
+label = "Email de follow-up"
+description = "An email someone agreed to send after the meeting (a recap, an answer, figures), drafted for the User to send."
+
+# Filled only by the User: a Speaker label (S1) or a name is not an email, so the model always answers null.
+[[action_types.fields]]
+name = "recipients"
+label = "Destinatari (emailuri)"
+type = "string"
+required = true
+description = "Always null: the User adds the recipients' emails, separated by commas."
+
+[[action_types.fields]]
+name = "subject"
+label = "Subiect"
+type = "string"
+required = true
+description = "A short subject naming what the email is about, from what was said."
+
+[[action_types.fields]]
+name = "body"
+label = "Text"
+type = "string"
+required = true
+description = "A short draft of the email, only with what was said or agreed in the meeting."
+
+[[action_types.workflow]]
+name = "build_email"
+label = "Pregătește draftul"
+
+# The draft is saved as an .eml file the User opens and sends from their own mail app; norev sends nothing.
+[[action_types.workflow]]
+name = "save_email"
+label = "Salvează draftul de email"
+connector = "email_draft"
+sends = ["recipients", "subject", "body"]
+
+[[action_types.workflow]]
+name = "save_result"
+label = "Salvează în Sesiune"

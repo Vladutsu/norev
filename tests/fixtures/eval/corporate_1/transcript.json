@@ -1,0 +1,111 @@
+{
+  "synthetic": "Written for tests. No real person.",
+  "about": "Planificare de sprint: angajamente, o reasignare, o acțiune anulată.",
+  "domain": "corporate",
+  "session_date": "2026-11-06",
+  "language": "ro",
+  "speakers": [
+    {
+      "id": "S1",
+      "role": "organizer"
+    },
+    {
+      "id": "S2",
+      "role": "participant"
+    },
+    {
+      "id": "S3",
+      "role": "participant"
+    },
+    {
+      "id": "S4",
+      "role": "participant"
+    }
+  ],
+  "segments": [
+    {
+      "start": 0.5,
+      "end": 6.0,
+      "speaker_id": "S1",
+      "text": "Bună dimineața. Începem planificarea de sprint. Andrei, cum stai cu migrarea bazei de date?"
+    },
+    {
+      "start": 6.5,
+      "end": 12.35,
+      "speaker_id": "S2",
+      "text": "Migrarea e gata în proporție de optzeci la sută. O termin până miercuri, unsprezece noiembrie."
+    },
+    {
+      "start": 12.85,
+      "end": 15.9,
+      "speaker_id": "S1",
+      "text": "Bine. Maria, tu ce ai pe listă?"
+    },
+    {
+      "start": 16.4,
+      "end": 21.55,
+      "speaker_id": "S3",
+      "text": "Eu fac designul pentru ecranul de plată. Îl trimit spre review până vineri."
+    },
+    {
+      "start": 22.05,
+      "end": 29.65,
+      "speaker_id": "S1",
+      "text": "Perfect. Aveam în plan și integrarea cu PayPal, dar clientul a renunțat, deci nu o mai facem în sprintul ăsta."
+    },
+    {
+      "start": 30.15,
+      "end": 34.25,
+      "speaker_id": "S4",
+      "text": "Atunci eu preiau testele automate pentru plăți, în locul integrării."
+    },
+    {
+      "start": 34.75,
+      "end": 37.1,
+      "speaker_id": "S1",
+      "text": "De acord, Radu. Până când?"
+    },
+    {
+      "start": 37.6,
+      "end": 39.6,
+      "speaker_id": "S4",
+      "text": "Până pe optsprezece noiembrie."
+    },
+    {
+      "start": 40.1,
+      "end": 45.25,
+      "speaker_id": "S2",
+      "text": "Și cineva ar trebui să actualizeze documentația API, e veche de două luni."
+    },
+    {
+      "start": 45.75,
+      "end": 49.85,
+      "speaker_id": "S1",
+      "text": "Maria, poți tu să te ocupi de documentație după design?"
+    },
+    {
+      "start": 50.35,
+      "end": 53.4,
+      "speaker_id": "S3",
+      "text": "Da, o actualizez până pe douăzeci noiembrie."
+    },
+    {
+      "start": 53.9,
+      "end": 57.3,
+      "speaker_id": "S1",
+      "text": "Eu trimit clientului raportul de progres luni dimineață."
+    },
+    {
+      "start": 57.8,
+      "end": 62.6,
+      "speaker_id": "S2",
+      "text": "Bugetul pentru servere rămâne patru mii cinci sute de euro pe lună?"
+    },
+    {
+      "start": 63.1,
+      "end": 68.6,
+      "speaker_id": "S1",
+      "text": "Da, patru mii cinci sute, fără modificări. Mulțumesc tuturor, ne vedem joi la retrospectivă."
+    }
+  ]
+}

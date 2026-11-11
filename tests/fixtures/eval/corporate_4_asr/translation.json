@@ -1,0 +1,154 @@
+{
+ "model": "Qwen3-8B-Q4_K_M",
+ "elapsed_seconds": 6.8,
+ "calls": [
+  {
+   "stage": "translate",
+   "prompt": "Translate these turns of a session transcript from Romanian into English.\n\nThe transcript comes from automatic speech recognition. Each turn is what one speaker said, in order.\n- Translate each turn on its own, faithfully, sentence by sentence. Do not summarise, skip, merge or add anything, and do not move text from one turn to another.\n- Keep questions as questions, and keep every name, number, date, time and amount exactly.\n- Fix obvious speech-recognition misspellings only when the intended word is unambiguous.\n- Answer with every turn id exactly once, in the same order.\n\nReturn ONLY valid JSON: {\"turns\": [{\"id\": \"...\", \"text\": \"...\"}]}\n\nTurns, one JSON object per line:\n{\"id\": \"1\", \"text\": \"Bună dimineața! Avem câteva întâlniri de stabilit pentru săptămâna viitoare. Ioana, când facem demo-ul pentru client?\"}\n{\"id\": \"2\", \"text\": \"Păpun marți, 10 noiembrie, la ora 10. Durează o oră.\"}\n{\"id\": \"3\", \"text\": \"Perfect, rămâne marți la 10. Victor, tu suni furnizorul de servere?\"}\n{\"id\": \"4\", \"text\": \"Da, îl sun mâine la ora 3 după amiază. Durează vreo jumătate de oră.\"}\n{\"id\": \"5\", \"text\": \"Cu echipa de marketing aveam întâlnire luni, dar o anulăm. Nu mai e nevoie.\"}\n{\"id\": \"6\", \"text\": \"Și retrospectiva de joi?\"}\n{\"id\": \"7\", \"text\": \"O mutăm vineri, 13 noiembrie, la ora 9.\"}\n{\"id\": \"8\", \"text\": \"Ar trebui să facem și un traind intern săptămâna viitoare, dar nu știu încă oara.\"}\n{\"id\": \"9\", \"text\": \"Bine, îl punem joi, 12 noiembrie. Ora o stabilim mai târziu.\"}\n{\"id\": \"10\", \"text\": \"Eu pregătesc prezentarea pentru demo până luni.\"}\n{\"id\": \"11\", \"text\": \"Mulțumesc tuturor!\"}",
+   "json_schema": {
+    "type": "object",
+    "properties": {
+     "turns": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11"
+         ]
+        },
+        "text": {
+         "type": "string",
+         "minLength": 1
+        }
+       },
+       "required": [
+        "id",
+        "text"
+       ],
+       "additionalProperties": false
+      },
+      "minItems": 11,
+      "maxItems": 11
+     }
+    },
+    "required": [
+     "turns"
+    ],
+    "additionalProperties": false
+   },
+   "response": "{\n  \"turns\": [\n    {\n      \"id\": \"1\",\n      \"text\": \"Good morning! We have a few meetings to schedule for next week. Ioana, when do we do the demo for the client?\"\n    },\n    {\n      \"id\": \"2\",\n      \"text\": \"On Tuesday, November 10th, at 10 o'clock. It lasts an hour.\"\n    },\n    {\n      \"id\": \"3\",\n      \"text\": \"Perfect, it remains Tuesday at 10. Victor, are you calling the server provider?\"\n    },\n    {\n      \"id\": \"4\",\n      \"text\": \"Yes, I'll call him tomorrow at 3 o'clock in the afternoon. It lasts about half an hour.\"\n    },\n    {\n      \"id\": \"5\",\n      \"text\": \"We had a meeting with the marketing team on Monday, but we cancel it. We don't need it anymore.\"\n    },\n    {\n      \"id\": \"6\",\n      \"text\": \"And the retrospective on Thursday?\"\n    },\n    {\n      \"id\": \"7\",\n      \"text\": \"We move it to Friday, November 13th, at 9 o'clock.\"\n    },\n    {\n      \"id\": \"8\",\n      \"text\": \"We should also do an internal training next week, but I don't know the time yet.\"\n    },\n    {\n      \"id\": \"9\",\n      \"text\": \"Okay, let's put it on Thursday, November 12th. We'll set the time later.\"\n    },\n    {\n      \"id\": \"10\",\n      \"text\": \"I prepare the presentation for the demo until Monday.\"\n    },\n    {\n      \"id\": \"11\",\n      \"text\": \"Thank you all!\"\n    }\n  ]\n}"
+  }
+ ],
+ "english": {
+  "synthetic": "Written for tests. No real person.",
+  "session_date": "2026-11-06",
+  "language": "en",
+  "source_language": "ro",
+  "speakers": [
+   {
+    "id": "S1",
+    "role": "participant"
+   },
+   {
+    "id": "S2",
+    "role": "participant"
+   },
+   {
+    "id": "S3",
+    "role": "participant"
+   }
+  ],
+  "segments": [
+   {
+    "start": 0.4,
+    "end": 7.7,
+    "speaker_id": "S1",
+    "text": "Good morning! We have a few meetings to schedule for next week. Ioana, when do we do the demo for the client?",
+    "untranslated": false
+   },
+   {
+    "start": 8.18,
+    "end": 12.08,
+    "speaker_id": "S2",
+    "text": "On Tuesday, November 10th, at 10 o'clock. It lasts an hour.",
+    "untranslated": false
+   },
+   {
+    "start": 12.42,
+    "end": 17.04,
+    "speaker_id": "S1",
+    "text": "Perfect, it remains Tuesday at 10. Victor, are you calling the server provider?",
+    "untranslated": false
+   },
+   {
+    "start": 17.7,
+    "end": 22.6,
+    "speaker_id": "S3",
+    "text": "Yes, I'll call him tomorrow at 3 o'clock in the afternoon. It lasts about half an hour.",
+    "untranslated": false
+   },
+   {
+    "start": 22.88,
+    "end": 27.3,
+    "speaker_id": "S1",
+    "text": "We had a meeting with the marketing team on Monday, but we cancel it. We don't need it anymore.",
+    "untranslated": false
+   },
+   {
+    "start": 27.82,
+    "end": 29.24,
+    "speaker_id": "S2",
+    "text": "And the retrospective on Thursday?",
+    "untranslated": false
+   },
+   {
+    "start": 29.24,
+    "end": 32.86,
+    "speaker_id": "S1",
+    "text": "We move it to Friday, November 13th, at 9 o'clock.",
+    "untranslated": false
+   },
+   {
+    "start": 33.06,
+    "end": 38.48,
+    "speaker_id": "S3",
+    "text": "We should also do an internal training next week, but I don't know the time yet.",
+    "untranslated": false
+   },
+   {
+    "start": 39.04,
+    "end": 43.84,
+    "speaker_id": "S1",
+    "text": "Okay, let's put it on Thursday, November 12th. We'll set the time later.",
+    "untranslated": false
+   },
+   {
+    "start": 44.06,
+    "end": 46.78,
+    "speaker_id": "S2",
+    "text": "I prepare the presentation for the demo until Monday.",
+    "untranslated": false
+   },
+   {
+    "start": 47.36,
+    "end": 48.54,
+    "speaker_id": "S1",
+    "text": "Thank you all!",
+    "untranslated": false
+   }
+  ]
+ }
+}
