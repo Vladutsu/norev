@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sample_id", "meeting_id", "source_url", "start_s", "end_s", "split", "speaker_id",
+    "speaker_name", "evidence", "model_sha256", "embedding"
+  ],
+  "properties": {
+    "sample_id": {"type": "string", "minLength": 1},
+    "meeting_id": {"type": "string", "pattern": "^sibiu-2026-[0-9]{2}-[0-9]{2}$"},
+    "source_url": {"type": "string", "pattern": "^https://"},
+    "start_s": {"type": "number", "minimum": 0},
+    "end_s": {"type": "number", "exclusiveMinimum": 0},
+    "split": {"enum": ["enroll", "calibrate", "test"]},
+    "speaker_id": {"type": ["string", "null"], "minLength": 1},
+    "speaker_name": {"type": ["string", "null"], "minLength": 1},
+    "evidence": {"type": "string", "minLength": 1},
+    "model_sha256": {"const": "d51abcf31717ef28162f26acb9d44dd4127c3d44c9b8624f699f3425daca8e77"},
+    "embedding": {
+      "type": "array", "minItems": 192, "maxItems": 192,
+      "items": {"type": "number"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"speaker_id": {"type": "null"}}},
+      "then": {"properties": {"speaker_name": {"type": "null"}, "split": {"enum": ["calibrate", "test"]}}},
+      "else": {"properties": {"speaker_name": {"type": "string"}}}
+    }
+  ]
+}
