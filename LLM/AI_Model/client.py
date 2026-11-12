@@ -201,6 +201,12 @@ class LlamaCppLLMClient(OllamaLLMClient):
     def _request_url(self) -> str:
         return f"{llamacpp_base_url(self._ollama_url)}/v1/chat/completions"
 
+    def bounded(self, model):
+        from LLM.AI_Model.budgeted import BudgetedLlama
+
+        return BudgetedLlama(llamacpp_base_url(self._ollama_url), model=model or self._default_model,
+                             timeout=self._request_timeout_seconds)
+
     def _build_body(
         self, prompt: str, model: str, *, force_json: bool, json_schema: dict | None = None
     ) -> dict:

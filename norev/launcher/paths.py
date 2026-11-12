@@ -90,10 +90,13 @@ def apply_defaults(paths: AppPaths, env: MutableMapping[str, str], *, offline: b
     # both only fill what the User did not set, and both come before the generic defaults below.
     env.setdefault("WHISPER_LANGUAGES", "ro")
     env.setdefault("NOREV_DOMAIN", "local_council")
-    # The minutes are written in ~4000-character fragments, one request at a time: one slot with an
-    # 8192-token context (domains/local_council) instead of the tier's 4 x 4096. It also needs less VRAM.
+    # The council pipeline counts each prompt against one 8192-token slot.
     env.setdefault("LLAMACPP_CTX", "8192")
     env.setdefault("LLM_PARALLEL", "1")
+    if env["NOREV_DOMAIN"] == "local_council":
+        env.setdefault("NOREV_DOMAIN_MODEL", hardware.SMALL.file)
+        env.setdefault("NOREV_EXTRACT_MODEL", env.get("LLAMACPP_MODEL") or str(paths.models / hardware.SMALL.file))
+        env.setdefault("NOREV_TRANSLATE_MODEL", env["NOREV_EXTRACT_MODEL"])
     # A council meeting has 20+ Speakers; Sortformer stops at 4, sherpa-onnx has no limit.
     env.setdefault("NOREV_DIARIZER", "sherpa")
     hardware.apply(paths.hardware, env)

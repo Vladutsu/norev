@@ -19,38 +19,28 @@ Transcript without Speakers). The first run then does, with no questions asked:
 2. **Installs only what that tier needs**: CUDA wheels only for NVIDIA; the sherpa-onnx diarization
    (CPU, every tier).
 3. **Downloads**, once: Whisper large-v3-turbo, the two sherpa-onnx diarization models (~100 MB), and,
-   checked by SHA-256, the tier's GGUF and the matching llama.cpp build (CUDA, Vulkan, Metal or CPU).
+   checked by SHA-256, Qwen3-4B-Instruct-2507 Q4_K_M and the matching llama.cpp build (CUDA, Vulkan, Metal or CPU).
 4. **Checks that the llama.cpp build runs** on this machine; if it does not (e.g. no Vulkan driver),
    it installs the CPU build instead.
 
-Run `norev.cmd setup` again after changing hardware: it detects again and downloads only what is missing.
+Run `norev.cmd setup` again after changing hardware or upgrading an installation with only the 8B model.
+Setup detects hardware again and downloads missing assets.
 `norev.cmd doctor` shows the chosen tier.
 
 ## Hardware tiers
 
-| Laptop | Tier | LLM | llama.cpp | Whisper large-v3-turbo |
-|---|---|---|---|---|
-| NVIDIA ≥ 8 GB VRAM | `gpu` | Qwen3-8B Q4_K_M, 4 slots | CUDA | GPU, float16 |
-| NVIDIA 4–6 GB VRAM | `gpu-small` | Qwen3-8B, split GPU/RAM by llama.cpp `--fit` | CUDA | GPU, float16 / int8_float16 |
-| AMD/Intel dedicated GPU | `gpu-small` | Qwen3-8B | Vulkan | CPU, int8 |
-| Integrated GPU, ≥ 12 GB RAM | `integrated` | Qwen3-8B, 2 slots | Vulkan (Metal on Mac) | CPU, int8 |
-| Integrated GPU, 8 GB RAM | `integrated` | **Qwen3-4B-Instruct-2507** Q4_K_M | Vulkan | CPU, int8 |
-| No GPU | `cpu` | Qwen3-8B, or 4B under 12 GB RAM | CPU | CPU, int8 |
-
-Accuracy is the same as the reference setup (Qwen3-8B, Whisper large-v3-turbo, beam 5) on every
-tier except the **8 GB RAM** machines, which get the 4B model. Without an NVIDIA GPU everything
-is slower, but the model and settings that produce the result are the same. Thresholds and rules: `norev/launcher/hardware.py`.
-Any variable set in the environment (README of the full app) still overrides the saved tier.
+Hardware detection selects the llama.cpp backend and Whisper device. Council analysis defaults to
+Qwen3-4B-Instruct-2507 Q4_K_M with one 8,192-token slot across tiers. Environment settings override defaults.
 
 ## Local council
 
 Import the recording of a council meeting (or record one) and review:
 
-- **Proces-verbal (draft)**: written in Romanian from the spoken Transcript, in chronological,
-  timestamped sections of ~4000 characters each (one slot with an 8192-token context). Every
-  fragment is processed; a failed fragment fails the analysis instead of publishing half the minutes.
-- **Hotărâri și voturi**: one pass over every agenda and vote line of the whole meeting. A result is
-  kept only when an exact quote from the Transcript announces it; the rest is marked `[de verificat]`.
+- **Proces-verbal (draft)**: Qwen3-4B reads the corrected Romanian transcript in overlapping windows,
+  extracts timestamped notes and uses them to draft chronological sections. The app checks the rendered
+  prompt against 65% of the llama-server context before sending each request.
+- **Hotărâri, voturi și prezență**: vote counts are linked to source turns inside the corresponding vote
+  interval. Attendance is checked separately. Missing or conflicting evidence is marked `[de verificat]`.
 - **Speakers**: diarization with sherpa-onnx on the CPU, with **no limit on the number of Speakers**
   (a council meeting has 20+; the Sortformer model stops at 4). Each Transcript segment gets a TitaNet
   embedding; the longer segments are grouped, groups whose mean voices are within 0.40 become one
@@ -58,8 +48,8 @@ Import the recording of a council meeting (or record one) and review:
   ("Da.", "5.") join the nearest Speaker instead of becoming one. On the 51-min Sibiu meeting of
   27.04.2026 this finds 15 Speakers and keeps the 14 people identified from the content apart, for any
   merge value from 0.35 to 0.45 (a single distance cut found 33 and put two people together).
-  Speaker Roles (chair, mayor, secretary...) are proposed, and only the ones the User confirms are
-  written into the minutes.
+  Speaker Roles (chair, mayor, secretary...) are proposed for review and used in follow-up extraction.
+  The draft uses confirmed roles when attributing debate notes.
 - **Exports**: the minutes as an editable Word file; the conversation as Word, text or JSON with
   timestamps and Speaker ids. An edited file is never overwritten.
 

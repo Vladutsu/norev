@@ -128,12 +128,31 @@ class CentralProcessor:
         """LlmClient for every stage. With `models`, the call's model is started in llama-server and the
         one before it stopped first (#62); a missing model raises before anything starts. Without it the
         gate only keeps Whisper and diarization off the GPU while LLM calls run."""
+        with self._active_model(model) as alias:
+            return self._llm.generate_json(prompt, model=alias, json_schema=json_schema)
+
+    @contextmanager
+    def _active_model(self, model):
         if self._models is None:
             with self._gpu.use(f"llm:{model or ''}"):
-                return self._llm.generate_json(prompt, model=model, json_schema=json_schema)
-        with self._gpu.use(f"llm:{self._models.resolve(model)}", self._models.stop):
-            alias = self._models.load(model)
-            return self._llm.generate_json(prompt, model=alias, json_schema=json_schema)
+                yield model
+        else:
+            with self._gpu.use(f"llm:{self._models.resolve(model)}", self._models.stop):
+                yield self._models.load(model)
+
+    @contextmanager
+    def bounded_llm(self, model):
+        """Keep one server active for token counting and generation in the same document run."""
+        factory = getattr(self._llm, 'bounded', None)
+        if factory is None:
+            yield None
+        else:
+            with self._active_model(model) as alias:
+                bounded = factory(alias)
+                try:
+                    yield bounded
+                finally:
+                    bounded.tokens.cache_clear()
 
     def transcribe(self, audio_ref: str, language: str | None = None) -> Transcript:
         if self._transcriber is None:

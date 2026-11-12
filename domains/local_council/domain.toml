@@ -3,7 +3,7 @@ name = "local_council"
 label = "Consiliu local"
 
 [model]
-gguf = "Qwen3-8B-Q4_K_M.gguf"
+gguf = "Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
 context = 8192
 
 [prompts]

@@ -7,12 +7,14 @@ call goes through the `translator`, `extractor` and `llm` the composition root b
 Central Processor; this module only orders the stages and saves through the SessionStore.
 """
 import dataclasses
+from contextlib import nullcontext
 from dataclasses import dataclass
 
 from norev.core.models import ActionStatus, Domain, OthersPrompt, ProposedAction, Segment, Session, Suggestion
 from norev.core.ports import ActionExtractor, LlmClient, SessionStore, Translator
 from norev.usecases.domain_stage import ask_domain
 from norev.usecases.document_completion import complete_document
+from norev.usecases.council_transcript import complete_council
 from norev.usecases.extract import to_proposed_actions
 from norev.usecases.others_completion import FAILED, check_template, complete
 from norev.usecases.others_prompt import others_domain
@@ -99,10 +101,14 @@ def run_session(
                 raise ValueError(f"Session {session_id!r}: the Others result needs the completion template")
             check_template(completion[0], prompt)
 
+    council = domain.name == 'local_council' and completion and decisions
+    bounded_llm = getattr(llm, 'bounded_llm', None) if council else None
     notes = []
     if correction and not session.source_transcript_ref:
         # once, when the meeting is over: the large model fixes what Whisper misheard, before anything reads it
-        spoken, changed = autocorrect(llm, store.load_transcript(session.transcript_ref), correction, model=domain.model)
+        with (bounded_llm(domain.model) if bounded_llm else nullcontext()) as bounded:
+            spoken, changed = autocorrect(bounded or llm, store.load_transcript(session.transcript_ref),
+                                          correction, model=domain.model)
         if changed:
             store.correct_transcript(session_id, spoken)
             session = _session(session_id, store)
@@ -135,9 +141,12 @@ def run_session(
     if completion and domain.name != "others":
         # Document Domains read every spoken segment in bounded requests; confirmed Roles remain available.
         spoken = store.load_transcript(session.source_transcript_ref or session.transcript_ref)
-        speakers = propose_speaker_roles(session_id, store, domain, llm, model=domain.model)
-        actions, suggestions, result = complete_document(
-            llm, domain, spoken, session_date, completion, speakers, prefix, decisions)
+        with (bounded_llm(domain.model) if bounded_llm else nullcontext()) as bounded:
+            document_llm = bounded or llm
+            speakers = propose_speaker_roles(session_id, store, domain, document_llm, model=domain.model)
+            write_document = complete_council if bounded else complete_document
+            actions, suggestions, result = write_document(
+                document_llm, domain, spoken, session_date, completion, speakers, prefix, decisions)
         raw = {}
     else:
         raw = extractor.extract(transcript, session_date)

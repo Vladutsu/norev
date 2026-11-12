@@ -36,7 +36,7 @@ class SessionCliTest(unittest.TestCase):
         create_key_file(root / "key" / "norev.key")
         self.audio = root / "meeting.wav"
         self.audio.write_bytes(b"not really audio")
-        self.env = {"NOREV_STORE_PATH": str(root / "store" / "norev.db"),
+        self.env = {"NOREV_HOME": str(root), "NOREV_STORE_PATH": str(root / "store" / "norev.db"),
                     "NOREV_STORE_KEY_FILE": str(root / "key" / "norev.key")}
         self.processor = FakeProcessor([])
 

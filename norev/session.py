@@ -83,6 +83,9 @@ def analyse(store, session_id: str, translate: bool, regenerate: bool = False, d
     if not session.transcript_ref:
         raise LookupError(f"Session {session_id!r} is not transcribed yet; run `transcribe` first")
     models = _models()
+    os.environ.setdefault("LLM_PROVIDER", os.environ.get("DEEPSEEK_PROVIDER") or "llamacpp")
+    if os.environ.get("LLAMACPP_PORT") and not os.environ.get("LLM_LLAMACPP_URL"):
+        os.environ.setdefault("LLAMACPP_URL", f"http://127.0.0.1:{os.environ['LLAMACPP_PORT']}")
     processor = _processor(store, models=models)
     model = os.getenv("NOREV_TRANSLATE_MODEL") or os.getenv("LLM_MODEL") or None
     try:
@@ -106,10 +109,10 @@ def _models():
     if not os.getenv("LLAMA_SERVER"):
         return None
     from norev.launcher.llama import models_from_environment
-    from norev.launcher.paths import AppPaths
+    from norev.launcher.paths import AppPaths, apply_defaults
 
     paths = AppPaths.from_environment()
-    os.environ.setdefault("NOREV_MODELS_DIR", str(paths.models))
+    apply_defaults(paths, os.environ)
     return models_from_environment(paths.logs / "llama-server.log")
 
 

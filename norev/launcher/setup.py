@@ -3,7 +3,7 @@
   1. detect the hardware and save the tier (hardware.py) in NOREV_HOME/hardware.json
   2. install the packages that tier needs: CUDA libraries only for NVIDIA, a CPU-only torch for
      diarization elsewhere (it is ~200 MB instead of ~6 GB)
-  3. download, once: Whisper large-v3-turbo, the diarization model, the tier's GGUF (Hugging Face,
+  3. download, once: Whisper large-v3-turbo, the diarization model, the council GGUF (Hugging Face,
      checked by SHA-256) and the llama.cpp build for the tier's backend (GitHub, checked by SHA-256)
   4. if that llama.cpp build does not run on this machine (no Vulkan driver, ...), fall back to the
      CPU build, so the app always starts
@@ -256,7 +256,7 @@ def run(paths: AppPaths, *, speakers: bool = True, downloads: bool = True,
     """Detect again every time: a new GPU or more RAM gives a new tier on the next setup."""
     profile_file = paths.hardware
     hw = detect()
-    profile = hardware.plan(hw)
+    profile = dataclasses.replace(hardware.plan(hw), model=hardware.SMALL)
     print(hardware.summary(hw, profile), flush=True)
 
     env = profile.env(paths.models)

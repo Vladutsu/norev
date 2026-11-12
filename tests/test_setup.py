@@ -63,6 +63,17 @@ class RunTest(Case):
             self.assertEqual(load_domain(DOMAINS / "corporate").model, SMALL.file)
         self.assertEqual(load_domain(DOMAINS / "corporate").model, "Qwen3-8B-Q4_K_M.gguf")  # unset: domain.toml
 
+    def test_council_defaults_override_an_old_8b_hardware_profile(self):
+        hw = Hardware("windows", "x64", 16, ())
+        profile = hardware.plan(hw)
+        self.assertEqual(profile.model, hardware.LARGE)
+        hardware.save(self.paths.hardware, hw, profile, profile.env(self.paths.models))
+        env = {}
+        apply_defaults(self.paths, env)
+        self.assertEqual(env["NOREV_DOMAIN_MODEL"], SMALL.file)
+        self.assertEqual(Path(env["NOREV_EXTRACT_MODEL"]).name, SMALL.file)
+        self.assertEqual((env["LLAMACPP_CTX"], env["LLM_PARALLEL"]), ("8192", "1"))
+
 
 class PackagesTest(unittest.TestCase):
     def test_cpu_tier_installs_sherpa_diarization_and_no_cuda_wheels(self):

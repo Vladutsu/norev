@@ -26,6 +26,10 @@ class LlmClient(Protocol):
     def generate_json(self, prompt: str, *, model: str | None = None, json_schema: dict | None = None) -> str: ...
 
 
+class LlmOutputLimit(ValueError):
+    """A structured response did not fit its output budget."""
+
+
 @runtime_checkable
 class Translator(Protocol):
     """Transcript in `source_language` -> English Transcript, one Segment per Speaker turn.

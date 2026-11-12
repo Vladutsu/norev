@@ -35,13 +35,16 @@ def timestamp(seconds: float) -> str:
     return f"{seconds // 3600:02d}:{seconds // 60 % 60:02d}:{seconds % 60:02d}"
 
 
+def confirmed_speaker_labels(domain, speakers):
+    labels = {r.name: r.label or r.name for r in domain.roles}
+    return {s.id: f"{s.id} · {labels[s.role]}" for s in speakers if s.role_confirmed and s.role in labels}
+
+
 def complete_document(llm, domain, transcript, session_date, completion, speakers, prefix, decisions=None):
     """The document as Markdown. With `decisions` (local council), it follows the agenda: a header and,
     for each item voted, its debate followed by its vote, both read from the whole meeting first.
     Without them, numbered time sequences."""
-    labels = {r.name: r.label or r.name for r in domain.roles}
-    # only Roles the User confirmed: a guessed Role written into the minutes reads as a fact
-    who = {s.id: f"{s.id} · {labels[s.role]}" for s in speakers if s.role_confirmed and s.role in labels}
+    who = confirmed_speaker_labels(domain, speakers)
     if not transcript.segments:
         raise ValueError("empty Transcript")
     writer = _Writer(llm, domain, session_date, completion, speakers, prefix, who, masked=decisions is not None)
@@ -75,14 +78,7 @@ class _Writer:
 
     def write(self, part: Transcript) -> str:
         self.index += 1
-        try:
-            found, hints = ask_domain(self.domain, self.llm, part, [], self.session_date, self.speakers,
-                                      id_prefix=f"{self.prefix}-part{self.index}")
-        except ValueError:  # the follow-ups of one fragment are lost, the minutes are not
-            found, hints = [], [Suggestion(f"Măsurile din fragmentul {self.index} nu au putut fi extrase; "
-                                           "verifică-le în procesul-verbal.")]
-        self.actions.extend(found)
-        self.suggestions.extend(hints)
+        self.collect_followups(part, self.index)
         source = "\n".join(f"[{timestamp(s.start)}–{timestamp(s.end)}] "
                            f"[{self.who.get(s.speaker_id, s.speaker_id) if s.speaker_id else '?'}] "
                            f"{MASKED if self.masked and _announces_result(s.text) else s.text}"
@@ -96,11 +92,21 @@ class _Writer:
                           "consultați transcrierea pentru acest interval.")
         return _without_codes(output.strip())
 
+    def collect_followups(self, part: Transcript, index: int) -> None:
+        try:
+            found, hints = ask_domain(self.domain, self.llm, part, [], self.session_date, self.speakers,
+                                      id_prefix=f"{self.prefix}-part{index}")
+        except ValueError:  # the follow-ups of one fragment are lost, the minutes are not
+            found, hints = [], [Suggestion(f"Măsurile din fragmentul {index} nu au putut fi extrase; "
+                                           "verifică-le în procesul-verbal.")]
+        self.actions.extend(found)
+        self.suggestions.extend(hints)
+
 
 GAP = 120  # seconds of talk between one vote and the next item: a debate of its own, not part of the vote
 
 
-def _agenda_document(writer: _Writer, transcript: Transcript, meeting: dict, items: list[dict]) -> str:
+def _agenda_document(writer: _Writer, transcript: Transcript, meeting: dict, items: list[dict], *, render_vote=None) -> str:
     segments = transcript.segments
     end = segments[-1].end + 1
     plan = [("Deschiderea ședinței", 0.0, items[0]["start"], None)]
@@ -123,7 +129,7 @@ def _agenda_document(writer: _Writer, transcript: Transcript, meeting: dict, ite
             heading, fragments = "Dezbateri", fragments[1:]
         body = [writer_paragraph(writer, fragment) for fragment in fragments]
         if item is not None:
-            body.append(_vote(item))
+            body.append((render_vote or _vote)(item))
         if body:
             out.append(f"## {heading}\n\n" + "\n\n".join(body))
     return "\n\n".join(out)
