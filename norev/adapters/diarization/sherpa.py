@@ -30,6 +30,7 @@ EMBEDDING_URL = ("https://github.com/k2-fsa/sherpa-onnx/releases/download/speake
 SEGMENTATION = "segmentation.onnx"
 EMBEDDING = "titanet_large.onnx"
 MIN_SECONDS = 0.5  # shorter segments ("Da.", "5.") give no reliable embedding: they keep no Speaker
+MAX_EMBEDDING_SECONDS = 8  # fixed-size TitaNet input on long Whisper sentences
 
 
 LONG_SECONDS = 1.5  # only segments this long shape the Speakers; shorter ones are attached afterwards
@@ -160,7 +161,7 @@ class SherpaDiarizer:
         self._extractor = None
 
     def diarize(self, audio_ref: str, spans=None) -> list[SpeakerTurn]:
-        """Who spoke when; speaker labels are cluster numbers, never a guess at who the person is."""
+        """Who spoke when, with optional independent name matches on eligible spans."""
         from faster_whisper import decode_audio
 
         audio = decode_audio(io.BytesIO(self._store.load_audio(audio_ref)), sampling_rate=SAMPLE_RATE)
@@ -177,12 +178,26 @@ class SherpaDiarizer:
             if end - start < MIN_SECONDS:
                 continue
             stream = extractor.create_stream()
-            stream.accept_waveform(SAMPLE_RATE, audio[int(start * SAMPLE_RATE):int(end * SAMPLE_RATE)])
+            left, right = int(start * SAMPLE_RATE), min(len(audio), int(end * SAMPLE_RATE))
+            if right - left < int(MIN_SECONDS * SAMPLE_RATE):
+                continue
+            width = MAX_EMBEDDING_SECONDS * SAMPLE_RATE
+            if right - left > width:
+                left = (left + right - width) // 2
+                right = left + width
+            stream.accept_waveform(SAMPLE_RATE, audio[left:right])
             stream.input_finished()
             kept.append((float(start), float(end)))
             vectors.append(extractor.compute(stream))
         labels = group(vectors, [end - start for start, end in kept])
-        return sorted((SpeakerTurn(start, end, str(label)) for (start, end), label in zip(kept, labels)),
+        profile_path = os.getenv("NOREV_VOICE_PROFILES")
+        names = [None] * len(kept)
+        if profile_path and kept:
+            from norev.adapters.diarization.voice_profiles import match_spans
+
+            names = match_spans(Path(profile_path), self._dir / EMBEDDING, extractor, audio, kept)
+        return sorted((SpeakerTurn(start, end, str(label), name)
+                       for (start, end), label, name in zip(kept, labels, names)),
                       key=lambda t: (t.start, t.end, t.speaker_id))
 
     def _embeddings(self):

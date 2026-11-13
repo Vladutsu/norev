@@ -47,6 +47,12 @@ class ExperimentTest(unittest.TestCase):
         result = list(extract_windows(llm, lines, lambda body: body, {}, None, overlap=1))
         self.assertEqual([(start, end) for start, end, _ in result], [(0, 2), (1, 2), (2, 4)])
 
+    def test_repeated_notes_on_one_line_are_kept_not_retried_forever(self):
+        transcript = Transcript((Segment(0, 1, 'Supun la vot. Aprobat.'),), 'ro')
+        answer = {'notes': [{'id': 0, 'kind': 'rezultat_vot'}] * 24}
+        notes = collect_notes(FakeModel(answer), transcript, ['0 Supun la vot. Aprobat.'], None, 0)
+        self.assertEqual([(note['id'], note['kind']) for note in notes], [(0, 'rezultat_vot')])
+
 
 class EvidenceTest(unittest.TestCase):
     def test_spoken_project_number_starts_a_new_vote_in_the_same_turn_as_its_title(self):

@@ -9,6 +9,7 @@ Everything lives in the User's profile, never in the app folder:
   %LOCALAPPDATA%\\norev\\llama.cpp\\       llama-server.exe and its DLLs
   %LOCALAPPDATA%\\norev\\logs\\            llama-server.log
   %LOCALAPPDATA%\\norev\\hardware.json     the hardware tier picked at install (launcher/hardware.py)
+  %LOCALAPPDATA%\\norev\\voice-profiles.json  optional TitaNet voice profiles: Speaker names (opt-in)
 
 NOREV_HOME moves all of it; every single path can still be set by its own variable.
 On Linux (the dev container) the root is $XDG_DATA_HOME/norev or ~/.local/share/norev.
@@ -76,6 +77,10 @@ class AppPaths:
     def hardware(self) -> Path:
         return self.root / "hardware.json"
 
+    @property
+    def voice_profiles(self) -> Path:
+        return self.root / "voice-profiles.json"
+
 
 def apply_defaults(paths: AppPaths, env: MutableMapping[str, str], *, offline: bool = True) -> None:
     """Fill the variables the rest of norev reads, without overriding what the User set.
@@ -99,6 +104,9 @@ def apply_defaults(paths: AppPaths, env: MutableMapping[str, str], *, offline: b
         env.setdefault("NOREV_TRANSLATE_MODEL", env["NOREV_EXTRACT_MODEL"])
     # A council meeting has 20+ Speakers; Sortformer stops at 4, sherpa-onnx has no limit.
     env.setdefault("NOREV_DIARIZER", "sherpa")
+    # Speaker names only when the User placed a profile file next to the store (opt-in, never downloaded).
+    if paths.voice_profiles.is_file():
+        env.setdefault("NOREV_VOICE_PROFILES", str(paths.voice_profiles))
     hardware.apply(paths.hardware, env)
     env.setdefault("HF_HOME", str(paths.hf_home))
     if offline:

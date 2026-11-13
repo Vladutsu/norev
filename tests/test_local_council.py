@@ -288,6 +288,31 @@ class ExportReviewTest(Case):
         self.ok(self.bridge.edit_transcript(sid, 0, 'Text corectat de utilizator.'))
         self.assertEqual(self.error(self.bridge.transcript_save(sid, preview)), 'not_executable')
 
+    def test_user_names_a_speaker_before_the_minutes_are_regenerated(self):
+        from dataclasses import replace
+        session = self.store.get_session(self.recorded())
+        sid = 'council-names'
+        ref = self.store.save_transcript(sid, Transcript((
+            Segment(0, 5, 'Bună ziua, am o întrebare.', 'S1', speaker_name='Mureșan Maria-Diana'),
+            Segment(5, 6, 'Da.', 'S1'),
+            Segment(6, 12, 'Sunt cetățean și vreau să spun ceva.', 'S2'),
+        ), 'ro'))
+        self.store.save_session(replace(session, id=sid, domain='local_council', transcript_ref=ref, source_transcript_ref=None))
+        from norev.core.speakers import speakers_in
+        self.store.save_speakers(sid, speakers_in(self.store.load_transcript(ref)))
+        speakers = {s['id']: s for s in self.ok(self.bridge.review(sid))['speakers']}
+        self.assertEqual((speakers['S1']['name'], speakers['S1']['named'], speakers['S1']['segments']),
+                         ('Mureșan Maria-Diana', 1, 2))
+        self.assertIsNone(speakers['S2']['name'])
+        review = self.ok(self.bridge.name_speaker(sid, 'S2', '  Ion   Popescu '))
+        self.assertEqual([s.get('speaker_name') for s in review['transcript']['spoken']],
+                         ['Mureșan Maria-Diana', None, 'Ion Popescu'])
+        self.ok(self.bridge.name_speaker(sid, 'S1', ''))  # the User clears a wrong recognition
+        spoken = self.store.load_transcript(self.store.get_session(sid).transcript_ref)
+        self.assertEqual([s.speaker_name for s in spoken.segments], [None, None, 'Ion Popescu'])
+        self.assertEqual(self.error(self.bridge.name_speaker(sid, 'S2', '[S1] Ion')), 'invalid_name')
+        self.assertEqual(self.error(self.bridge.name_speaker(sid, 'S9', 'Ion')), 'invalid_speaker')
+
     def test_council_minutes_export_as_word(self):
         from dataclasses import replace
         session = self.store.get_session(self.recorded())

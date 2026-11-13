@@ -8,6 +8,7 @@ running a Workflow is #23's executor through the Central Processor, never the UI
 import dataclasses
 import hashlib
 import json
+import os
 import re
 import time
 import uuid
@@ -15,7 +16,9 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from norev.adapters.diarization.voice_profiles import profile_names
 from norev.adapters.domains.loader import load_completion, load_domain
+from norev.core.speakers import speaker_names
 from norev.core.models import (
     ActionStatus, Domain, ProposedAction, Segment, Session, Suggestion, Transcript, ValidationError,
 )
@@ -23,7 +26,7 @@ from norev.core.ports import Clock, SessionStore
 from norev.processor.payloads import email_preview
 from norev.usecases.approve import approve_action, domain_digest, edit_action, preview_action, reject_action
 from norev.usecases.others_prompt import render_completion
-from norev.usecases.transcript_correction import correct_transcript
+from norev.usecases.transcript_correction import correct_transcript, name_speaker
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DEMO = Path(__file__).resolve().parent / "demo_session.json"
@@ -320,6 +323,7 @@ class DemoBackend:
         # the spoken Transcript (#82); before translation, or for an English Session, it is the same one
         spoken_ref = session.source_transcript_ref or session.transcript_ref
         spoken = transcript if spoken_ref == session.transcript_ref else self.store.load_transcript(spoken_ref)
+        names = speaker_names(spoken)
         return {
             "session_id": session_id,
             "revision": snapshot.revision,
@@ -328,7 +332,10 @@ class DemoBackend:
             "domain": {"name": domain.name, "label": domain.label},
             "summary": self._summary(session_id),
             "completion": self._completion(session_id),
-            "speakers": self._speakers(session_id, transcript),
+            # `name`: who the voice profiles recognized in this Speaker's Segments, or the User's name for it
+            "speakers": [{**s, **names.get(s["id"], {"name": None, "named": 0, "segments": 0})}
+                         for s in self._speakers(session_id, transcript)],
+            "people": profile_names(os.environ["NOREV_VOICE_PROFILES"]) if os.environ.get("NOREV_VOICE_PROFILES") else [],
             "untranslated": self._partial(session_id, transcript),
             "transcript": self._transcript_view(spoken, transcript if spoken_ref != session.transcript_ref else None),
             # a correction dropped the translation (#82): the actions come from the old text until regenerated
@@ -352,7 +359,9 @@ class DemoBackend:
         """The final Transcript, made after Stop from the whole audio, with Speakers: as spoken (`index` is what
         edit_transcript corrects, #82), and the English one the analysis read when it was translated."""
         lines = lambda t: [{"index": i, "speaker_id": s.speaker_id, "start": s.start, "end": s.end, "text": s.text,
-                            "untranslated": s.untranslated} for i, s in enumerate(t.segments)]
+                            "untranslated": s.untranslated,
+                            **({"speaker_name": s.speaker_name} if s.speaker_name else {})}
+                           for i, s in enumerate(t.segments)]
         return {"spoken": lines(spoken), "spoken_language": spoken.language,
                 "translated": lines(translated) if translated else [],
                 "translated_language": translated.language if translated else None}
@@ -421,6 +430,11 @@ class DemoBackend:
     def edit_transcript(self, session_id: str, index: int, text: str) -> dict[str, Any]:
         """The User's correction of one spoken Segment (#82); actions change only on "Regenerează"."""
         correct_transcript(session_id, index, text, self.store)
+        return self.review(session_id)
+
+    def name_speaker(self, session_id: str, speaker_id: str, name: str) -> dict[str, Any]:
+        """The User's name for a Speaker; the minutes change only on "Regenerează"."""
+        name_speaker(session_id, speaker_id, name, self.store)
         return self.review(session_id)
 
     def edit(self, session_id: str, action_id: str, changes: dict[str, Any], revision: int) -> dict[str, Any]:

@@ -22,6 +22,8 @@ const ERRORS = {
   llm_unavailable: "Modelul local (llama-server) nu a pornit. Verifică LLAMA_SERVER și LLAMACPP_MODEL.",
   no_microphone: "Microfonul nu a putut fi deschis.",
   regenerate_failed: "Regenerarea nu a reușit. Acțiunile de dinainte au rămas cum erau.",
+  invalid_name: "Numele are cel mult 80 de caractere, fără paranteze drepte.",
+  invalid_speaker: "Vorbitorul nu mai există în transcriere.",
   invalid_email: "Scrie adrese de email valide, separate prin virgulă.",
   invalid_header: "Subiectul și destinatarii nu pot avea mai multe rânduri.",
   invalid_text: "Textul conține caractere care nu pot fi trimise.",
@@ -465,14 +467,30 @@ function renderReview() {
   const unknown = r.speakers.some((s) => !s.role) ? h("p", { class: "small muted", role: "note" },
     "Rolul unor vorbitori nu e cunoscut, așa că responsabilul acțiunilor lor rămâne gol. Alege rolul mai jos.") : null;
   const again = state.rolesChanged === r.session_id && r.can_execute ? h("div", { class: "actions" },
-    h("span", { class: "hint" }, "Acțiunile deja decise rămân neschimbate."), regenerateButton()) : null;
-  $("speakers").replaceChildren(...[unknown, ...r.speakers.map((s, i) => {
+    h("span", { class: "hint" }, "Rolurile și numele intră în procesul-verbal după regenerare. Acțiunile deja decise rămân neschimbate."),
+    regenerateButton()) : null;
+  // A name from the voice profiles is recognized per intervention; the User's name applies to all of a Speaker's
+  const recognized = (s) => !s.named ? null : !s.name ? "Intervenții recunoscute ca persoane diferite: verifică pe înregistrare."
+    : s.named < s.segments ? `Recunoscut în ${s.named} din ${s.segments} intervenții. Salvează numele ca să-l aplici tuturor.` : null;
+  const people = h("datalist", { id: "people" }, (r.people || []).map((p) => h("option", { value: p })));
+  $("speakers").replaceChildren(...[unknown, people, ...r.speakers.map((s, i) => {
     const select = h("select", { id: `role-${s.id}`, onchange: (e) => guarded(e.target, async () => {
       state.review = await api("set_role", state.sessionId, s.id, e.target.value);
       state.rolesChanged = state.sessionId;
       renderReview();
     }) }, roleOptions(s.role));
-    return h("label", { for: `role-${s.id}` }, h("span", {}, `Vorbitor ${i + 1}`), select);
+    const name = h("input", { id: `name-${s.id}`, type: "text", list: "people", maxlength: "80", value: s.name || "",
+      placeholder: "Nume (ex. cetățean)", autocomplete: "off", onchange: (e) => guarded(e.target, async () => {
+        state.review = await api("name_speaker", state.sessionId, s.id, e.target.value);
+        state.rolesChanged = state.sessionId;
+        state.transcriptChanged = state.sessionId;
+        renderReview();
+      }) });
+    const hint = recognized(s);
+    return h("div", { class: "speaker-row" },
+      h("label", { for: `role-${s.id}` }, h("span", {}, `Vorbitor ${i + 1}`), select),
+      h("label", { for: `name-${s.id}` }, h("span", { class: "small muted" }, "Nume"), name),
+      hint ? h("p", { class: "small muted" }, hint) : null);
   }), again].filter(Boolean));
   $("suggestions").replaceChildren(...(r.suggestions.length ? r.suggestions.map((s) => h("div", { class: "well inset suggestion" },
     h("strong", {}, s.text), s.transcript_excerpt ? quote(s, "em") : null))
@@ -546,9 +564,9 @@ function renderFinalTranscript(r) {
     const quoted = state.quoted && s.start < state.quoted.end && s.end > state.quoted.start;
     return h("div", { class: quoted ? "line quoted" : "line" },
       h("span", { class: "time" }, time(s.start)),
-      s.speaker_id == null ? null : h("span", { class: `speaker s${(n < 0 ? 0 : n) % 3}` }, label(s.speaker_id)),
+      s.speaker_id == null ? null : h("span", { class: `speaker s${(n < 0 ? 0 : n) % 3}` }, s.speaker_name || label(s.speaker_id)),
       h("p", {}, editable ? h("button", { type: "button", class: "segment", title: "Corectează textul",
-        onclick: (e) => editSegment(e.currentTarget.parentElement, s, label(s.speaker_id)) }, s.text) : s.text,
+        onclick: (e) => editSegment(e.currentTarget.parentElement, s, s.speaker_name || label(s.speaker_id)) }, s.text) : s.text,
         s.untranslated ? h("span", { class: "small muted" }, " (netradus)") : null));
   }) : [h("p", { class: "small muted" }, "Transcrierea e goală.")]), ...(corrected ? [corrected] : []));
 }

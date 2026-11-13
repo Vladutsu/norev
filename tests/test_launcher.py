@@ -62,6 +62,19 @@ class PathsTest(unittest.TestCase):
             self.assertEqual(env["NOREV_STORE_KEY_FILE"], str(paths.key))
             self.assertNotIn("HF_HUB_OFFLINE", env)
 
+    def test_voice_profiles_are_used_only_when_the_file_is_in_the_data_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = AppPaths(Path(tmp), windows=True)
+            env = {}
+            apply_defaults(paths, env)
+            self.assertNotIn("NOREV_VOICE_PROFILES", env)
+            paths.voice_profiles.write_text("{}", encoding="utf-8")
+            apply_defaults(paths, env)
+            self.assertEqual(env["NOREV_VOICE_PROFILES"], str(paths.voice_profiles))
+            env = {"NOREV_VOICE_PROFILES": "D:/other.json"}
+            apply_defaults(paths, env)
+            self.assertEqual(env["NOREV_VOICE_PROFILES"], "D:/other.json")
+
     def test_cuda_dll_dirs_are_the_nvidia_wheel_bin_folders(self):
         with tempfile.TemporaryDirectory() as tmp:
             site = Path(tmp)
@@ -210,7 +223,7 @@ class LlamaServerTest(unittest.TestCase):
         args = self.server(lambda url: True).args()
         self.assertEqual(args[:3], [str(self.binary), "-m", str(self.model)])
         for flag in (["--host", "127.0.0.1"], ["-c", "16384"], ["--parallel", "4"], ["-ngl", "auto"],
-                     ["-fa", "on"], ["--alias", "Qwen3-8B-Q4_K_M"], ["--reasoning", "off"]):
+                     ["-fa", "on"], ["--alias", "Qwen3-8B-Q4_K_M"], ["--reasoning", "off"], ["--cache-ram", "0"]):
             self.assertIn(flag, [args[i:i + 2] for i in range(len(args) - 1)])
 
     def test_starts_waits_for_health_and_stops(self):

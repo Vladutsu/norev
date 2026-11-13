@@ -1,8 +1,10 @@
 import unittest
 from datetime import datetime, timezone
 
-from norev.adapters.diarization.sherpa import MIN_SPEAKER_SECONDS, cluster, group
+from norev.adapters.diarization.sherpa import MIN_SPEAKER_SECONDS, SherpaDiarizer, cluster, group
+from norev.adapters.diarization.voice_profiles import match_spans, match_vector
 from norev.core.models import Segment, Session, SpeakerTurn, Transcript
+from norev.core.speakers import attach_speakers
 from norev.testing.fakes import FakeTranscriber
 from norev.usecases.transcribe import transcribe_session
 from test_ui_session_backend import Case
@@ -47,6 +49,49 @@ class GroupTest(unittest.TestCase):
         from unittest import mock
         with mock.patch.dict("os.environ", {"NOREV_SPEAKER_MERGE": "1.5"}):
             self.assertEqual(len(set(group([A, B], [20, 20]))), 1)
+
+
+class VoiceProfileTest(unittest.TestCase):
+    def test_long_sentence_keeps_its_timing_with_bounded_embedding_input(self):
+        from unittest.mock import MagicMock, patch
+
+        import numpy as np
+
+        diarizer = SherpaDiarizer(None)
+        extractor = MagicMock()
+        extractor.compute.return_value = A
+        with patch.object(diarizer, "_embeddings", return_value=extractor), patch.dict(
+            "os.environ", {"NOREV_VOICE_PROFILES": ""}
+        ):
+            turns = diarizer._by_segment(np.zeros(180 * 16000), [(0, 180)])
+        self.assertEqual(turns, [SpeakerTurn(0, 180, "0")])
+        self.assertEqual(len(extractor.create_stream.return_value.accept_waveform.call_args.args[1]), 8 * 16000)
+
+    def test_weak_and_close_scores_abstain(self):
+        import numpy as np
+
+        profiles = ["Alice", "Bob"], np.array([A, B])
+        self.assertEqual(match_vector(A, profiles), "Alice")
+        self.assertIsNone(match_vector([1, 1, 0], profiles))
+        self.assertIsNone(match_vector(C, profiles))
+
+    def test_short_and_conflicting_spans_stay_anonymous(self):
+        from unittest.mock import MagicMock, patch
+
+        import numpy as np
+
+        extractor = MagicMock()
+        extractor.compute.side_effect = [A, A, B]
+        with patch("norev.adapters.diarization.voice_profiles.load_profiles",
+                   return_value=(["Alice", "Bob"], np.array([A, B]))):
+            names = match_spans(None, None, extractor, np.zeros(16 * 16000), [(0, 2), (2, 6), (6, 16)])
+        self.assertEqual(names, [None, "Alice", None])
+        result = attach_speakers(
+            Transcript((Segment(0, 2, "Da."), Segment(2, 6, "O intervenție.")), "ro"),
+            [SpeakerTurn(0, 2, "same"), SpeakerTurn(2, 6, "same", "Alice")],
+        )
+        self.assertEqual([(s.speaker_id, s.speaker_name) for s in result.segments],
+                         [("S1", None), ("S1", "Alice")])
 
 
 class SpansDiarizer:

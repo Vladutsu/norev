@@ -63,6 +63,10 @@ Names, votes, quorum and adopted decisions must be checked against the recording
   live only in `tests/fixtures/domains/`, so the industry-agnostic core keeps its tests (ADR 0003).
 - Diarization is sherpa-onnx (`requirements-diarization.txt`), not NeMo: ~30 MB instead of ~6 GB.
   `NOREV_DIARIZER=sortformer` still picks NeMo Sortformer when it is installed by hand.
+  Set `NOREV_VOICE_PROFILES` to the path of a local TitaNet profile JSON to enable speaker names
+  with Sherpa on newly transcribed sessions. The file contains `model_sha256`, `dimension` (192)
+  and `profiles` with `speaker_name` and a normalized `embedding` for each person. Segments
+  with weak, ambiguous, conflicting, or too-short matches keep their anonymous speaker label.
 - llama.cpp is pinned to build `b12249` (`NOREV_LLAMA_BUILD` changes it).
 
 ## Checks

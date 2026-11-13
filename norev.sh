@@ -108,7 +108,7 @@ use_model() {
     "$LLAMA_SERVER" -m "$model" \
         --host 127.0.0.1 --port "$LLAMACPP_PORT" \
         -c "$(( LLAMACPP_CTX * LLM_PARALLEL ))" --parallel "$LLM_PARALLEL" -ngl "$LLAMACPP_GPU_LAYERS" \
-        -fa on -ctk q8_0 -ctv q8_0 \
+        -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 \
         --alias "$LLM_MODEL" "${extra[@]}" >>"$log_file" 2>&1 &
     LLAMA_PID=$!
     LLAMA_LOADED="$model"

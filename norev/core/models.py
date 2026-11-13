@@ -78,6 +78,7 @@ class SpeakerTurn:
     start: float
     end: float
     speaker_id: str
+    speaker_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,7 @@ class Segment:
     speaker_id: str | None = None
     # Set by a Translator when it could not translate this Segment and kept the original text
     untranslated: bool = False
+    speaker_name: str | None = None
 
     def __post_init__(self) -> None:
         if self.start < 0 or self.end < self.start:

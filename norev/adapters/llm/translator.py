@@ -38,6 +38,7 @@ class _Turn:
     end: float
     speaker_id: str | None
     text: str
+    speaker_name: str | None = None
 
 
 def speaker_turns(transcript: Transcript) -> list[_Turn]:
@@ -45,11 +46,12 @@ def speaker_turns(transcript: Transcript) -> list[_Turn]:
     turns: list[_Turn] = []
     for segment in transcript.segments:
         text = " ".join(segment.text.split())
-        if turns and turns[-1].speaker_id == segment.speaker_id:
+        if turns and (turns[-1].speaker_id, turns[-1].speaker_name) == (segment.speaker_id, segment.speaker_name):
             last = turns[-1]
-            turns[-1] = _Turn(last.start, segment.end, last.speaker_id, f"{last.text} {text}".strip())
+            turns[-1] = _Turn(last.start, segment.end, last.speaker_id, f"{last.text} {text}".strip(),
+                              last.speaker_name)
         else:
-            turns.append(_Turn(segment.start, segment.end, segment.speaker_id, text))
+            turns.append(_Turn(segment.start, segment.end, segment.speaker_id, text, segment.speaker_name))
     return turns
 
 
@@ -120,7 +122,8 @@ class TurnTranslator:
         for turn, ids in zip(turns, turn_pieces):
             untranslated = any(i not in english for i in ids)
             text = " ".join(english.get(i, source[i]) for i in ids)
-            segments.append(Segment(turn.start, turn.end, text, turn.speaker_id, untranslated=untranslated))
+            segments.append(Segment(turn.start, turn.end, text, turn.speaker_id, untranslated=untranslated,
+                                    speaker_name=turn.speaker_name))
         return Transcript(segments=tuple(segments), language="en")
 
     def _translate_pieces(self, ids: list[str], source: dict[str, str], source_name: str) -> dict[str, str]:

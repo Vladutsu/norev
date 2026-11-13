@@ -65,7 +65,9 @@ class LlamaServer:
         """Same flags as norev.sh: every slot gets `ctx` tokens; Qwen3 answers without "thinking"."""
         args = [str(self.binary), "-m", str(self.model), "--host", "127.0.0.1", "--port", str(self.port),
                 "-c", str(self.ctx * self.parallel), "--parallel", str(self.parallel), "-ngl", str(self.gpu_layers),
-                "-fa", "on", "-ctk", "q8_0", "-ctv", "q8_0", "--alias", self.alias]
+                "-fa", "on", "-ctk", "q8_0", "-ctv", "q8_0", "--alias", self.alias,
+                # The RAM prompt cache (8 GB by default) only fills up: the minutes send each window once.
+                "--cache-ram", "0"]
         if "Qwen3" in Path(self.model).name:
             args += ["--reasoning", "off"]
         return args

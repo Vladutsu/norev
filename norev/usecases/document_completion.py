@@ -1,4 +1,5 @@
 """Bounded document generation from the whole spoken Transcript, through the Central Processor."""
+import dataclasses
 import json
 import re
 
@@ -24,7 +25,7 @@ def chunks(transcript: Transcript, limit: int = LIMIT):
             if batch and size + len(text) + overhead > limit:
                 yield Transcript(tuple(batch), transcript.language)
                 batch, size = [], 0
-            batch.append(Segment(segment.start, segment.end, text, segment.speaker_id))
+            batch.append(dataclasses.replace(segment, text=text))
             size += len(text) + overhead
     if batch:
         yield Transcript(tuple(batch), transcript.language)
@@ -80,7 +81,7 @@ class _Writer:
         self.index += 1
         self.collect_followups(part, self.index)
         source = "\n".join(f"[{timestamp(s.start)}–{timestamp(s.end)}] "
-                           f"[{self.who.get(s.speaker_id, s.speaker_id) if s.speaker_id else '?'}] "
+                           f"[{s.speaker_name or self.who.get(s.speaker_id, s.speaker_id) or '?'}] "
                            f"{MASKED if self.masked and _announces_result(s.text) else s.text}"
                            for s in part.segments)
         prompt = fill(self.template, {"transcript": source})

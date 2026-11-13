@@ -37,7 +37,7 @@ from norev.usecases import others_prompt
 from norev.usecases.session_flow import run_session
 from norev.usecases.speaker_roles import set_speaker_role
 from norev.usecases.transcribe import transcribe_session
-from norev.usecases.transcript_correction import correct_transcript
+from norev.usecases.transcript_correction import correct_transcript, name_speaker
 from norev.usecases.document_completion import timestamp
 
 log = logging.getLogger(__name__)
@@ -359,10 +359,11 @@ class SessionBackend(DemoBackend):
         if format == "json":
             content = json.dumps({"session_id": session.id, "language": transcript.language,
                                   "segments": [{"start": s.start, "end": s.end, "speaker_id": s.speaker_id,
+                                                **({"speaker_name": s.speaker_name} if s.speaker_name else {}),
                                                 "text": s.text} for s in transcript.segments]}, ensure_ascii=False, indent=2)
         else:
             content = "# Conversația ședinței\n\nTranscriere automată — verificați pasajele neclare pe înregistrare.\n\n"
-            content += "\n\n".join(f"[{timestamp(s.start)}–{timestamp(s.end)}] {s.speaker_id or 'Vorbitor neidentificat'}: {s.text}"
+            content += "\n\n".join(f"[{timestamp(s.start)}–{timestamp(s.end)}] {s.speaker_name or s.speaker_id or 'Vorbitor neidentificat'}: {s.text}"
                                    for s in transcript.segments)
         return LocalDocumentPayloadBuilder(self.export_dir).document(content, format)
 
@@ -408,6 +409,13 @@ class SessionBackend(DemoBackend):
         with self._lock:
             self._refuse_if_busy(session_id)
             correct_transcript(session_id, index, text, self.store)
+        return self.review(session_id)
+
+    def name_speaker(self, session_id: str, speaker_id: str, name: str) -> dict[str, Any]:
+        """Never while the Session records or is analysed, like a text correction."""
+        with self._lock:
+            self._refuse_if_busy(session_id)
+            name_speaker(session_id, speaker_id, name, self.store)
         return self.review(session_id)
 
     def delete(self, session_id: str) -> dict[str, Any]:

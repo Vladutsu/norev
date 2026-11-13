@@ -41,8 +41,12 @@ def attach_speakers(transcript: Transcript, turns: Sequence[SpeakerTurn]) -> Tra
     for speaker in speakers:
         if speaker is not None and speaker not in names:
             names[speaker] = f"S{len(names) + 1}"
+    # Sherpa scores the same spans as the transcript. Never propagate a name by cluster alone.
+    named_spans = {(turn.start, turn.end, turn.speaker_id): turn.speaker_name
+                   for turn in turns if turn.speaker_name}
     segments = tuple(
-        dataclasses.replace(segment, speaker_id=names.get(speaker) if speaker is not None else None)
+        dataclasses.replace(segment, speaker_id=names.get(speaker),
+                            speaker_name=named_spans.get((segment.start, segment.end, speaker)))
         for segment, speaker in zip(transcript.segments, speakers)
     )
     return dataclasses.replace(transcript, segments=segments)
@@ -55,6 +59,22 @@ def speakers_in(transcript: Transcript) -> list[Speaker]:
         if segment.speaker_id is not None and segment.speaker_id not in ids:
             ids.append(segment.speaker_id)
     return [Speaker(speaker_id) for speaker_id in ids]
+
+
+def speaker_names(transcript: Transcript) -> dict[str, dict]:
+    """Per speaker_id: the person its named Segments agree on (None when none or several), and how many
+    of its Segments carry a name. Only shown to the User; never copied to the other Segments here."""
+    found: dict[str, dict] = {}
+    for segment in transcript.segments:
+        if segment.speaker_id is None:
+            continue
+        entry = found.setdefault(segment.speaker_id, {"names": set(), "named": 0, "segments": 0})
+        entry["segments"] += 1
+        if segment.speaker_name:
+            entry["names"].add(segment.speaker_name)
+            entry["named"] += 1
+    return {sid: {"name": next(iter(e["names"])) if len(e["names"]) == 1 else None,
+                  "named": e["named"], "segments": e["segments"]} for sid, e in found.items()}
 
 
 def merge_speakers(stored: Sequence[Speaker], new: Sequence[Speaker]) -> list[Speaker]:
